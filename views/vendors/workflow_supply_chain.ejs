@@ -1,0 +1,83 @@
+<%
+/*
+  workflow_supply_chain.ejs
+  -----------------------------------------------------------------------------
+  Stage 2 — Supply Chain review.
+  View-only snapshot of the initial submission, plus three-decision panel:
+  Approve / Reject / Request more info.
+
+  FIELDS TODO: replace the "Initial submission summary" placeholder block
+  with the readonly fields from the vendor record (legal name, tax id, etc.)
+  -----------------------------------------------------------------------------
+*/
+%>
+<% var title = 'Supply Chain Review'; %>
+<% var layout = locals.layout || 'layout'; %>
+
+<%- include('../partials/header', { title: title }) %>
+
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
+
+  <!-- ======================= Initial submission (read-only) ================= -->
+  <section class="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Initial submission</h2>
+    <!-- TODO (field layout): render the readonly initial submission fields here.
+         You can loop res.locals.vendor keys, or hand-lay a <dl> grouped by section. -->
+    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+      Placeholder for the view-only vendor snapshot. Replace with the same
+      field groupings as the initial onboarding form (legal identity, address,
+      contacts, banking, etc.).
+    </div>
+  </section>
+
+  <!-- ======================= Decision panel ================================= -->
+  <form method="post" action="/vendors/<%= vendor.id %>/workflow/supply-chain-decision"
+        class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <h2 class="text-lg font-semibold text-gray-900">Decision</h2>
+    <p class="mt-1 text-sm text-gray-500">
+      Choose one outcome. Comments are required for
+      <strong>Reject</strong> and <strong>Request more info</strong>.
+    </p>
+
+    <fieldset class="mt-4 space-y-3">
+      <label class="flex cursor-pointer items-start gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50">
+        <input type="radio" name="decision" value="approve" class="mt-1" required>
+        <span>
+          <span class="block font-medium text-gray-900">Approve</span>
+          <span class="block text-sm text-gray-500">Send to the supplier to fill in their portion.</span>
+        </span>
+      </label>
+      <label class="flex cursor-pointer items-start gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50">
+        <input type="radio" name="decision" value="request_info" class="mt-1">
+        <span>
+          <span class="block font-medium text-gray-900">Request more information</span>
+          <span class="block text-sm text-gray-500">Return to the requestor with notes; they can update and resubmit.</span>
+        </span>
+      </label>
+      <label class="flex cursor-pointer items-start gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50">
+        <input type="radio" name="decision" value="reject" class="mt-1">
+        <span>
+          <span class="block font-medium text-gray-900">Reject</span>
+          <span class="block text-sm text-gray-500">Terminal — the requestor must start a new submission.</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <label class="mt-4 block">
+      <span class="text-sm font-medium text-gray-700">Comment</span>
+      <textarea name="comment" rows="4"
+                class="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                placeholder="Required for Reject or Request more information."></textarea>
+    </label>
+
+    <div class="mt-5 flex justify-end gap-3">
+      <a href="/vendors/queue" class="rounded px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cancel</a>
+      <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+        Submit decision
+      </button>
+    </div>
+  </form>
+</main>
+
+<%- include('../partials/footer') %>

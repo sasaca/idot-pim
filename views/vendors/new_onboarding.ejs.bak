@@ -1,0 +1,182 @@
+<%- include('../partials/head', { pageTitle: 'New Vendor Onboarding' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'New Vendor Onboarding', topSub: 'Submit a full vendor onboarding request. Duplicate, watchlist, and address checks run automatically.' }) %>
+<main class="p-6 max-w-5xl">
+
+
+
+<%- include('../partials/doc_upload', { docDomain: 'VENDOR_ONBOARDING', docTitle: 'Document Upload — Vendor Onboarding' }) %>
+<%- include('../partials/address_autocomplete') %>
+<form method="post" action="/vendors/new/onboarding" class="space-y-6">
+
+  <!-- Section: Core identity -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">1. Identity</h3>
+      <span class="ml-auto text-xs text-slate-400">Required for duplicate check</span></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Legal name *</span>
+        <input name="legal_name" required class="input" placeholder="Acme Industries, Inc."></label>
+      <label class="field"><span class="label">DUNS number</span>
+        <input name="duns" class="input" placeholder="9-digit DUNS"></label>
+      <label class="field"><span class="label">Tax ID / EIN *</span>
+        <input name="tax_id" required class="input" placeholder="XX-XXXXXXX"></label>
+      <label class="field"><span class="label">Primary contact name</span>
+        <input name="primary_contact_name" class="input"></label>
+      <label class="field"><span class="label">Primary contact email</span>
+        <input name="primary_contact_email" type="email" class="input"></label>
+      <label class="field"><span class="label">Primary contact phone</span>
+        <input name="primary_contact_phone" class="input"></label>
+    </div>
+    <div class="px-5 pb-5">
+      <button type="button" onclick="runDupCheck()" class="btn btn-secondary text-xs">Run duplicate check now →</button>
+      <div id="dup-result" class="mt-2 text-sm"></div>
+    </div>
+  </section>
+
+  <!-- Section: Address -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">2. Primary address</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Address line 1 *</span><input name="addr_line1" required class="input"></label>
+      <label class="field"><span class="label">Address line 2</span><input name="addr_line2" class="input"></label>
+      <label class="field"><span class="label">City *</span><input name="addr_city" required class="input"></label>
+      <label class="field"><span class="label">State / Province</span>
+        <select name="addr_state" class="input">
+          <option value="">—</option>
+          <% (ref.STATE || []).forEach(s => { %><option value="<%= s.code %>"><%= s.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">ZIP / Postal *</span><input name="addr_zip" required class="input"></label>
+      <label class="field"><span class="label">Country *</span>
+        <select name="addr_country" required class="input">
+          <option value="">—</option>
+          <% (ref.COUNTRY || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+    </div>
+  </section>
+
+  <!-- Section: Classification -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">3. Classification</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Category L1 *</span>
+        <select name="category_l1" required class="input">
+          <option value="">—</option>
+          <% (ref.CATEGORY || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Category L2</span><input name="category_l2" class="input"></label>
+      <label class="field"><span class="label">Category L3</span><input name="category_l3" class="input"></label>
+      <label class="field"><span class="label">Category L4</span><input name="category_l4" class="input"></label>
+      <label class="field"><span class="label">Commodity code *</span>
+        <select name="commodity_code" required class="input">
+          <option value="">—</option>
+          <% (ref.COMMODITY_CODE || []).forEach(c => { %><option value="<%= c.code %>"><%= c.code %> — <%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Line of business</span>
+        <select name="line_of_business" class="input">
+          <option value="">—</option>
+          <% ['NEW_EQUIPMENT','MODERNIZATION','SERVICE','PARTS','CORPORATE'].forEach(c => { %><option><%= c %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Factory or field</span>
+        <select name="factory_or_field" class="input"><option>FACTORY</option><option>FIELD</option><option>BOTH</option></select></label>
+      <label class="field"><span class="label">High-level class</span>
+        <select name="high_level_class" class="input"><option>GOODS</option><option>SERVICES</option><option>BOTH</option></select></label>
+    </div>
+  </section>
+
+  <!-- Section: ERP & financial -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">4. ERP & financial terms</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">ERP instance *</span>
+        <select name="erp_instance" required class="input">
+          <option value="">—</option>
+          <% (ref.ERP_INSTANCE || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Currency *</span>
+        <select name="currency_code" required class="input">
+          <option value="">—</option>
+          <% (ref.CURRENCY || []).forEach(c => { %><option value="<%= c.code %>"><%= c.code %> — <%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">AP payment terms *</span>
+        <select name="ap_payment_terms" required class="input">
+          <option value="">—</option>
+          <% (ref.PAYMENT_TERM || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Incoterms</span>
+        <select name="incoterms" class="input">
+          <option value="">—</option>
+          <% (ref.INCOTERM || []).forEach(c => { %><option value="<%= c.code %>"><%= c.code %> — <%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">E-invoice enabled</span>
+        <select name="e_invoice_flag" class="input"><option>No</option><option>Yes</option></select></label>
+    </div>
+  </section>
+
+  <!-- Section: Scope + compliance -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">5. Scope of work & compliance questionnaire</h3></div>
+    <div class="card-body space-y-4">
+      <label class="field"><span class="label">Scope of work / purpose of engagement *</span>
+        <textarea name="scope_of_work" rows="3" required class="input" placeholder="Describe what this vendor will supply..."></textarea></label>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <% const yesNo = (name, label) => `
+          <label class="flex items-center justify-between py-1 border-b border-slate-100">
+            <span class="text-slate-700">${label}</span>
+            <select name="${name}" class="input max-w-[100px] py-1"><option>No</option><option>Yes</option></select>
+          </label>`; %>
+        <%- yesNo('f_1099', '1099 reportable?') %>
+        <%- yesNo('f_coi', 'Conflict of interest?') %>
+        <%- yesNo('f_diverse', 'Diverse / small business?') %>
+        <%- yesNo('f_asn', 'ASN / ERS capable?') %>
+        <%- yesNo('f_site', 'Will perform work on site?') %>
+        <%- yesNo('f_physical', 'Physical labor?') %>
+        <%- yesNo('f_ior', 'Importer of record?') %>
+        <%- yesNo('f_ctpat', 'C-TPAT certified?') %>
+        <%- yesNo('f_vmf', 'VMF complete?') %>
+        <%- yesNo('f_onetime', 'One-time activity?') %>
+        <%- yesNo('f_existing', 'Existing vendor relationship?') %>
+      </div>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit onboarding request →</button>
+    <a href="/vendors" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+<script>
+async function runDupCheck() {
+  const el = document.getElementById('dup-result');
+  el.innerHTML = '<span class="text-slate-500">Checking…</span>';
+  const body = {
+    legal_name: document.querySelector('[name=legal_name]').value,
+    tax_id: document.querySelector('[name=tax_id]').value,
+    duns: document.querySelector('[name=duns]').value,
+    address: document.querySelector('[name=addr_line1]').value,
+    country: document.querySelector('[name=addr_country]').value,
+    commodity_code: document.querySelector('[name=commodity_code]').value,
+    erp_instance: document.querySelector('[name=erp_instance]').value,
+  };
+  const res = await fetch('/vendors/api/dup-check', { method: 'POST',
+    headers: {'content-type':'application/json'}, body: JSON.stringify(body) });
+  const j = await res.json();
+  const color = j.level === '100_MATCH' ? 'bg-red-50 border-red-200 text-red-700'
+              : j.level === 'PARTIAL' ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-700';
+  let html = `<div class="border p-3 rounded ${color}"><div class="font-semibold">${j.level.replace('_',' ')}</div>`;
+  html += `<div class="text-xs mt-1">${j.message}</div>`;
+  if (j.matches && j.matches.length) {
+    html += '<ul class="mt-2 text-xs list-disc list-inside">';
+    j.matches.forEach(m => { html += `<li>${m.legal_name} — score ${(m.score*100).toFixed(0)}%</li>`; });
+    html += '</ul>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+</script>
+<%- include('../partials/chat_widget', { chatDomain: 'VENDOR_ONBOARDING', chatTitle: 'New vendor onboarding' }) %>
+</main></div>
+</body></html>

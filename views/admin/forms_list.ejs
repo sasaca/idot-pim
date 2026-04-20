@@ -1,0 +1,53 @@
+<%- include('../partials/head', { pageTitle: 'Form Builder' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', {
+  topTitle: 'Form Builder',
+  topSub: 'Design custom forms with drag-and-drop fields, publish them, and collect submissions.',
+}) %>
+<main class="p-6">
+
+<div class="mb-4 flex items-center gap-2">
+  <a href="/admin" class="btn btn-ghost">← Admin</a>
+  <a href="/admin/forms/new" class="btn btn-primary ml-auto">＋ New Form</a>
+</div>
+
+<div class="card">
+  <div class="overflow-x-auto">
+    <table class="data">
+      <thead><tr>
+        <th>Name</th><th>Description</th><th>Status</th><th>Fields</th>
+        <th>Submissions</th><th>Updated</th><th></th>
+      </tr></thead>
+      <tbody>
+        <% if (!forms.length) { %>
+          <tr><td colspan="7" class="text-center text-slate-500 p-10">
+            No forms yet. <a href="/admin/forms/new" class="text-brand-600 hover:underline">Create the first one →</a>
+          </td></tr>
+        <% } %>
+        <% forms.forEach(f => { let schema = {}; try { schema = JSON.parse(f.schema_json || '{"fields":[]}') } catch(e) { schema = {fields:[]}; } %>
+          <tr>
+            <td class="font-medium"><%= f.name %></td>
+            <td class="text-xs text-slate-600"><%= f.description || '—' %></td>
+            <td><span class="chip <%= f.is_published ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700' %>">
+              <%= f.is_published ? 'Published' : 'Draft' %></span></td>
+            <td class="text-xs"><%= (schema.fields || []).length %></td>
+            <td class="text-xs">
+              <% if (f.submission_count) { %>
+                <a class="text-brand-600 hover:underline" href="/admin/forms/<%= f.id %>/submissions"><%= f.submission_count %> →</a>
+              <% } else { %>0<% } %>
+            </td>
+            <td class="text-xs text-slate-500"><%= f.updated_at %></td>
+            <td class="text-xs whitespace-nowrap">
+              <a href="/admin/forms/<%= f.id %>" class="text-brand-600 hover:underline">Edit</a>
+              <% if (f.is_published) { %> · <a href="/forms/<%= f.id %>" class="text-brand-600 hover:underline">Open →</a><% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main></div>
+</body></html>

@@ -1,0 +1,74 @@
+<%- include('../partials/head', { pageTitle: 'Complete: ' + request.wf_id }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Complete task: ' + request.title, topSub: request.wf_id + ' · ' + request.domain + ' · Self-service submission' }) %>
+<main class="p-6 max-w-4xl">
+
+<div class="card card-body mb-6">
+  <div class="text-sm text-slate-600">
+    The requesting organization has prepared a master-data request for you. Please review what they've submitted on your behalf and provide the details only you can supply — banking, remit-to, manufacturing location, and acknowledgements.
+  </div>
+</div>
+
+<form method="post" action="/portal/tasks/<%= request.id %>/submit" class="space-y-6">
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">1. Banking details</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Bank name *</span><input name="bank_name" required class="input"></label>
+      <label class="field"><span class="label">Account number *</span><input name="bank_account" required class="input"></label>
+      <label class="field"><span class="label">Transit / routing number</span><input name="bank_transit" class="input"></label>
+      <label class="field"><span class="label">IBAN</span><input name="iban" class="input"></label>
+      <label class="field"><span class="label">SWIFT / BIC</span><input name="swift" class="input"></label>
+      <label class="field"><span class="label">Bank country *</span><input name="bank_country" required class="input"></label>
+      <label class="field"><span class="label">Payment instrument *</span>
+        <select name="payment_instrument" required class="input">
+          <option value="">—</option><option>ACH</option><option>WIRE</option><option>CHECK</option><option>CARD</option><option>SEPA</option>
+        </select></label>
+      <label class="field"><span class="label">Additional tax ID (if any)</span><input name="additional_tax_id" class="input"></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">2. Remit-to address</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field md:col-span-2"><span class="label">Remit-to address *</span><input name="remit_address" required class="input"></label>
+      <label class="field"><span class="label">State</span><input name="remit_state" class="input"></label>
+      <label class="field"><span class="label">ZIP *</span><input name="remit_zip" required class="input"></label>
+      <label class="field"><span class="label">Country *</span><input name="remit_country" required class="input"></label>
+      <label class="field"><span class="label">Remit-to email</span><input name="remit_email" type="email" class="input"></label>
+      <label class="field"><span class="label">PO email</span><input name="po_email" type="email" class="input"></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">3. Manufacturing / shipping origin (if applicable)</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field md:col-span-2"><span class="label">Manufacturing address</span><input name="mfg_address" class="input"></label>
+      <label class="field"><span class="label">City</span><input name="mfg_city" class="input"></label>
+      <label class="field"><span class="label">State</span><input name="mfg_state" class="input"></label>
+      <label class="field"><span class="label">ZIP</span><input name="mfg_zip" class="input"></label>
+      <label class="field"><span class="label">Country</span><input name="mfg_country" class="input"></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">4. Certifications & acknowledgements</h3></div>
+    <div class="card-body space-y-2 text-sm">
+      <label class="flex items-start gap-2"><input type="checkbox" name="code_of_conduct" class="mt-1">
+        <span>I have read and agree to abide by the Supplier <a href="#" class="text-brand-600 hover:underline">Code of Conduct</a>.</span></label>
+      <label class="flex items-start gap-2"><input type="checkbox" name="privacy_ack" class="mt-1">
+        <span>I acknowledge the <a href="#" class="text-brand-600 hover:underline">Privacy Notice</a> and consent to processing of my business data.</span></label>
+      <label class="flex items-start gap-2"><input type="checkbox" name="cpm17" class="mt-1">
+        <span>I confirm that the banking information above is accurate and that I am authorized to provide it (CPM-17).</span></label>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit to master data team →</button>
+    <a href="/portal" class="btn btn-ghost">Back</a>
+  </div>
+</form>
+
+</main></div>
+</body></html>

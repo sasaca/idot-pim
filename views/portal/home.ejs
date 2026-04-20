@@ -1,0 +1,49 @@
+<%- include('../partials/head', { pageTitle: 'Self-Service Portal' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Self-Service Portal', topSub: 'Complete the forms assigned to you by the master data team.' }) %>
+<main class="p-6">
+
+<div class="card">
+  <div class="card-header"><h3 class="font-semibold">Tasks assigned to me</h3>
+    <span class="ml-auto text-xs text-slate-400"><%= tasks.length %></span></div>
+  <div class="overflow-x-auto">
+    <table class="data">
+      <thead><tr><th>WF ID</th><th>Type</th><th>Title</th><th>Status</th><th>Step</th><th>SLA</th><th></th></tr></thead>
+      <tbody>
+        <% if (!tasks.length) { %>
+          <tr><td colspan="7" class="text-center text-slate-500 p-10">No tasks waiting for you. When the master data team needs banking, remit-to, or manufacturing details, they will appear here.</td></tr>
+        <% } %>
+        <% tasks.forEach(t => { %>
+          <tr>
+            <td class="font-mono text-xs"><%= t.wf_id %></td>
+            <td class="text-xs"><%= t.request_type.replace(/_/g,' ') %></td>
+            <td><%= t.title %></td>
+            <td><span class="chip <%= statusClass(t.status) %>"><%= t.status.replace(/_/g,' ') %></span></td>
+            <td class="text-xs text-slate-600"><%= t.current_step %></td>
+            <td class="text-xs <%= t.sla_due && new Date(t.sla_due) < new Date() ? 'text-red-600 font-semibold' : 'text-slate-500' %>"><%= fmtDate(t.sla_due) %></td>
+            <td><a href="/portal/tasks/<%= t.id %>" class="text-brand-600 hover:underline text-sm">Complete →</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Secure banking</div>
+    <div class="text-sm text-slate-600">Your banking details are encrypted and visible only to authorized approvers.</div>
+  </div>
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Quick turnaround</div>
+    <div class="text-sm text-slate-600">Tasks submitted through this portal are typically approved within 2 business days.</div>
+  </div>
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Need help?</div>
+    <div class="text-sm text-slate-600">Use the comments panel on each task to message the master data team directly.</div>
+  </div>
+</div>
+
+</main></div>
+</body></html>

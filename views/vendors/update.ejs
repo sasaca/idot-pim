@@ -1,0 +1,117 @@
+<%- include('../partials/head', { pageTitle: 'Update ' + vendor.legal_name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Update: ' + vendor.legal_name, topSub: kind.toUpperCase() + ' request · requires approval' }) %>
+<main class="p-6 max-w-3xl">
+
+<form method="post" action="/vendors/<%= vendor.id %>/update/<%= kind %>" class="space-y-6">
+
+  <% if (kind === 'address') { %>
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">New address</h3></div>
+      <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Address type</span>
+          <select name="address_type" class="input"><option>PRIMARY</option><option>ORDER_FROM</option><option>REMIT_TO</option><option>MANUFACTURING</option></select></label>
+        <label class="field"><span class="label">Line 1 *</span><input name="line1" required class="input"></label>
+        <label class="field"><span class="label">Line 2</span><input name="line2" class="input"></label>
+        <label class="field"><span class="label">City *</span><input name="city" required class="input"></label>
+        <label class="field"><span class="label">State</span><input name="state" class="input"></label>
+        <label class="field"><span class="label">ZIP *</span><input name="zip" required class="input"></label>
+        <label class="field"><span class="label">Country *</span><input name="country" required class="input"></label>
+      </div>
+    </section>
+  <% } else if (kind === 'erp') { %>
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">ERP / classification update</h3></div>
+      <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">New ERP instance</span>
+          <select name="erp_instance" class="input">
+            <option value="">—</option>
+            <% (ref.ERP_INSTANCE || []).forEach(c => { %><option value="<%= c.code %>" <%= vendor.erp_instance===c.code ? 'selected':'' %>><%= c.label %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">New commodity code</span>
+          <select name="commodity_code" class="input">
+            <option value="">—</option>
+            <% (ref.COMMODITY_CODE || []).forEach(c => { %><option value="<%= c.code %>" <%= vendor.commodity_code===c.code ? 'selected':'' %>><%= c.code %> — <%= c.label %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Category L1</span>
+          <select name="category_l1" class="input">
+            <option value="">—</option>
+            <% (ref.CATEGORY || []).forEach(c => { %><option value="<%= c.code %>" <%= vendor.category_l1===c.code ? 'selected':'' %>><%= c.label %></option><% }) %>
+          </select></label>
+      </div>
+    </section>
+  <% } else if (kind === 'terms') { %>
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Payment terms update</h3></div>
+      <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">New AP terms *</span>
+          <select name="ap_payment_terms" required class="input">
+            <% (ref.PAYMENT_TERM || []).forEach(c => { %><option value="<%= c.code %>" <%= vendor.ap_payment_terms===c.code ? 'selected':'' %>><%= c.label %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Currency</span>
+          <select name="currency_code" class="input">
+            <% (ref.CURRENCY || []).forEach(c => { %><option value="<%= c.code %>" <%= vendor.currency_code===c.code ? 'selected':'' %>><%= c.code %> — <%= c.label %></option><% }) %>
+          </select></label>
+      </div>
+    </section>
+  <% } else if (kind === 'bank') { %>
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">New banking details</h3>
+        <span class="ml-auto text-xs text-amber-600">Requires supplier self-service confirmation</span></div>
+      <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Bank name *</span><input name="bank_name" required class="input"></label>
+        <label class="field"><span class="label">Account number *</span><input name="bank_account" required class="input"></label>
+        <label class="field"><span class="label">Transit / routing</span><input name="bank_transit" class="input"></label>
+        <label class="field"><span class="label">IBAN</span><input name="iban" class="input"></label>
+        <label class="field"><span class="label">SWIFT / BIC</span><input name="swift" class="input"></label>
+        <label class="field"><span class="label">Bank country</span><input name="bank_country" class="input"></label>
+        <label class="field"><span class="label">Currency</span><input name="currency_code" class="input"></label>
+        <label class="field"><span class="label">Payment instrument</span>
+          <select name="payment_instrument" class="input">
+            <% (ref.PAYMENT_INSTRUMENT || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+          </select></label>
+      </div>
+    </section>
+  <% } else if (kind === 'deactivate') { %>
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Deactivate vendor</h3></div>
+      <div class="card-body space-y-4">
+        <p class="text-sm text-slate-600">Deactivating will block new POs and transactions with this vendor. Any open POs must be closed first.</p>
+        <label class="field"><span class="label">Deactivation reason *</span>
+          <select name="deactivation_reason" required class="input">
+            <option value="">—</option>
+            <option>Duplicate vendor</option>
+            <option>No longer doing business</option>
+            <option>Compliance / risk concerns</option>
+            <option>Merger / acquisition</option>
+            <option>Out of business</option>
+            <option>Other</option>
+          </select></label>
+      </div>
+    </section>
+  <% } else if (kind === 'reactivate') { %>
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Reactivate vendor</h3></div>
+      <div class="card-body space-y-4">
+        <p class="text-sm text-slate-600">Reactivation re-opens this vendor for transactions and re-runs compliance screening.</p>
+      </div>
+    </section>
+  <% } %>
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Justification</h3></div>
+    <div class="card-body">
+      <label class="field"><span class="label">Reason / justification *</span>
+        <textarea name="reason" rows="3" required class="input" placeholder="Why is this change needed?"></textarea></label>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit for approval →</button>
+    <a href="/vendors/<%= vendor.id %>" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+</main></div>
+</body></html>

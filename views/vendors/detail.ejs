@@ -1,0 +1,127 @@
+<%- include('../partials/head', { pageTitle: vendor.legal_name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: vendor.legal_name, topSub: 'Vendor · ' + (vendor.erp_supplier_id || 'no ERP ID') + ' · ' + vendor.status }) %>
+<main class="p-6">
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Vendor profile</h3>
+        <span class="ml-auto chip <%= vendor.status==='ACTIVE' ? 'bg-emerald-100 text-emerald-700' : vendor.status==='BLOCKED' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700' %>"><%= vendor.status %></span></div>
+      <dl class="card-body grid grid-cols-2 gap-4 text-sm">
+        <div><dt class="text-xs text-slate-500">Legal name</dt><dd class="font-medium"><%= vendor.legal_name %></dd></div>
+        <div><dt class="text-xs text-slate-500">ERP supplier ID</dt><dd class="font-mono"><%= vendor.erp_supplier_id || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Tax ID</dt><dd><%= vendor.tax_id || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">DUNS</dt><dd><%= vendor.duns || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Category L1</dt><dd><%= vendor.category_l1 || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Commodity code</dt><dd><%= vendor.commodity_code || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Line of business</dt><dd><%= vendor.line_of_business || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">ERP instance</dt><dd><%= vendor.erp_instance || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Currency</dt><dd><%= vendor.currency_code || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">AP terms</dt><dd><%= vendor.ap_payment_terms || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Risk level</dt><dd><%= vendor.risk_level || 'LOW' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Created</dt><dd class="text-xs"><%= fmtDate(vendor.created_at) %></dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Addresses</h3>
+        <span class="ml-auto text-xs text-slate-400"><%= addresses.length %></span></div>
+      <table class="data">
+        <thead><tr><th>Type</th><th>Line 1</th><th>City</th><th>State</th><th>ZIP</th><th>Country</th></tr></thead>
+        <tbody>
+          <% if (!addresses.length) { %><tr><td colspan="6" class="text-center text-slate-500 p-4">No addresses on file.</td></tr><% } %>
+          <% addresses.forEach(a => { %>
+            <tr>
+              <td class="text-xs"><span class="chip bg-slate-100 text-slate-700"><%= a.address_type %></span></td>
+              <td><%= a.line1 %></td><td><%= a.city %></td><td><%= a.state %></td><td><%= a.zip %></td><td><%= a.country %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Bank accounts</h3>
+        <span class="ml-auto text-xs text-slate-400"><%= banks.length %></span></div>
+      <table class="data">
+        <thead><tr><th>Bank</th><th>Account</th><th>IBAN</th><th>SWIFT</th><th>Country</th><th>Currency</th><th>Payment</th></tr></thead>
+        <tbody>
+          <% if (!banks.length) { %><tr><td colspan="7" class="text-center text-slate-500 p-4">No banking on file.</td></tr><% } %>
+          <% banks.forEach(b => { %>
+            <tr>
+              <td><%= b.bank_name %></td>
+              <td class="font-mono text-xs"><%= b.bank_account ? '****' + b.bank_account.slice(-4) : '—' %></td>
+              <td class="font-mono text-xs"><%= b.iban || '—' %></td>
+              <td class="text-xs"><%= b.swift || '—' %></td>
+              <td><%= b.bank_country || '—' %></td>
+              <td><%= b.currency_code || '—' %></td>
+              <td class="text-xs"><%= b.payment_instrument || '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Request history</h3>
+        <span class="ml-auto text-xs text-slate-400"><%= history.length %></span></div>
+      <table class="data">
+        <thead><tr><th>WF ID</th><th>Type</th><th>Status</th><th>Created</th><th>Completed</th><th></th></tr></thead>
+        <tbody>
+          <% if (!history.length) { %><tr><td colspan="6" class="text-center text-slate-500 p-4">No history.</td></tr><% } %>
+          <% history.forEach(h => { %>
+            <tr>
+              <td class="font-mono text-xs"><%= h.wf_id %></td>
+              <td class="text-xs"><%= h.request_type.replace(/_/g,' ') %></td>
+              <td><span class="chip <%= statusClass(h.status) %>"><%= h.status.replace(/_/g,' ') %></span></td>
+              <td class="text-xs text-slate-500"><%= fmtDate(h.created_at) %></td>
+              <td class="text-xs text-slate-500"><%= fmtDate(h.completed_at) %></td>
+              <td><a href="/requests/<%= h.id %>" class="text-brand-600 hover:underline text-sm">View →</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Maintenance actions</h3></div>
+      <div class="card-body space-y-2">
+        <a href="/vendors/<%= vendor.id %>/update/address" class="btn btn-secondary w-full justify-center">Update address</a>
+        <a href="/vendors/<%= vendor.id %>/update/erp" class="btn btn-secondary w-full justify-center">Update ERP</a>
+        <a href="/vendors/<%= vendor.id %>/update/terms" class="btn btn-secondary w-full justify-center">Update payment terms</a>
+        <a href="/vendors/<%= vendor.id %>/update/bank" class="btn btn-secondary w-full justify-center">Update bank</a>
+        <% if (vendor.status === 'ACTIVE') { %>
+          <a href="/vendors/<%= vendor.id %>/update/deactivate" class="btn btn-warn w-full justify-center">Deactivate vendor</a>
+        <% } else if (vendor.status === 'INACTIVE' || vendor.status === 'BLOCKED') { %>
+          <a href="/vendors/<%= vendor.id %>/update/reactivate" class="btn btn-success w-full justify-center">Reactivate vendor</a>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Compliance flags</h3></div>
+      <div class="card-body text-sm space-y-1">
+        <% const flags = vendor.flags || {}; %>
+        <% Object.keys(flags).length === 0 ? `` : null %>
+        <% const flagList = [
+          ['1099_reportable','1099 reportable'],['conflict_of_interest','Conflict of interest'],
+          ['diverse','Diverse supplier'],['asn_ers','ASN/ERS'],['otis_site_work','Site work'],
+          ['physical_work','Physical work'],['importer_of_record','Importer of record'],['c_tpat','C-TPAT']
+        ]; %>
+        <% flagList.forEach(([k,label]) => { const v = flags[k]; %>
+          <div class="flex items-center justify-between py-1 border-b border-slate-100 text-xs">
+            <span class="text-slate-600"><%= label %></span>
+            <span class="<%= v==='Yes' ? 'text-emerald-700 font-semibold' : 'text-slate-400' %>"><%= v || '—' %></span>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+  </aside>
+</div>
+
+</main></div>
+</body></html>

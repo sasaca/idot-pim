@@ -1,0 +1,55 @@
+<%- include('../partials/head', { pageTitle: 'Requests' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Requests', topSub: 'All workflow cases across Vendor, Customer, and Product master' }) %>
+<main class="p-6">
+
+<form method="get" class="flex flex-wrap gap-2 mb-4">
+  <input type="text" name="q" placeholder="Search WF ID, title…" value="<%= query.q || '' %>" class="input max-w-xs">
+  <select name="domain" class="input max-w-[160px]">
+    <option value="">All domains</option>
+    <% ['VENDOR','CUSTOMER','PRODUCT'].forEach(d => { %>
+      <option value="<%= d %>" <%= query.domain===d ? 'selected':'' %>><%= d %></option>
+    <% }) %>
+  </select>
+  <select name="status" class="input max-w-[180px]">
+    <option value="">All statuses</option>
+    <% ['NEW','WIP','PENDING_APPROVAL','AWAITING_INFO','ON_HOLD','COMPLETED','REJECTED','CANCELLED'].forEach(s => { %>
+      <option value="<%= s %>" <%= query.status===s ? 'selected':'' %>><%= s.replace(/_/g,' ') %></option>
+    <% }) %>
+  </select>
+  <label class="inline-flex items-center gap-2 px-3 py-2 text-sm">
+    <input type="checkbox" name="mine" value="1" <%= query.mine==='1' ? 'checked' : '' %>> My items
+  </label>
+  <button class="btn btn-primary">Filter</button>
+  <a href="/requests" class="btn btn-ghost">Reset</a>
+</form>
+
+<div class="card">
+  <div class="overflow-x-auto">
+    <table class="data">
+      <thead><tr><th>WF ID</th><th>Domain</th><th>Type</th><th>Title</th><th>Status</th><th>Current Step</th><th>Assignee Role</th><th>SLA Due</th><th></th></tr></thead>
+      <tbody>
+        <% if (!rows.length) { %>
+          <tr><td colspan="9" class="text-center text-slate-500 p-10">No requests match these filters.</td></tr>
+        <% } %>
+        <% rows.forEach(r => { %>
+          <tr>
+            <td class="font-mono text-xs"><%= r.wf_id %></td>
+            <td><span class="chip bg-slate-100 text-slate-700"><%= r.domain %></span></td>
+            <td class="text-xs text-slate-600"><%= r.request_type.replace(/_/g,' ') %></td>
+            <td><%= r.title %></td>
+            <td><span class="chip <%= statusClass(r.status) %>"><%= r.status.replace(/_/g,' ') %></span></td>
+            <td class="text-xs text-slate-500"><%= r.current_step %></td>
+            <td class="text-xs"><%= (r.current_assignee_role || '').replace(/_/g,' ') %></td>
+            <td class="text-xs <%= r.sla_due && new Date(r.sla_due) < new Date() && !['COMPLETED','REJECTED'].includes(r.status) ? 'text-red-600 font-semibold' : 'text-slate-500' %>"><%= fmtDate(r.sla_due) %></td>
+            <td><a href="/requests/<%= r.id %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main></div>
+</body></html>

@@ -1,0 +1,99 @@
+<%- include('../partials/head', { pageTitle: 'Reports' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Reports & Analytics', topSub: 'Operational KPIs across master data workflows' }) %>
+<main class="p-6">
+
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Requests by domain</h3></div>
+    <div class="card-body"><canvas id="c1"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Requests by status</h3></div>
+    <div class="card-body"><canvas id="c2"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Open tasks by assignee role</h3></div>
+    <div class="card-body"><canvas id="c3"></canvas></div>
+  </div>
+</section>
+
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Average cycle time by domain</h3></div>
+    <table class="data">
+      <thead><tr><th>Domain</th><th>Avg. cycle time (hrs)</th></tr></thead>
+      <tbody>
+        <% if (!avgTime.length) { %><tr><td colspan="2" class="text-center text-slate-500 p-4">No completed requests yet.</td></tr><% } %>
+        <% avgTime.forEach(a => { %>
+          <tr><td><%= a.domain %></td><td class="font-mono"><%= a.avg_hrs ? a.avg_hrs.toFixed(1) : '—' %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Top vendor countries</h3></div>
+    <table class="data">
+      <thead><tr><th>Country</th><th>Vendors</th></tr></thead>
+      <tbody>
+        <% if (!topVendorCountries.length) { %><tr><td colspan="2" class="text-center text-slate-500 p-4">No data.</td></tr><% } %>
+        <% topVendorCountries.forEach(c => { %>
+          <tr><td><%= c.c %></td><td class="font-mono"><%= c.n %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card mb-6">
+  <div class="card-header"><h3 class="font-semibold">Requests by type</h3></div>
+  <table class="data">
+    <thead><tr><th>Request type</th><th>Count</th></tr></thead>
+    <tbody>
+      <% byRequestType.forEach(r => { %>
+        <tr><td class="text-sm"><%= r.request_type.replace(/_/g,' ') %></td><td class="font-mono"><%= r.n %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <div class="card-header"><h3 class="font-semibold text-red-600">SLA breaches</h3>
+    <span class="ml-auto text-xs text-slate-400"><%= slaBreaches.length %></span></div>
+  <table class="data">
+    <thead><tr><th>WF ID</th><th>Domain</th><th>Title</th><th>Step</th><th>Assignee</th><th>Overdue since</th><th></th></tr></thead>
+    <tbody>
+      <% if (!slaBreaches.length) { %><tr><td colspan="7" class="text-center text-emerald-600 p-6">No SLA breaches. 🎉</td></tr><% } %>
+      <% slaBreaches.forEach(s => { %>
+        <tr>
+          <td class="font-mono text-xs"><%= s.wf_id %></td>
+          <td class="text-xs"><%= s.domain %></td>
+          <td><%= s.title %></td>
+          <td class="text-xs"><%= s.current_step %></td>
+          <td class="text-xs"><%= (s.current_assignee_role || '').replace(/_/g,' ') %></td>
+          <td class="text-xs text-red-600 font-semibold"><%= fmtDate(s.sla_due) %></td>
+          <td><a href="/requests/<%= s.id %>" class="text-brand-600 hover:underline text-sm">View →</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+
+</main></div>
+
+<script>
+  const byDomain = <%- JSON.stringify(byDomain) %>;
+  const byStatus = <%- JSON.stringify(byStatus) %>;
+  const byAssignee = <%- JSON.stringify(byAssignee) %>;
+  new Chart(document.getElementById('c1'), { type:'doughnut',
+    data: { labels: byDomain.map(x=>x.domain), datasets:[{ data: byDomain.map(x=>x.n), backgroundColor:['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444'] }] },
+    options: { plugins:{ legend:{ position:'bottom' } } } });
+  new Chart(document.getElementById('c2'), { type:'bar',
+    data: { labels: byStatus.map(x=>x.status), datasets:[{ data: byStatus.map(x=>x.n), backgroundColor:'#3b82f6' }] },
+    options: { plugins:{ legend:{ display:false } } } });
+  new Chart(document.getElementById('c3'), { type:'bar',
+    data: { labels: byAssignee.map(x=>(x.role||'').replace(/_/g,' ')), datasets:[{ data: byAssignee.map(x=>x.n), backgroundColor:'#10b981' }] },
+    options: { indexAxis:'y', plugins:{ legend:{ display:false } } } });
+</script>
+</body></html>

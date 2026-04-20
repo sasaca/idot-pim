@@ -1,0 +1,48 @@
+<%- include('../partials/head', { pageTitle: 'Reactivate ' + customer.legal_name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Reactivate customer: ' + customer.legal_name, topSub: 'Remove block(s) and restore normal transactional activity.' }) %>
+<main class="p-6 max-w-3xl">
+
+<form method="post" action="/customers/<%= customer.id %>/reactivate" class="space-y-6">
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Customer being reactivated</h3></div>
+    <dl class="card-body grid grid-cols-2 gap-4 text-sm">
+      <div><dt class="text-xs text-slate-500">Legal name</dt><dd class="font-medium"><%= customer.legal_name %></dd></div>
+      <div><dt class="text-xs text-slate-500">ERP ID</dt><dd class="font-mono"><%= customer.erp_customer_id || '—' %></dd></div>
+      <div><dt class="text-xs text-slate-500">Country</dt><dd><%= customer.country || '—' %></dd></div>
+      <div><dt class="text-xs text-slate-500">Status</dt><dd><%= customer.status %></dd></div>
+    </dl>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Reactivation details</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Mode *</span>
+        <select name="reactivation_mode" required class="input">
+          <option value="TEMPORAL">Temporal — one-time order only</option>
+          <option value="PERMANENT">Permanent — restore standing</option>
+        </select></label>
+      <label class="field"><span class="label">Effective date *</span>
+        <input name="effective_date" type="date" required class="input"></label>
+      <label class="field md:col-span-2"><span class="label">Justification *</span>
+        <textarea name="reason" rows="3" required class="input"></textarea></label>
+      <label class="field md:col-span-2">
+        <span class="label">Additional supporting documents provided?</span>
+        <select name="docs_provided" class="input">
+          <option value="NO">No — existing documentation still valid</option>
+          <option value="YES">Yes — see attachments / comments</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit reactivation →</button>
+    <a href="/customers/<%= customer.id %>" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+</main></div>
+</body></html>

@@ -1,0 +1,78 @@
+<%- include('../partials/head', { pageTitle: customer.legal_name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: customer.legal_name, topSub: 'Customer · ' + (customer.erp_customer_id || 'no ERP ID') + ' · ' + customer.status }) %>
+<main class="p-6">
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Customer profile</h3>
+        <span class="ml-auto chip <%= customer.status==='ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700' %>"><%= customer.status %></span></div>
+      <dl class="card-body grid grid-cols-2 gap-4 text-sm">
+        <div><dt class="text-xs text-slate-500">Legal name</dt><dd class="font-medium"><%= customer.legal_name %></dd></div>
+        <div><dt class="text-xs text-slate-500">ERP customer ID</dt><dd class="font-mono"><%= customer.erp_customer_id || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Tax ID</dt><dd><%= customer.tax_id || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Customer type</dt><dd><%= customer.customer_type || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Sales org</dt><dd><%= customer.sales_org || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Sales region</dt><dd><%= customer.sales_region || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Company code</dt><dd><%= customer.company_code || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Country</dt><dd><%= customer.country || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Currency</dt><dd><%= customer.currency_code || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Payment terms</dt><dd><%= customer.payment_terms || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Credit limit</dt><dd><%= customer.credit_limit ? Number(customer.credit_limit).toLocaleString() : '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Created</dt><dd class="text-xs"><%= fmtDate(customer.created_at) %></dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Request history</h3>
+        <span class="ml-auto text-xs text-slate-400"><%= history.length %></span></div>
+      <table class="data">
+        <thead><tr><th>WF ID</th><th>Type</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+          <% if (!history.length) { %><tr><td colspan="5" class="text-center text-slate-500 p-4">No history.</td></tr><% } %>
+          <% history.forEach(h => { %>
+            <tr>
+              <td class="font-mono text-xs"><%= h.wf_id %></td>
+              <td class="text-xs"><%= h.request_type.replace(/_/g,' ') %></td>
+              <td><span class="chip <%= statusClass(h.status) %>"><%= h.status.replace(/_/g,' ') %></span></td>
+              <td class="text-xs text-slate-500"><%= fmtDate(h.created_at) %></td>
+              <td><a href="/requests/<%= h.id %>" class="text-brand-600 hover:underline text-sm">View →</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Maintenance actions</h3></div>
+      <div class="card-body space-y-2">
+        <a href="/customers/<%= customer.id %>/modify" class="btn btn-primary w-full justify-center">Modify customer</a>
+        <a href="/customers/<%= customer.id %>/update/company-code" class="btn btn-secondary w-full justify-center">Extend company code</a>
+        <a href="/customers/<%= customer.id %>/update/sales-area" class="btn btn-secondary w-full justify-center">Extend sales area</a>
+        <% if (customer.status === 'ACTIVE') { %>
+          <a href="/customers/<%= customer.id %>/block" class="btn btn-warn w-full justify-center">Block customer</a>
+        <% } else { %>
+          <a href="/customers/<%= customer.id %>/reactivate" class="btn btn-success w-full justify-center">Reactivate customer</a>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Partner profile</h3></div>
+      <dl class="card-body text-sm space-y-1">
+        <div class="flex gap-2"><dt class="text-slate-500 w-28">Partner fn.</dt><dd><%= customer.partner_function || 'SOLD_TO' %></dd></div>
+        <div class="flex gap-2"><dt class="text-slate-500 w-28">Cust. group</dt><dd><%= customer.customer_group || '—' %></dd></div>
+        <div class="flex gap-2"><dt class="text-slate-500 w-28">Market</dt><dd><%= customer.market || '—' %></dd></div>
+        <div class="flex gap-2"><dt class="text-slate-500 w-28">Quality</dt><dd><%= customer.quality_class || '—' %></dd></div>
+        <div class="flex gap-2"><dt class="text-slate-500 w-28">GxP / SOX</dt><dd><%= customer.gxp_flag?'GxP':'—' %> / <%= customer.sox_flag?'SOX':'—' %></dd></div>
+      </dl>
+    </section>
+  </aside>
+</div>
+
+</main></div>
+</body></html>

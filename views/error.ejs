@@ -1,0 +1,13 @@
+<%- include('partials/head', { pageTitle: 'Error' }) %>
+<%- include('partials/nav') %>
+<div class="<%= currentUser ? 'main-content' : '' %>">
+  <main class="p-10 max-w-2xl mx-auto">
+    <div class="card card-body text-center">
+      <div class="text-5xl mb-3">⚠</div>
+      <h1 class="text-xl font-bold mb-2">Something went wrong</h1>
+      <p class="text-slate-600"><%= error && error.message ? error.message : 'Unexpected error' %></p>
+      <a href="/dashboard" class="btn btn-primary mt-4 inline-flex">← Back to dashboard</a>
+    </div>
+  </main>
+</div>
+</body></html>

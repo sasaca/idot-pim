@@ -1,0 +1,46 @@
+<%- include('../partials/head', { pageTitle: 'Products' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Product Master', topSub: 'All product / material master records' }) %>
+<main class="p-6">
+
+<div class="flex items-start gap-2 mb-4 flex-wrap">
+  <form method="get" class="flex gap-2 flex-1">
+    <input name="q" placeholder="Search name, SKU, description…" value="<%= typeof query!=='undefined' && query.q || '' %>" class="input max-w-md">
+    <select name="status" class="input max-w-[160px]">
+      <option value="">All lifecycle</option>
+      <% ['NEW','ACTIVE','PHASE_OUT','OBSOLETE','BLOCKED'].forEach(s => { %>
+        <option value="<%= s %>" <%= typeof query!=='undefined' && query.status===s ? 'selected':'' %>><%= s.replace('_',' ') %></option>
+      <% }) %>
+    </select>
+    <button class="btn btn-primary">Search</button>
+  </form>
+  <a href="/products/new/create" class="btn btn-primary">+ Create Product</a>
+</div>
+
+<div class="card">
+  <div class="overflow-x-auto">
+    <table class="data">
+      <thead><tr><th>Name</th><th>SKU</th><th>Type</th><th>Material group</th><th>UoM</th><th>Lifecycle</th><th></th></tr></thead>
+      <tbody>
+        <% if (!products.length) { %>
+          <tr><td colspan="7" class="text-center text-slate-500 p-10">No products. <a href="/products/new/create" class="text-brand-600 hover:underline">Create one →</a></td></tr>
+        <% } %>
+        <% products.forEach(p => { %>
+          <tr>
+            <td class="font-medium"><%= p.name %></td>
+            <td class="font-mono text-xs"><%= p.sku || '—' %></td>
+            <td class="text-xs"><%= p.product_type || '—' %></td>
+            <td class="text-xs"><%= p.material_group || '—' %></td>
+            <td class="text-xs"><%= p.base_uom || '—' %></td>
+            <td><span class="chip <%= p.lifecycle_status==='ACTIVE' ? 'bg-emerald-100 text-emerald-700' : p.lifecycle_status==='OBSOLETE' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700' %>"><%= p.lifecycle_status %></span></td>
+            <td><a href="/products/<%= p.id %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main></div>
+</body></html>

@@ -1,0 +1,55 @@
+<%- include('../partials/head', { pageTitle: 'Admin' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Administration', topSub: 'Reference data and user management' }) %>
+<main class="p-6">
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="card lg:col-span-2">
+    <div class="card-header"><h3 class="font-semibold">Reference data categories</h3></div>
+    <table class="data">
+      <thead><tr><th>Category</th><th>Items</th><th></th></tr></thead>
+      <tbody>
+        <% categories.forEach(c => { %>
+          <tr>
+            <td class="font-medium"><%= c.category %></td>
+            <td class="font-mono text-xs"><%= c.n %></td>
+            <td><a href="/admin/reference/<%= c.category %>" class="text-brand-600 hover:underline text-sm">Manage →</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Platform info</h3></div>
+    <dl class="card-body text-sm space-y-2">
+      <div><dt class="text-xs text-slate-500">Product</dt><dd class="font-medium">iDOT PIM</dd></div>
+      <div><dt class="text-xs text-slate-500">Version</dt><dd class="font-mono">1.0.0</dd></div>
+      <div><dt class="text-xs text-slate-500">Environment</dt><dd>Demo / On-prem</dd></div>
+      <div><dt class="text-xs text-slate-500">Database</dt><dd>SQLite (local)</dd></div>
+    </dl>
+  </div>
+</div>
+
+<div class="card mt-6">
+  <div class="card-header"><h3 class="font-semibold">Users</h3>
+    <span class="ml-auto text-xs text-slate-400"><%= users.length %></span></div>
+  <table class="data">
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Region</th><th>Status</th></tr></thead>
+    <tbody>
+      <% users.forEach(u => { %>
+        <tr>
+          <td><%= u.name %></td>
+          <td class="text-xs"><%= u.email %></td>
+          <td><span class="chip bg-slate-100 text-slate-700"><%= u.role.replace(/_/g,' ') %></span></td>
+          <td class="text-xs"><%= u.region || '—' %></td>
+          <td><span class="chip <%= u.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700' %>"><%= u.active ? 'Active' : 'Inactive' %></span></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+</main></div>
+</body></html>

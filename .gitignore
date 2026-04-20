@@ -1,0 +1,9 @@
+.env
+.DS_Store
+node_modules/
+db/idot.sqlite
+db/idot.sqlite-shm
+db/idot.sqlite-wal
+uploads_store/*
+!uploads_store/.gitkeep
+.claude/

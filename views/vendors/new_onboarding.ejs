@@ -1,0 +1,817 @@
+<%
+/*
+  views/vendors/new_onboarding.ejs
+  ---------------------------------------------------------------------------
+  Initial Vendor Onboarding form — tabbed, 10 sections.
+
+  Tabs:
+    1. Document Upload
+    2. General Information  (supplier name, address, primary contact)
+    3. Requestor Information
+    4. Vendor Category
+    5. Duplicate Check
+    6. Vendor Additional Details
+    7. Compliance Questions
+    8. Sustainability Questions
+    9. CSR Score
+   10. Scope of Work
+
+  Notes for the developer filling this in later:
+   - Every <select> currently has a minimal option list. Swap in real lookup
+     values from your reference tables once known.
+   - All inputs share one <form>, one submit. Tabs are just JS-swapped panes;
+     hidden panes still post their values on submit.
+   - Required fields are flagged with a red asterisk AND `required` attribute.
+   - The document upload partial and the address autocomplete partial are
+     pulled in exactly as before — they already know how to populate fields
+     here by name.
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'Vendor Onboarding Request' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Vendor Onboarding Request', topSub: 'Submit a full vendor onboarding request. Saves as draft or advances to Supply Chain review.' }) %>
+
+<style>
+  /* Tab navigation — left rail. */
+  .vob-shell { display: block; }
+
+  /* Folder tabs — sit flush against the top of the card below, single row. */
+  .vob-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 0 6px;
+    margin: 0 0 -1px 0;          /* overlap the card's top border by 1px */
+    position: relative;
+    z-index: 2;
+    overflow-x: auto;            /* scroll only if viewport is very narrow */
+  }
+  .vob-nav h3 { display: none; }
+  .vob-nav button {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; margin: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px 8px 0 0;
+    background: #f3f4f6; color: #4b5563;
+    font-size: 13px; cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+  }
+  .vob-nav button:hover { background: #e5e7eb; }
+  .vob-nav button.active {
+    background: #fff; color: #111827; font-weight: 600;
+    border-color: #e5e7eb;
+    border-bottom-color: #fff;   /* mask the card's top border under the tab */
+    z-index: 3;
+  }
+  .vob-nav .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 4px;
+    background: #e5e7eb; color: #374151; font-size: 12px; font-weight: 600;
+  }
+  .vob-nav button.active .num { background: #1e3a8a; color: #fff; }
+  .vob-nav .vob-count {
+    display: inline-block; padding: 1px 7px; font-size: 11px;
+    border-radius: 9999px; background: #d1d5db; color: #374151;
+    font-weight: 600;
+  }
+  .vob-nav button.active .vob-count { background: #e5e7eb; color: #111827; }
+  /* Done — green whenever a tab's required fields are all filled. */
+  .vob-nav button.done {
+    background: #10b981; color: #fff; border-color: #10b981;
+  }
+  .vob-nav button.done .num,
+  .vob-nav button.done .vob-count {
+    background: rgba(255,255,255,0.35); color: #fff;
+  }
+  .vob-nav button.done.active {
+    border-bottom-color: #10b981;
+  }
+
+  /* Panels */
+  .vob-card {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 0 0 8px 8px;   /* flat top — folder tabs sit on it */
+    padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    position: relative; z-index: 1;
+  }
+  .vob-card h2 {
+    font-size: 18px; font-weight: 600; color: #111827;
+    margin: 0 0 4px;
+  }
+  .vob-card .indicates-required {
+    color: #dc2626; font-size: 12px; margin-bottom: 14px;
+  }
+  .vob-card .section-title {
+    font-size: 15px; font-weight: 600; color: #111827;
+    border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin: 18px 0 12px;
+  }
+
+  .vob-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px;
+  }
+  @media (max-width: 700px) { .vob-grid { grid-template-columns: 1fr; } }
+
+  .vob-field label {
+    display: block; font-size: 13px; font-weight: 500; color: #374151;
+    margin-bottom: 4px;
+  }
+  .vob-field label .req { color: #dc2626; margin-right: 3px; }
+
+  .vob-field input[type=text],
+  .vob-field input[type=email],
+  .vob-field input[type=tel],
+  .vob-field input[type=date],
+  .vob-field input[type=number],
+  .vob-field select,
+  .vob-field textarea {
+    width: 100%; padding: 8px 10px; font-size: 14px;
+    border: 1px solid #d1d5db; border-radius: 6px; background: #fff;
+    box-sizing: border-box;
+  }
+  .vob-field input:focus, .vob-field select:focus, .vob-field textarea:focus {
+    outline: 2px solid #2563eb; outline-offset: -1px; border-color: #2563eb;
+  }
+  .vob-field[data-readonly] input { background: #f3f4f6; color: #6b7280; }
+  .vob-field textarea { min-height: 80px; resize: vertical; }
+
+  .vob-field.full { grid-column: 1 / -1; }
+
+  /* Inline radio / checkbox groups */
+  .radio-group, .check-group {
+    display: flex; flex-wrap: wrap; gap: 10px 16px;
+    padding: 6px 0 2px;
+  }
+  .radio-group label, .check-group label {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    font-size: 14px; font-weight: 400; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 999px;
+    cursor: pointer; background: #fff;
+    margin: 0; user-select: none;
+  }
+  .radio-group label:hover, .check-group label:hover {
+    background: #f3f4f6; border-color: #9ca3af;
+  }
+  .radio-group input[type=radio], .check-group input[type=checkbox] {
+    margin: 0; accent-color: #1e3a8a;
+  }
+  /* Highlight the label when its input is checked (pure-CSS pill effect) */
+  .radio-group label:has(input:checked),
+  .check-group label:has(input:checked) {
+    background: #1e3a8a; color: #fff; border-color: #1e3a8a;
+  }
+  .radio-group label:has(input:checked) input,
+  .check-group label:has(input:checked) input {
+    accent-color: #fff;
+  }
+
+  /* Standalone checkbox (single trigger, e.g. "Perform Duplicate Check") */
+  .vob-checkbox {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 14px; color: #374151;
+  }
+
+  /* Bottom nav */
+  .vob-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb;
+  }
+  .vob-footer .right { display: flex; gap: 8px; }
+  .btn {
+    padding: 8px 16px; font-size: 14px; font-weight: 500;
+    border-radius: 6px; border: none; cursor: pointer;
+  }
+  .btn-default { background: #fff; border: 1px solid #d1d5db; color: #374151; }
+  .btn-default:hover { background: #f9fafb; }
+  .btn-primary { background: #1e3a8a; color: #fff; }
+  .btn-primary:hover { background: #1e40af; }
+  .btn-ghost { background: transparent; color: #374151; }
+
+  .vob-pane { display: none; }
+  .vob-pane.active { display: block; }
+
+  /* Duplicate-check results table */
+  .dup-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    margin-top: 4px; border: 1px solid #e5e7eb; border-radius: 6px;
+    overflow: hidden;
+  }
+  .dup-table th, .dup-table td {
+    padding: 8px 10px; text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+  }
+  .dup-table th {
+    background: #f9fafb; font-weight: 600; color: #374151; font-size: 12px;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .dup-table tr:last-child td { border-bottom: none; }
+  .dup-table tr.hit-high { background: #fef2f2; }
+  .dup-table tr.hit-med  { background: #fff7ed; }
+  .dup-table .empty { color: #9ca3af; text-align: center; padding: 18px; }
+  .dup-flag {
+    display: inline-block; font-size: 10px; padding: 2px 7px;
+    border-radius: 9999px; background: #dc2626; color: #fff; font-weight: 700;
+    margin-right: 4px; letter-spacing: .03em;
+  }
+</style>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4">
+    <h1 class="text-2xl font-semibold text-gray-900">Vendor Onboarding Request</h1>
+    <p class="text-sm text-gray-500 mt-1">
+      Complete all required sections. You can save progress at any time.
+    </p>
+  </div>
+
+  <div class="vob-shell">
+    <!-- ==================== Folder tabs ==================== -->
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="docs"><span class="num">1</span><span class="vob-label">Document Upload</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="requestor"><span class="num">2</span><span class="vob-label">Requestor Information</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="general"><span class="num">3</span><span class="vob-label">General Information</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="additional"><span class="num">4</span><span class="vob-label">Additional Details</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="compliance"><span class="num">5</span><span class="vob-label">Compliance Questions</span><span class="vob-count"></span></button>
+    </nav>
+
+    <!-- ==================== Main form ==================== -->
+    <form id="vob-form" method="post" action="/vendors/new/onboarding"
+          enctype="multipart/form-data">
+
+      <!-- ============================================= 1) Document Upload -->
+      <section class="vob-pane active" data-pane="docs">
+        <div class="vob-card">
+          <h2>Document Upload</h2>
+          <p class="text-sm text-gray-500 mb-3">
+            Drop a supplier document (tax form, W-9, business license, etc.) —
+            Claude will read it and pre-fill fields in the tabs below.
+          </p>
+          <%- include('../partials/doc_upload', {
+            docDomain: 'VENDOR_ONBOARDING',
+            docTitle: 'Document Upload — Vendor Onboarding'
+          }) %>
+        </div>
+      </section>
+
+      <!-- ============================================= 2) General Information -->
+      <section class="vob-pane" data-pane="general">
+        <div class="vob-card">
+          <h2>General Information</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <div class="section-title">Supplier identity</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Supplier Legal Name</label>
+              <input type="text" name="legal_name" required>
+            </div>
+            <div class="vob-field">
+              <label>Secondary / Alpha Name</label>
+              <input type="text" name="secondary_alpha_name">
+            </div>
+          </div>
+
+          <div class="section-title">Address</div>
+          <div class="vob-grid">
+            <div class="vob-field full">
+              <label><span class="req">*</span>Address Line 1</label>
+              <input type="text" name="addr_line1" required>
+            </div>
+            <div class="vob-field"><label>Address Line 2</label><input type="text" name="addr_line2"></div>
+            <div class="vob-field"><label>Address Line 3</label><input type="text" name="addr_line3"></div>
+            <div class="vob-field"><label>Address Line 4</label><input type="text" name="addr_line4"></div>
+            <div class="vob-field">
+              <label><span class="req">*</span>City</label>
+              <input type="text" name="addr_city" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>State Code</label>
+              <select name="addr_state" required>
+                <option value="">-- Select --</option>
+                <option value="00">00 - Blank</option>
+                <!-- TODO: populate state list -->
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>ZIP Code</label>
+              <input type="text" name="addr_zip" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Country</label>
+              <select name="addr_country" required>
+                <option value="">-- Select --</option>
+                <option>United States</option>
+                <option>Canada</option>
+                <option>Mexico</option>
+                <option>United Kingdom</option>
+                <option>Germany</option>
+                <option>France</option>
+                <option>India</option>
+                <option>China</option>
+                <option>Japan</option>
+                <option>Brazil</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label>County Code</label>
+              <select name="county_code"><option value="">-- None --</option></select>
+            </div>
+          </div>
+
+          <div class="section-title">Primary contact</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Supplier Primary Contact Name</label>
+              <input type="text" name="primary_contact_name" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Supplier Contact Email</label>
+              <input type="email" name="primary_contact_email" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Supplier Contact Phone Area Code</label>
+              <input type="text" name="primary_contact_phone_area" placeholder="+1" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Supplier Contact Phone</label>
+              <input type="tel" name="primary_contact_phone" required>
+            </div>
+          </div>
+
+          <div class="section-title">Vendor Category</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Category Level 1</label>
+              <select name="category_l1" required>
+                <option value="">-- Select --</option>
+                <option>DIRECT</option>
+                <option>INDIRECT</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Category Level 2</label>
+              <select name="category_l2" required><option value="">-- Select --</option></select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Category Level 3</label>
+              <select name="category_l3" required><option value="">-- Select --</option></select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Category Level 4</label>
+              <select name="category_l4" required><option value="">-- Select --</option></select>
+            </div>
+            <div class="vob-field" data-readonly>
+              <label>Commodity Code</label>
+              <input type="text" name="commodity_code" readonly>
+            </div>
+            <div class="vob-field">
+              <label>Supplier Nature</label>
+              <select name="supplier_nature"><option value="">-- Select --</option></select>
+            </div>
+          </div>
+
+          <div class="section-title">Supplier Identifiers</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label>Tax ID / EIN</label>
+              <input type="text" name="tax_id" placeholder="XX-XXXXXXX">
+            </div>
+            <div class="vob-field">
+              <label>DUNS #</label>
+              <input type="text" name="duns" placeholder="9-digit DUNS">
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>ERP Instance</label>
+              <select name="erp_instance" required>
+                <option value="">-- Select --</option>
+                <option>JDE:EUR</option>
+                <option>JDE:NA</option>
+                <option>SAP:EMEA</option>
+                <option>SAP:APAC</option>
+                <option>SAP:NA</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">Duplicate Check</div>
+          <p class="text-sm text-gray-500 mb-2">
+            Compare the identity fields above against existing suppliers in the ERP master.
+            Tax&nbsp;ID and DUNS&nbsp;# require an exact match; Name, Address, and ERP Instance
+            are fuzzy-matched with a similarity score.
+          </p>
+          <div class="flex items-center gap-3 mb-3" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <button type="button" id="erp-dup-check-btn" class="btn btn-default">Run Duplicate Check</button>
+            <span id="erp-dup-check-status" style="font-size:12px;color:#6b7280;"></span>
+          </div>
+          <table class="dup-table">
+            <thead>
+              <tr>
+                <th>Legal Name</th>
+                <th>Address</th>
+                <th>Tax ID</th>
+                <th>DUNS #</th>
+                <th>ERP Instance</th>
+                <th>Match %</th>
+                <th>Flags</th>
+              </tr>
+            </thead>
+            <tbody id="erp-dup-results">
+              <tr><td colspan="7" class="empty">No check run yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================= 3) Requestor Information -->
+      <section class="vob-pane" data-pane="requestor">
+        <div class="vob-card">
+          <h2>Requestor Information</h2>
+          <div class="indicates-required">* Indicates required</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Requestor's Name</label>
+              <input type="text" name="requestor_name" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Requestor's Email</label>
+              <input type="email" name="requestor_email" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Requestor's Department</label>
+              <input type="text" name="requestor_department" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Requestor's Legal Entity</label>
+              <input type="text" name="requestor_legal_entity" required>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Requestor's Legal Entity Region</label>
+              <select name="requestor_legal_entity_region" required>
+                <option value="">-- Select --</option>
+                <option>North America</option>
+                <option>EMEA</option>
+                <option>APAC</option>
+                <option>LATAM</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Requestor's Subregion</label>
+              <select name="requestor_subregion" required>
+                <option value="">-- Select --</option>
+                <option>North America</option>
+                <option>South America</option>
+                <option>Western Europe</option>
+                <option>Eastern Europe</option>
+                <option>MEA</option>
+                <option>APAC</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================= 4) Additional Details -->
+      <section class="vob-pane" data-pane="additional">
+        <div class="vob-card">
+          <h2>Vendor Additional Details</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <div class="section-title">Business configuration</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Line of Business</label>
+              <select name="line_of_business" required>
+                <option value="">-- Select --</option>
+                <option>Global</option><option>Regional</option><option>Local</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Company Code</label>
+              <select name="company_code" required><option value="">-- Select --</option></select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Business Unit</label>
+              <select name="business_unit" required><option value="">-- Select --</option></select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Search Type</label>
+              <div class="radio-group">
+                <label><input type="radio" name="search_type" value="Vendor" required>Vendor</label>
+                <label><input type="radio" name="search_type" value="Customer">Customer</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Currency Code</label>
+              <select name="currency_code" required>
+                <option value="">-- Select --</option>
+                <option>USD</option><option>EUR</option><option>GBP</option>
+                <option>INR</option><option>CNY</option><option>JPY</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>AP Payment Terms</label>
+              <select name="ap_payment_terms" required>
+                <option value="">-- Select --</option>
+                <option>Net 30 Days</option><option>Net 45 Days</option>
+                <option>Net 60 Days</option><option>Due on Receipt</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>High Level Classification</label>
+              <select name="high_level_classification" required>
+                <option value="">-- Select --</option>
+                <option>1 - INDIVIDUAL</option><option>2 - CORPORATION</option>
+                <option>3 - PARTNERSHIP</option><option>4 - LLC</option>
+                <option>5 - GOVERNMENT</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>E Invoice Flag</label>
+              <div class="radio-group">
+                <label><input type="radio" name="e_invoice_flag" value="Yes" required>Yes</label>
+                <label><input type="radio" name="e_invoice_flag" value="No">No</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Parent / customer references</div>
+          <div class="vob-grid">
+            <div class="vob-field"><label>Parent Number</label><input type="text" name="parent_number"></div>
+            <div class="vob-field"><label>Parent DUNS #</label><input type="text" name="parent_duns"></div>
+            <div class="vob-field"><label>Customer Account Number</label><input type="text" name="customer_account_number"></div>
+            <div class="vob-field"><label>E Invoice Vendor Onboarding Date</label><input type="date" name="e_invoice_onboarding_date"></div>
+          </div>
+
+          <div class="section-title">Scope of Work</div>
+          <p class="text-sm text-gray-500 mb-2">
+            Please specify the scope of work that the vendor will be responsible for upon onboarding.
+          </p>
+          <div class="vob-field full">
+            <textarea name="scope_of_work" rows="6"
+                      placeholder="e.g., Vendor will be providing travel agency services for the India Team in Jaipur"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================= 7) Compliance Questions -->
+      <section class="vob-pane" data-pane="compliance">
+        <div class="vob-card">
+          <h2>Compliance Questions</h2>
+          <div class="indicates-required">* Indicates required</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>1099 Reportable</label>
+              <select name="f_1099" required>
+                <option value="">-- Select --</option>
+                <option>A1 - Rents</option><option>A2 - Services</option>
+                <option>A3 - Other Income</option><option>N/A</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Does This Supplier Present a Conflict of Interest?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="conflict_of_interest" value="Yes" required>Yes</label>
+                <label><input type="radio" name="conflict_of_interest" value="No">No</label>
+              </div>
+            </div>
+            <div class="vob-field full">
+              <label>Diverse / Small Business Classification <span class="text-xs text-gray-500">(select all that apply)</span></label>
+              <div class="check-group">
+                <label><input type="checkbox" name="diverse_small_business[]" value="Small Business">Small Business</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Minority-Owned">Minority-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Women-Owned">Women-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Veteran-Owned">Veteran-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Disability-Owned">Disability-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="LGBTQ-Owned">LGBTQ-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="None">None</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>ASN / ERS Supplier</label>
+              <div class="radio-group">
+                <label><input type="radio" name="asn_ers" value="ASN" required>ASN</label>
+                <label><input type="radio" name="asn_ers" value="ERS">ERS</label>
+                <label><input type="radio" name="asn_ers" value="Neither">Neither</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Will Employees or Representatives Perform Work On-Site?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="work_at_site" value="Yes" required>Yes</label>
+                <label><input type="radio" name="work_at_site" value="No">No</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Is supplier C-TPAT certified or equivalent (PIP, AEO)?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="ctpat_certified" value="Yes" required>Yes</label>
+                <label><input type="radio" name="ctpat_certified" value="No">No</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Terms for International/Canadian/Foreign Shipments (INCOTERMS)</label>
+              <select name="incoterms" required>
+                <option value="">-- Select --</option>
+                <option>EXW - Ex Works</option><option>FCA - Free Carrier</option>
+                <option>CPT - Carriage Paid To</option><option>CIP - Carriage and Insurance Paid To</option>
+                <option>DAP - Delivered at Place</option><option>DPU - Delivered at Place Unloaded</option>
+                <option>DDP - Delivered Duty Paid</option><option>FAS - Free Alongside Ship</option>
+                <option>FOB - Free On Board</option><option>CFR - Cost and Freight</option>
+                <option>CIF - Cost, Insurance and Freight (Named Destination)</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Are we Importer of Record (Handling Customs Documentation)?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="importer_of_record" value="Yes" required>Yes</label>
+                <label><input type="radio" name="importer_of_record" value="No">No</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Is this going to be a one-time activity specific to this job?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="one_time_activity" value="Yes" required>Yes</label>
+                <label><input type="radio" name="one_time_activity" value="No">No</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Will The Employees or Representatives Perform Physical Work On-Site?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="physical_work_at_site" value="Yes" required>Yes</label>
+                <label><input type="radio" name="physical_work_at_site" value="No">No</label>
+              </div>
+            </div>
+            <div class="vob-field full">
+              <label>Do You Already Have a Vendor Which Provides This Same Service / Product? If Yes, Please Mention the Name of the Vendor</label>
+              <input type="text" name="existing_vendor_name">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== Footer (always visible) ==================== -->
+      <div class="vob-footer">
+        <button type="button" id="vob-prev" class="btn btn-default">← Previous</button>
+        <div class="right">
+          <button type="submit" name="action" value="save_draft" class="btn btn-default">
+            💾 Save as Draft
+          </button>
+          <button type="button" id="vob-next" class="btn btn-default">Next →</button>
+          <button type="submit" name="action" value="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</main>
+
+<!-- Include address autocomplete (attaches to addr_line1 automatically) -->
+<%- include('../partials/address_autocomplete') %>
+
+<script>
+(function () {
+  var TABS = ['docs','requestor','general','additional','compliance'];
+  var current = 0;
+
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) {
+      p.classList.toggle('active', p.dataset.pane === TABS[current]);
+    });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === TABS[current]);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      show(TABS.indexOf(btn.dataset.tab));
+    });
+  });
+  document.getElementById('vob-prev').addEventListener('click', function () { show(current - 1); });
+  document.getElementById('vob-next').addEventListener('click', function () { show(current + 1); });
+
+  // Auto-jump to a tab when the URL has #tabname.
+  if (window.location.hash) {
+    var h = window.location.hash.slice(1);
+    var i = TABS.indexOf(h);
+    if (i >= 0) show(i);
+  }
+
+  // --- Per-tab completion tracker -----------------------------------------
+  // Counts required inputs inside each pane, shows "done/total" on the tab,
+  // and marks the tab .done (green) only when every required field is filled.
+  // Radios/checkboxes sharing a name count as one group.
+  function updateCompletion() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var countEl = btn.querySelector('.vob-count');
+
+      var required = Array.prototype.slice.call(pane.querySelectorAll('[required]'));
+      var nameGroups = {};
+      var nonGroup = [];
+      required.forEach(function (el) {
+        if ((el.type === 'radio' || el.type === 'checkbox') && el.name) {
+          (nameGroups[el.name] = nameGroups[el.name] || []).push(el);
+        } else {
+          nonGroup.push(el);
+        }
+      });
+
+      var total = nonGroup.length + Object.keys(nameGroups).length;
+      var done  = 0;
+
+      nonGroup.forEach(function (el) {
+        var v = (el.value != null ? String(el.value) : '').trim();
+        if (v !== '') done++;
+      });
+      Object.keys(nameGroups).forEach(function (name) {
+        if (nameGroups[name].some(function (r) { return r.checked; })) done++;
+      });
+
+      if (total === 0) {
+        if (countEl) { countEl.style.display = 'none'; countEl.textContent = ''; }
+        btn.classList.remove('done');
+      } else {
+        if (countEl) { countEl.style.display = ''; countEl.textContent = done + '/' + total; }
+        btn.classList.toggle('done', done === total);
+      }
+    });
+  }
+
+  var form = document.getElementById('vob-form');
+  form.addEventListener('input',  updateCompletion);
+  form.addEventListener('change', updateCompletion);
+  updateCompletion();
+
+  // --- ERP duplicate check -------------------------------------------------
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) {
+      return { '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  var dupBtn = document.getElementById('erp-dup-check-btn');
+  if (dupBtn) {
+    dupBtn.addEventListener('click', async function () {
+      var statusEl = document.getElementById('erp-dup-check-status');
+      var tbody    = document.getElementById('erp-dup-results');
+      var payload = {
+        legal_name:   (form.elements.legal_name   || {}).value || '',
+        tax_id:       (form.elements.tax_id       || {}).value || '',
+        duns:         (form.elements.duns         || {}).value || '',
+        erp_instance: (form.elements.erp_instance || {}).value || '',
+        addr_line1:   (form.elements.addr_line1   || {}).value || '',
+        addr_city:    (form.elements.addr_city    || {}).value || '',
+        addr_state:   (form.elements.addr_state   || {}).value || '',
+        addr_zip:     (form.elements.addr_zip     || {}).value || '',
+        addr_country: (form.elements.addr_country || {}).value || '',
+      };
+      statusEl.textContent = 'Checking…';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">Checking…</td></tr>';
+      try {
+        var res  = await fetch('/vendors/api/erp-dup-check', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        var data = await res.json();
+        var matches = (data && data.matches) || [];
+        if (!matches.length) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty">No similar suppliers found.</td></tr>';
+          statusEl.textContent = 'No matches.';
+          return;
+        }
+        tbody.innerHTML = matches.map(function (m) {
+          var rowCls = m.score >= 90 ? 'hit-high' : m.score >= 70 ? 'hit-med' : '';
+          var flags  = (m.flags || []).map(function (f) {
+            return '<span class="dup-flag">' + escHtml(f) + '</span>';
+          }).join('');
+          return '<tr class="' + rowCls + '">' +
+            '<td>' + escHtml(m.legal_name) + '</td>' +
+            '<td>' + escHtml(m.address) + '</td>' +
+            '<td>' + escHtml(m.tax_id) + '</td>' +
+            '<td>' + escHtml(m.duns) + '</td>' +
+            '<td>' + escHtml(m.erp_instance) + '</td>' +
+            '<td><strong>' + m.score + '%</strong></td>' +
+            '<td>' + flags + '</td>' +
+          '</tr>';
+        }).join('');
+        statusEl.textContent = 'Found ' + matches.length + ' potential match' +
+          (matches.length === 1 ? '' : 'es') + '.';
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">Error: ' +
+          escHtml(e && e.message ? e.message : String(e)) + '</td></tr>';
+        statusEl.textContent = 'Error.';
+      }
+    });
+  }
+})();
+</script>
+
+</div>
+</body></html>

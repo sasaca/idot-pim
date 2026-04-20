@@ -1,0 +1,37 @@
+<%- include('../partials/head', { pageTitle: 'One-Time Vendor' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'One-Time Vendor Request', topSub: 'Fast-track flow for a single, non-recurring payment.' }) %>
+<main class="p-6 max-w-3xl">
+
+<form method="post" action="/vendors/new/one-time" class="space-y-6">
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">One-time vendor details</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Legal name *</span><input name="legal_name" required class="input"></label>
+      <label class="field"><span class="label">Tax ID *</span><input name="tax_id" required class="input"></label>
+      <label class="field"><span class="label">Country *</span>
+        <select name="country" required class="input">
+          <option value="">—</option>
+          <% (ref.COUNTRY || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Currency *</span>
+        <select name="currency_code" required class="input">
+          <option value="">—</option>
+          <% (ref.CURRENCY || []).forEach(c => { %><option value="<%= c.code %>"><%= c.code %> — <%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field md:col-span-2"><span class="label">Address *</span><input name="address" required class="input"></label>
+      <label class="field md:col-span-2"><span class="label">Scope of work / purpose *</span>
+        <textarea name="scope_of_work" rows="3" required class="input"></textarea></label>
+      <label class="field"><span class="label">Estimated amount</span><input name="amount" type="number" step="0.01" class="input"></label>
+      <label class="field"><span class="label">PO number (if any)</span><input name="po_number" class="input"></label>
+    </div>
+  </section>
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit one-time vendor →</button>
+    <a href="/vendors" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+</main></div>
+</body></html>

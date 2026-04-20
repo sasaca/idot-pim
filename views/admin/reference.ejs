@@ -1,0 +1,45 @@
+<%- include('../partials/head', { pageTitle: 'Reference: ' + category }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Reference data: ' + category, topSub: 'Add, edit or deactivate codes used across the platform' }) %>
+<main class="p-6 max-w-4xl">
+
+<div class="card mb-6">
+  <div class="card-header"><h3 class="font-semibold">Add new entry</h3></div>
+  <form method="post" action="/admin/reference/<%= category %>" class="card-body grid grid-cols-1 md:grid-cols-4 gap-4">
+    <label class="field"><span class="label">Code *</span><input name="code" required class="input"></label>
+    <label class="field md:col-span-2"><span class="label">Label *</span><input name="label" required class="input"></label>
+    <label class="field"><span class="label">Parent (optional)</span><input name="parent" class="input"></label>
+    <div class="md:col-span-4"><button class="btn btn-primary">Add entry</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3 class="font-semibold">Existing entries</h3>
+    <span class="ml-auto text-xs text-slate-400"><%= items.length %></span>
+    <a href="/admin" class="ml-3 text-xs text-brand-600 hover:underline">← Back to admin</a></div>
+  <table class="data">
+    <thead><tr><th>Code</th><th>Label</th><th>Parent</th><th>Active</th><th></th></tr></thead>
+    <tbody>
+      <% if (!items.length) { %><tr><td colspan="5" class="text-center text-slate-500 p-6">No entries yet.</td></tr><% } %>
+      <% items.forEach(i => { %>
+        <tr class="<%= !i.active ? 'opacity-50' : '' %>">
+          <td class="font-mono text-xs"><%= i.code %></td>
+          <td><%= i.label %></td>
+          <td class="text-xs"><%= i.parent || '—' %></td>
+          <td><span class="chip <%= i.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500' %>"><%= i.active ? 'Yes' : 'No' %></span></td>
+          <td>
+            <% if (i.active) { %>
+              <form method="post" action="/admin/reference/<%= category %>/<%= i.id %>/delete" class="inline">
+                <button class="text-red-600 hover:underline text-xs">Deactivate</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+</main></div>
+</body></html>

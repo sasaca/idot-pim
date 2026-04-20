@@ -1,0 +1,46 @@
+<%- include('../partials/head', { pageTitle: 'Customers' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Customer Master', topSub: 'All customer master records' }) %>
+<main class="p-6">
+
+<div class="flex items-start gap-2 mb-4 flex-wrap">
+  <form method="get" class="flex gap-2 flex-1">
+    <input name="q" placeholder="Search legal name, tax ID, ERP customer ID…" value="<%= typeof query!=='undefined' && query.q || '' %>" class="input max-w-md">
+    <select name="status" class="input max-w-[160px]">
+      <option value="">All statuses</option>
+      <% ['ACTIVE','INACTIVE','BLOCKED','PENDING'].forEach(s => { %>
+        <option value="<%= s %>" <%= typeof query!=='undefined' && query.status===s ? 'selected':'' %>><%= s %></option>
+      <% }) %>
+    </select>
+    <button class="btn btn-primary">Search</button>
+  </form>
+  <a href="/customers/new/onboarding" class="btn btn-primary">+ Onboard Customer</a>
+</div>
+
+<div class="card">
+  <div class="overflow-x-auto">
+    <table class="data">
+      <thead><tr><th>Legal name</th><th>ERP ID</th><th>Type</th><th>Country</th><th>Sales org</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% if (!customers.length) { %>
+          <tr><td colspan="7" class="text-center text-slate-500 p-10">No customers found. <a href="/customers/new/onboarding" class="text-brand-600 hover:underline">Onboard one →</a></td></tr>
+        <% } %>
+        <% customers.forEach(c => { %>
+          <tr>
+            <td class="font-medium"><%= c.legal_name %></td>
+            <td class="font-mono text-xs"><%= c.erp_customer_id || '—' %></td>
+            <td class="text-xs"><%= c.customer_type || '—' %></td>
+            <td class="text-xs"><%= c.country || '—' %></td>
+            <td class="text-xs"><%= c.sales_org || '—' %></td>
+            <td><span class="chip <%= c.status==='ACTIVE' ? 'bg-emerald-100 text-emerald-700' : c.status==='BLOCKED' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700' %>"><%= c.status %></span></td>
+            <td><a href="/customers/<%= c.id %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main></div>
+</body></html>

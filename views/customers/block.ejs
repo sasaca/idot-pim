@@ -1,0 +1,53 @@
+<%- include('../partials/head', { pageTitle: 'Block ' + customer.legal_name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Block customer: ' + customer.legal_name, topSub: 'Blocking prevents new orders and deliveries against this customer.' }) %>
+<main class="p-6 max-w-3xl">
+
+<form method="post" action="/customers/<%= customer.id %>/block" class="space-y-6">
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Customer being blocked</h3></div>
+    <dl class="card-body grid grid-cols-2 gap-4 text-sm">
+      <div><dt class="text-xs text-slate-500">Legal name</dt><dd class="font-medium"><%= customer.legal_name %></dd></div>
+      <div><dt class="text-xs text-slate-500">ERP ID</dt><dd class="font-mono"><%= customer.erp_customer_id || '—' %></dd></div>
+      <div><dt class="text-xs text-slate-500">Country</dt><dd><%= customer.country || '—' %></dd></div>
+      <div><dt class="text-xs text-slate-500">Status</dt><dd><%= customer.status %></dd></div>
+    </dl>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Block details</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Block scope *</span>
+        <select name="block_scope" required class="input">
+          <option value="ORDER_BLOCK">Order block</option>
+          <option value="DELIVERY_BLOCK">Delivery block</option>
+          <option value="BILLING_BLOCK">Billing block</option>
+          <option value="POSTING_BLOCK">Posting block</option>
+          <option value="ALL">All activities</option>
+        </select></label>
+      <label class="field"><span class="label">Effective date *</span>
+        <input name="effective_date" type="date" required class="input"></label>
+      <label class="field md:col-span-2"><span class="label">Blocked reason *</span>
+        <select name="blocked_reason" required class="input">
+          <option value="CREDIT_RISK">Credit risk / exposure</option>
+          <option value="QA_NONCONFORMANCE">Quality non-conformance</option>
+          <option value="LITIGATION">Litigation / legal hold</option>
+          <option value="BUSINESS_TERMINATED">Business terminated</option>
+          <option value="DUPLICATE">Duplicate record</option>
+          <option value="OTHER">Other — see comments</option>
+        </select></label>
+      <label class="field md:col-span-2"><span class="label">Justification *</span>
+        <textarea name="reason" rows="3" required class="input"></textarea></label>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit block request →</button>
+    <a href="/customers/<%= customer.id %>" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+</main></div>
+</body></html>

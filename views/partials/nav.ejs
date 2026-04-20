@@ -1,0 +1,60 @@
+<% if (currentUser) { %>
+<aside class="w-60 bg-slate-900 text-slate-100 fixed inset-y-0 left-0 flex flex-col">
+  <div class="px-5 py-5 border-b border-slate-800">
+    <a href="/dashboard" class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center font-bold">i</div>
+      <div>
+        <div class="font-semibold text-white leading-tight">iDOT PIM</div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-400">Master Data Platform</div>
+      </div>
+    </a>
+  </div>
+  <nav class="flex-1 p-3 space-y-1 text-sm overflow-y-auto">
+    <% function navItem(href, label, emoji, active) { %>
+      <a href="<%= href %>" class="flex items-center gap-2 px-3 py-2 rounded <%= active ? 'bg-brand-600 text-white' : 'text-slate-300 hover:bg-slate-800' %>">
+        <span><%= emoji %></span><span><%= label %></span>
+      </a>
+    <% } %>
+    <% navItem('/dashboard', 'Dashboard', '◎', path.startsWith('/dashboard')); %>
+    <% navItem('/requests', 'Requests', '✓', path.startsWith('/requests')); %>
+    <div class="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-slate-500">Master Data</div>
+    <% navItem('/vendors', 'Vendors', '⚙', path.startsWith('/vendors')); %>
+    <% navItem('/customers', 'Customers', '☰', path.startsWith('/customers')); %>
+    <% navItem('/products', 'Products', '◫', path.startsWith('/products')); %>
+    <div class="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-slate-500">Insights</div>
+    <% navItem('/reports', 'Reports', '▦', path.startsWith('/reports')); %>
+    <% navItem('/forms',   'Forms',   '📝', path === '/forms' || path.startsWith('/forms/')); %>
+    <% if (['SUPPLIER','CUSTOMER'].includes(currentUser.role)) { %>
+      <% navItem('/portal', 'Portal', '◉', path.startsWith('/portal')); %>
+    <% } %>
+    <% if (currentUser.role === 'MASTER_ADMIN') { %>
+      <div class="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-slate-500">Admin</div>
+      <% navItem('/admin',       'Reference Data', '✦', path === '/admin' || path.startsWith('/admin/reference')); %>
+      <% navItem('/admin/forms', 'Form Builder',   '🛠', path.startsWith('/admin/forms')); %>
+      <% navItem('/admin/vendor-workflow', 'Vendor Workflow', '⚙', path.startsWith('/admin/vendor-workflow')); %>
+    <% } %>
+  </nav>
+  <div class="border-t border-slate-800 p-3">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-full bg-brand-600 grid place-items-center text-xs font-bold"><%= (currentUser.name || '?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase() %></div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm truncate"><%= currentUser.name %></div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-400"><%= currentUser.role.replace(/_/g,' ') %></div>
+      </div>
+      <form method="post" action="/logout"><button class="text-slate-400 hover:text-white text-xs">Sign out</button></form>
+    </div>
+  </div>
+</aside>
+
+<%
+  // Floating Claude assistant — appears on every authenticated page.
+  // Domain is inferred from the path so the assistant knows which form it's
+  // helping with; everything else gets the GENERAL domain.
+  var chatDomainForPage = 'GENERAL';
+  var chatTitleForPage  = 'Ask Claude';
+  if      (path.startsWith('/vendors'))   { chatDomainForPage = 'VENDOR_ONBOARDING';   chatTitleForPage = 'Vendor assistant'; }
+  else if (path.startsWith('/customers')) { chatDomainForPage = 'CUSTOMER_ONBOARDING'; chatTitleForPage = 'Customer assistant'; }
+  else if (path.startsWith('/products'))  { chatDomainForPage = 'PRODUCT_CREATE';      chatTitleForPage = 'Product assistant'; }
+%>
+<%- include('chat_widget', { chatDomain: chatDomainForPage, chatTitle: chatTitleForPage }) %>
+<% } %>

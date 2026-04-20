@@ -1,0 +1,406 @@
+<%
+/*
+  address_autocomplete.ejs
+  ------------------------
+  Drop-in Mapbox-backed address typeahead.
+
+  How it works:
+    - On load, scans the main form for any input whose name matches one of
+      the known "street line 1" suffixes (address_line_1, addr_line1, line1,
+      street, ...). For each match it attaches a typeahead dropdown.
+    - When the user picks a suggestion, we derive the prefix (e.g. "addr_")
+      from the street input and fill the sibling fields that share that
+      prefix: line_2, city, region, region_code, postal_code, country,
+      country_code.
+    - Backend: GET /api/address/autocomplete?q=...&country=us  (server-side
+      Mapbox token).
+
+  Include in a form template BELOW the form markup:
+    include('partials/address_autocomplete')  (use EJS include syntax)
+
+  Debug: set window.__ADDR_DEBUG = true in the console before load, OR add
+  ?addrdebug=1 to the URL. Logs are prefixed [addr].
+*/
+%>
+<style>
+  .addr-ac-wrap { position: relative; }
+  .addr-ac-menu {
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    z-index: 50;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 2px;
+    display: none;
+  }
+  .addr-ac-menu.open { display: block; }
+  .addr-ac-item {
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .addr-ac-item:last-child { border-bottom: none; }
+  .addr-ac-item:hover, .addr-ac-item.active {
+    background: #eff6ff;
+  }
+  .addr-ac-item .addr-ac-primary { color: #111827; }
+  .addr-ac-item .addr-ac-secondary {
+    color: #6b7280; font-size: 0.75rem; margin-top: 2px;
+  }
+  .addr-ac-status {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- Debug ----
+  var DEBUG = (function () {
+    try {
+      if (window.__ADDR_DEBUG === true) return true;
+      if (/[?&]addrdebug=1\b/.test(window.location.search)) return true;
+    } catch (_) {}
+    return false;
+  })();
+  function log() {
+    if (!DEBUG) return;
+    try { console.log.apply(console, ['[addr]'].concat([].slice.call(arguments))); } catch (_) {}
+  }
+
+  // ---- Config ----
+  // Suffix patterns we recognize as "street address line 1" inputs. Matched
+  // against the tail of input.name (case-insensitive, underscore-normalized).
+  var STREET_SUFFIXES = [
+    'address_line_1',
+    'address_line1',
+    'addressline1',
+    'address_1',
+    'address1',
+    'addr_line_1',
+    'addr_line1',
+    'addr_1',
+    'street_address',
+    'street_1',
+    'street1',
+    'street',
+    'line_1',
+    'line1'
+  ];
+
+  // Role → candidate suffixes. For each picked suggestion, we try to fill
+  // a sibling input whose name = prefix + <one of these suffixes>.
+  var SIBLING_ROLES = {
+    address_line_2: ['address_line_2', 'address_line2', 'addressline2', 'address_2', 'address2',
+                     'addr_line_2', 'addr_line2', 'addr_2', 'line_2', 'line2', 'street_2', 'street2'],
+    city:           ['city', 'locality', 'town', 'addr_city'],
+    region:         ['region', 'state', 'province', 'state_name', 'addr_state', 'addr_region'],
+    region_code:    ['region_code', 'state_code', 'province_code', 'state_abbr', 'addr_state_code'],
+    postal_code:    ['postal_code', 'postcode', 'post_code', 'zip', 'zip_code', 'zipcode',
+                     'addr_zip', 'addr_postal', 'addr_postalcode', 'addr_postal_code'],
+    country:        ['country', 'country_name', 'addr_country'],
+    country_code:   ['country_code', 'country_iso', 'iso_country', 'addr_country_code']
+  };
+
+  // ---- Helpers ----
+  function norm(s) {
+    return String(s || '').toLowerCase().replace(/[-\s]+/g, '_');
+  }
+
+  function pickMainForm() {
+    var forms = Array.prototype.slice.call(document.querySelectorAll('form'));
+    if (forms.length === 0) return null;
+    if (forms.length === 1) return forms[0];
+    // Choose the form with the most named inputs (skip the search/chat form).
+    var best = forms[0], bestScore = -1;
+    forms.forEach(function (f) {
+      var n = f.querySelectorAll('input[name], select[name], textarea[name]').length;
+      if (n > bestScore) { bestScore = n; best = f; }
+    });
+    return best;
+  }
+
+  // Find every input that looks like a street-line-1 field.
+  // Returns array of { input, prefix, suffix }.
+  function findStreetInputs(form) {
+    var inputs = Array.prototype.slice.call(
+      form.querySelectorAll('input[type="text"][name], input:not([type])[name], input[type="search"][name]')
+    );
+    log('candidate inputs:', inputs.map(function (i) { return i.name; }));
+
+    var matches = [];
+    inputs.forEach(function (inp) {
+      var n = norm(inp.name);
+      // Longest-suffix-first so "address_line_1" beats "line_1".
+      var sorted = STREET_SUFFIXES.slice().sort(function (a, b) { return b.length - a.length; });
+      for (var i = 0; i < sorted.length; i++) {
+        var suf = sorted[i];
+        if (n === suf || n.endsWith('_' + suf) || n.endsWith(suf)) {
+          var prefix = n.slice(0, n.length - suf.length);
+          // Trim trailing underscore off prefix so we know the "base" and can rebuild with _.
+          if (prefix.length > 0 && prefix[prefix.length - 1] === '_') {
+            prefix = prefix.slice(0, -1);
+          }
+          matches.push({ input: inp, prefix: prefix, suffix: suf });
+          log('matched street input', inp.name, '→ prefix=' + JSON.stringify(prefix), 'suffix=' + suf);
+          return;
+        }
+      }
+    });
+    return matches;
+  }
+
+  // Find a sibling input for a given prefix + role. Returns element or null.
+  function findSibling(form, prefix, role) {
+    var candidates = SIBLING_ROLES[role] || [];
+    var inputs = Array.prototype.slice.call(form.querySelectorAll('input[name], select[name]'));
+    // Try prefix + _ + suffix first, then prefix + suffix, then plain suffix if prefix empty.
+    for (var i = 0; i < candidates.length; i++) {
+      var suf = candidates[i];
+      var wanted = [];
+      if (prefix) {
+        wanted.push(norm(prefix + '_' + suf));
+        wanted.push(norm(prefix + suf));
+      } else {
+        wanted.push(norm(suf));
+      }
+      for (var j = 0; j < inputs.length; j++) {
+        var nm = norm(inputs[j].name);
+        if (wanted.indexOf(nm) !== -1) {
+          return inputs[j];
+        }
+      }
+    }
+    return null;
+  }
+
+  function setValue(el, val) {
+    if (!el || val === undefined || val === null || val === '') return false;
+    if (el.tagName === 'SELECT') {
+      // Try exact, then case-insensitive, then matching by visible text.
+      var want = String(val);
+      var found = null;
+      for (var i = 0; i < el.options.length; i++) {
+        var o = el.options[i];
+        if (o.value === want) { found = o; break; }
+      }
+      if (!found) {
+        var wantLow = want.toLowerCase();
+        for (var k = 0; k < el.options.length; k++) {
+          var o2 = el.options[k];
+          if (String(o2.value).toLowerCase() === wantLow ||
+              String(o2.text).toLowerCase() === wantLow) {
+            found = o2; break;
+          }
+        }
+      }
+      if (found) {
+        el.value = found.value;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      }
+      return false;
+    }
+    el.value = String(val);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  // ---- Network ----
+  var cfgCache = null;
+  async function getConfig() {
+    if (cfgCache) return cfgCache;
+    try {
+      var r = await fetch('/api/address/config', { credentials: 'same-origin' });
+      cfgCache = await r.json();
+    } catch (e) {
+      cfgCache = { ready: false };
+    }
+    return cfgCache;
+  }
+
+  async function fetchSuggestions(q, country) {
+    var url = '/api/address/autocomplete?q=' + encodeURIComponent(q);
+    if (country) url += '&country=' + encodeURIComponent(country);
+    try {
+      var r = await fetch(url, { credentials: 'same-origin' });
+      if (!r.ok) return [];
+      var data = await r.json();
+      return Array.isArray(data.features) ? data.features : [];
+    } catch (e) {
+      log('fetch error', e);
+      return [];
+    }
+  }
+
+  // ---- UI attach ----
+  function attach(form, match) {
+    var input = match.input;
+    var prefix = match.prefix;
+
+    // Wrap input for positioning if not already.
+    var parent = input.parentNode;
+    if (!parent) return;
+    if (!parent.classList.contains('addr-ac-wrap')) {
+      var wrap = document.createElement('div');
+      wrap.className = 'addr-ac-wrap';
+      parent.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      parent = wrap;
+    } else {
+      parent.classList.add('addr-ac-wrap');
+    }
+
+    var menu = document.createElement('div');
+    menu.className = 'addr-ac-menu';
+    menu.setAttribute('role', 'listbox');
+    parent.appendChild(menu);
+
+    var features = [];
+    var activeIdx = -1;
+    var debounceTimer = null;
+
+    function closeMenu() {
+      menu.classList.remove('open');
+      activeIdx = -1;
+    }
+    function openMenu() {
+      menu.classList.add('open');
+    }
+
+    function render() {
+      menu.innerHTML = '';
+      if (features.length === 0) {
+        var s = document.createElement('div');
+        s.className = 'addr-ac-status';
+        s.textContent = 'No matches';
+        menu.appendChild(s);
+        return;
+      }
+      features.forEach(function (f, i) {
+        var item = document.createElement('div');
+        item.className = 'addr-ac-item' + (i === activeIdx ? ' active' : '');
+        item.setAttribute('role', 'option');
+
+        var primary = document.createElement('div');
+        primary.className = 'addr-ac-primary';
+        primary.textContent = f.address_line_1 || f.place_name || '(no line 1)';
+        var sec = document.createElement('div');
+        sec.className = 'addr-ac-secondary';
+        var secondaryBits = [];
+        if (f.city) secondaryBits.push(f.city);
+        if (f.region_code || f.region) secondaryBits.push(f.region_code || f.region);
+        if (f.postal_code) secondaryBits.push(f.postal_code);
+        if (f.country_code || f.country) secondaryBits.push(f.country_code || f.country);
+        sec.textContent = secondaryBits.join(', ');
+        item.appendChild(primary);
+        item.appendChild(sec);
+
+        item.addEventListener('mousedown', function (ev) {
+          ev.preventDefault();
+          pick(i);
+        });
+        menu.appendChild(item);
+      });
+    }
+
+    function pick(i) {
+      var f = features[i];
+      if (!f) return;
+      log('picked', f);
+
+      // Fill line 1 with the clean street from the feature (drops number-only lines).
+      if (f.address_line_1) setValue(input, f.address_line_1);
+
+      var filled = { address_line_1: !!f.address_line_1 };
+      ['address_line_2', 'city', 'region', 'region_code', 'postal_code', 'country', 'country_code']
+        .forEach(function (role) {
+          var sib = findSibling(form, prefix, role);
+          if (!sib) { log('no sibling for role', role, '(prefix=' + prefix + ')'); return; }
+          var val = f[role];
+          if (val === undefined || val === null || val === '') return;
+          var ok = setValue(sib, val);
+          filled[role] = ok;
+          log('filled sibling', role, '→', sib.name, '=', val, 'ok=' + ok);
+        });
+      closeMenu();
+    }
+
+    async function onInput() {
+      var q = input.value.trim();
+      if (q.length < 3) { features = []; closeMenu(); return; }
+      // Optional country hint from a sibling country_code input.
+      var countryInput = findSibling(form, prefix, 'country_code');
+      var country = countryInput && countryInput.value ? countryInput.value : '';
+      features = await fetchSuggestions(q, country);
+      log('suggestions for', q, '→', features.length);
+      if (features.length === 0) { closeMenu(); return; }
+      activeIdx = -1;
+      render();
+      openMenu();
+    }
+
+    input.setAttribute('autocomplete', 'off');
+    input.addEventListener('input', function () {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(onInput, 250);
+    });
+    input.addEventListener('keydown', function (ev) {
+      if (!menu.classList.contains('open')) return;
+      if (ev.key === 'ArrowDown') {
+        ev.preventDefault();
+        activeIdx = Math.min(activeIdx + 1, features.length - 1);
+        render();
+      } else if (ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, 0);
+        render();
+      } else if (ev.key === 'Enter') {
+        if (activeIdx >= 0) { ev.preventDefault(); pick(activeIdx); }
+      } else if (ev.key === 'Escape') {
+        closeMenu();
+      }
+    });
+    input.addEventListener('blur', function () { setTimeout(closeMenu, 150); });
+
+    log('attached to', input.name);
+  }
+
+  // ---- Init ----
+  async function init() {
+    var cfg = await getConfig();
+    if (!cfg || !cfg.ready) {
+      log('Mapbox not configured (MAPBOX_TOKEN missing on server) — widget disabled.');
+      return;
+    }
+    var form = pickMainForm();
+    if (!form) { log('no form found on page'); return; }
+    log('using form:', form);
+
+    var matches = findStreetInputs(form);
+    if (matches.length === 0) {
+      log('no street inputs detected. Add one of these suffixes to your field name:',
+          STREET_SUFFIXES);
+      return;
+    }
+    matches.forEach(function (m) { attach(form, m); });
+    log('initialization complete — ' + matches.length + ' address field(s) attached.');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

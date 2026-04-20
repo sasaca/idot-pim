@@ -1,0 +1,170 @@
+<%- include('../partials/head', { pageTitle: 'Modify ' + customer.legal_name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Modify customer: ' + customer.legal_name, topSub: 'Modification of an active customer record (select change type).' }) %>
+<main class="p-6 max-w-4xl">
+
+
+<%- include('../partials/doc_upload', { docDomain: 'CUSTOMER_MODIFY', docTitle: 'Document Upload — Customer Modification' }) %>
+<%- include('../partials/address_autocomplete') %>
+<form method="post" action="/customers/<%= customer.id %>/modify" class="space-y-6" id="modForm">
+
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">1. Change type</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field">
+        <span class="label">What is being changed? *</span>
+        <select name="change_type" id="change_type" required class="input">
+          <option value="">—</option>
+          <option value="NAME">Name (SOX-sensitive)</option>
+          <option value="ADDRESS">Address</option>
+          <option value="TAX_ID">Tax ID (SOX-sensitive)</option>
+          <option value="PAYMENT_TERMS">Payment terms / credit (SOX-sensitive)</option>
+          <option value="BANK">Bank / IBAN (SOX-sensitive)</option>
+          <option value="CONTACT">Contact / email</option>
+          <option value="QUALITY">Quality class / GxP attribute</option>
+          <option value="SALES_AREA">Sales area</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label">Reason / justification *</span>
+        <input name="reason" required class="input" placeholder="Why is this change needed?">
+      </label>
+    </div>
+  </section>
+
+  <!-- Field sections, show/hide based on change_type -->
+  <section class="card sec" data-for="NAME">
+    <div class="card-header"><h3 class="font-semibold">Name change</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Name 1</span>
+        <input name="name_1" value="<%= customer.name_1 || customer.legal_name || '' %>" class="input sox-f"></label>
+      <label class="field"><span class="label">Name 2</span>
+        <input name="name_2" value="<%= customer.name_2 || '' %>" class="input sox-f"></label>
+      <label class="field"><span class="label">Name 3</span>
+        <input name="name_3" value="<%= customer.name_3 || '' %>" class="input sox-f"></label>
+      <label class="field"><span class="label">Name 4</span>
+        <input name="name_4" value="<%= customer.name_4 || '' %>" class="input sox-f"></label>
+      <label class="field md:col-span-2"><span class="label">Legal name (displayed on invoice)</span>
+        <input name="legal_name" value="<%= customer.legal_name || '' %>" class="input sox-f"></label>
+    </div>
+  </section>
+
+  <section class="card sec" data-for="ADDRESS">
+    <div class="card-header"><h3 class="font-semibold">Address change</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field md:col-span-2"><span class="label">Address line 1</span><input name="address_line1" class="input"></label>
+      <label class="field"><span class="label">City</span><input name="city" class="input"></label>
+      <label class="field"><span class="label">State / Province</span><input name="state" class="input"></label>
+      <label class="field"><span class="label">Postal code</span><input name="postal_code" class="input"></label>
+      <label class="field"><span class="label">Country</span>
+        <select name="country" class="input">
+          <option value="">—</option>
+          <% (ref.COUNTRY || []).forEach(c => { %><option value="<%= c.code %>" <%= customer.country===c.code?'selected':'' %>><%= c.code %> — <%= c.label %></option><% }) %>
+        </select></label>
+    </div>
+  </section>
+
+  <section class="card sec" data-for="TAX_ID">
+    <div class="card-header"><h3 class="font-semibold">Tax ID change</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">New Tax ID</span>
+        <input name="tax_id" value="<%= customer.tax_id || '' %>" class="input sox-f"></label>
+      <label class="field"><span class="label">VAT / GST no.</span>
+        <input name="vat_no" class="input"></label>
+    </div>
+  </section>
+
+  <section class="card sec" data-for="PAYMENT_TERMS">
+    <div class="card-header"><h3 class="font-semibold">Payment terms / credit change</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Payment terms</span>
+        <select name="payment_terms" class="input sox-f">
+          <% (ref.PAYMENT_TERM || []).forEach(c => { %><option value="<%= c.code %>" <%= customer.payment_terms===c.code?'selected':'' %>><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Credit limit</span>
+        <input name="credit_limit" type="number" step="0.01" value="<%= customer.credit_limit || '' %>" class="input sox-f"></label>
+    </div>
+  </section>
+
+  <section class="card sec" data-for="BANK">
+    <div class="card-header"><h3 class="font-semibold">Bank / IBAN change</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Bank name</span><input name="bank_name" class="input"></label>
+      <label class="field"><span class="label">Account number</span><input name="bank_account" class="input sox-f"></label>
+      <label class="field"><span class="label">IBAN</span><input name="iban" class="input sox-f"></label>
+      <label class="field"><span class="label">SWIFT / BIC</span><input name="swift" class="input"></label>
+    </div>
+  </section>
+
+  <section class="card sec" data-for="CONTACT">
+    <div class="card-header"><h3 class="font-semibold">Contact update</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Contact name</span><input name="contact_name" class="input"></label>
+      <label class="field"><span class="label">Contact email</span><input name="contact_email" type="email" class="input"></label>
+      <label class="field"><span class="label">Contact phone</span><input name="contact_phone" class="input"></label>
+    </div>
+  </section>
+
+  <section class="card sec" data-for="QUALITY">
+    <div class="card-header"><h3 class="font-semibold">Quality / GxP attribute update</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Quality class</span>
+        <select name="quality_class" class="input">
+          <option value="">—</option>
+          <option value="PHARMA" <%= customer.quality_class==='PHARMA'?'selected':'' %>>Pharma / GxP regulated</option>
+          <option value="MEDICAL_DEVICE" <%= customer.quality_class==='MEDICAL_DEVICE'?'selected':'' %>>Medical device</option>
+          <option value="CONSUMER" <%= customer.quality_class==='CONSUMER'?'selected':'' %>>Consumer / non-regulated</option>
+        </select></label>
+      <label class="field"><span class="label">GxP flag</span>
+        <select name="gxp_flag" class="input">
+          <option value="0" <%= !customer.gxp_flag?'selected':'' %>>No</option>
+          <option value="1" <%= customer.gxp_flag?'selected':'' %>>Yes</option>
+        </select></label>
+    </div>
+  </section>
+
+  <section class="card sec" data-for="SALES_AREA">
+    <div class="card-header"><h3 class="font-semibold">Sales area update</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Sales org</span>
+        <select name="sales_org" class="input">
+          <% (ref.SALES_ORG || []).forEach(c => { %><option value="<%= c.code %>" <%= customer.sales_org===c.code?'selected':'' %>><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Distribution channel</span>
+        <select name="dist_channel" class="input">
+          <option value="DIRECT">Direct</option><option value="RESELLER">Reseller</option>
+          <option value="DISTRIBUTOR">Distributor</option><option value="OEM">OEM</option>
+        </select></label>
+      <label class="field"><span class="label">Division</span><input name="division" class="input"></label>
+    </div>
+  </section>
+
+  <div id="sox-warning" class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800" style="display:none">
+    <strong>SOX-sensitive change:</strong> this modification will route through Supervisor SOX Review before ERP integration.
+  </div>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit modification →</button>
+    <a href="/customers/<%= customer.id %>" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+<script>
+(function(){
+  const sel = document.getElementById('change_type');
+  const sections = document.querySelectorAll('.sec');
+  const sox = document.getElementById('sox-warning');
+  const soxTypes = ['NAME','TAX_ID','PAYMENT_TERMS','BANK'];
+
+  function refresh(){
+    const v = sel.value;
+    sections.forEach(s => { s.style.display = (s.dataset.for === v) ? '' : 'none'; });
+    sox.style.display = soxTypes.includes(v) ? '' : 'none';
+  }
+  sel.addEventListener('change', refresh);
+  refresh();
+})();
+</script>
+</main></div>
+</body></html>

@@ -1,0 +1,22 @@
+<%- include('../partials/head', { pageTitle: form.name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: form.name, topSub: form.description || '' }) %>
+<main class="p-6 max-w-3xl">
+
+<div class="mb-3"><a href="/forms" class="btn btn-ghost">← All forms</a></div>
+
+<form method="post" action="/forms/<%= form.id %>/submit" class="space-y-3">
+  <div class="card">
+    <div class="card-body space-y-3">
+      <%- renderHtml %>
+    </div>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit</button>
+    <a href="/forms" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+</main></div>
+</body></html>

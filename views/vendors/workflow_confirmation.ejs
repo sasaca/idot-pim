@@ -1,0 +1,63 @@
+<%
+/*
+  workflow_confirmation.ejs
+  -----------------------------------------------------------------------------
+  Stage 6 — Final confirmation page. Shown to any authenticated user who
+  navigates to a vendor that's CONFIRMED (or REJECTED).
+  -----------------------------------------------------------------------------
+*/
+%>
+<%- include('../partials/header', { title: 'Vendor Onboarding — Confirmation' }) %>
+
+<main class="mx-auto max-w-3xl px-4 py-10">
+  <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
+
+  <% if (vendor.workflow_state === 'CONFIRMED') { %>
+    <section class="rounded-lg border border-green-200 bg-green-50 p-8 text-center shadow-sm">
+      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#16a34a" class="h-8 w-8">
+          <path fill-rule="evenodd"
+                d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 111.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z"
+                clip-rule="evenodd" />
+        </svg>
+      </div>
+      <h2 class="text-2xl font-semibold text-green-900">Vendor onboarded</h2>
+      <p class="mt-2 text-green-800">
+        <strong><%= vendor.legal_name %></strong> has completed every review stage
+        and is now active in iDOT.
+      </p>
+      <p class="mt-1 text-sm text-green-700">Vendor ID: <%= vendor.id %></p>
+      <div class="mt-6 flex justify-center gap-3">
+        <a href="/vendors/<%= vendor.id %>" class="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+          View vendor record
+        </a>
+        <a href="/vendors/queue" class="rounded border border-green-200 px-4 py-2 text-sm text-green-800 hover:bg-green-100">
+          Back to queue
+        </a>
+      </div>
+    </section>
+  <% } else if (vendor.workflow_state === 'REJECTED') { %>
+    <section class="rounded-lg border border-red-200 bg-red-50 p-8 shadow-sm">
+      <h2 class="text-xl font-semibold text-red-900">Onboarding rejected</h2>
+      <p class="mt-2 text-sm text-red-800">
+        This vendor submission was rejected. A new onboarding request must be
+        started to try again. Review the comments panel above for the reason.
+      </p>
+      <div class="mt-6">
+        <a href="/vendors/new/onboarding" class="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+          Start a new submission
+        </a>
+      </div>
+    </section>
+  <% } else { %>
+    <section class="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+      <h2 class="text-lg font-semibold text-gray-900">Workflow in progress</h2>
+      <p class="mt-2 text-sm text-gray-600">
+        This vendor is currently at stage <strong><%= stateLabel %></strong>.
+        Come back once it reaches Confirmation.
+      </p>
+    </section>
+  <% } %>
+</main>
+
+<%- include('../partials/footer') %>

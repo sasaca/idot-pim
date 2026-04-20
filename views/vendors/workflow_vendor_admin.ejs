@@ -1,0 +1,52 @@
+<%
+/*
+  workflow_vendor_admin.ejs
+  -----------------------------------------------------------------------------
+  Stage 4 — Vendor Admin team form. Internal team fills in technical fields
+  (ERP vendor codes, tax codes, payment terms mapping, account group, etc.)
+
+  FIELDS TODO: add the technical field layout in the marked section.
+  -----------------------------------------------------------------------------
+*/
+%>
+<%- include('../partials/header', { title: 'Vendor Admin Form' }) %>
+
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
+
+  <form method="post" action="/vendors/<%= vendor.id %>/workflow/vendor-admin"
+        class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900">Technical setup</h2>
+      <p class="mt-1 text-sm text-gray-500">
+        Fill in ERP-side configuration needed to activate the vendor.
+      </p>
+    </div>
+
+    <!-- ===================== VENDOR ADMIN FIELDS — TODO ====================== -->
+    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+      Placeholder for technical fields (account group, reconciliation account,
+      withholding tax code, purchasing org, company codes, payment method,
+      tolerance group, etc.). Field list pending.
+    </div>
+    <!-- ======================================================================= -->
+
+    <div>
+      <label class="block">
+        <span class="text-sm font-medium text-gray-700">Notes to Legal reviewer</span>
+        <textarea name="comment" rows="3"
+                  class="mt-1 w-full rounded border border-gray-300 p-2 text-sm"></textarea>
+      </label>
+    </div>
+
+    <div class="flex justify-end gap-3">
+      <a href="/vendors/queue" class="rounded px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Save draft</a>
+      <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+        Send to Legal
+      </button>
+    </div>
+  </form>
+</main>
+
+<%- include('../partials/footer') %>

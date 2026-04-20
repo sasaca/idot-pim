@@ -1,0 +1,59 @@
+<%- include('../partials/head', { pageTitle: product.name }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: product.name, topSub: 'Product · ' + (product.sku || 'no SKU') + ' · ' + product.lifecycle_status }) %>
+<main class="p-6">
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Product profile</h3>
+        <span class="ml-auto chip <%= product.lifecycle_status==='ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700' %>"><%= product.lifecycle_status %></span></div>
+      <dl class="card-body grid grid-cols-2 gap-4 text-sm">
+        <div><dt class="text-xs text-slate-500">Name</dt><dd class="font-medium"><%= product.name %></dd></div>
+        <div><dt class="text-xs text-slate-500">SKU</dt><dd class="font-mono"><%= product.sku || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Product type</dt><dd><%= product.product_type || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Material group</dt><dd><%= product.material_group || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Base UoM</dt><dd><%= product.base_uom || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Industry sector</dt><dd><%= product.industry_sector || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Division</dt><dd><%= product.division || '—' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Net weight</dt><dd><%= product.net_weight || '—' %> <%= product.weight_uom || '' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Gross weight</dt><dd><%= product.gross_weight || '—' %> <%= product.weight_uom || '' %></dd></div>
+        <div><dt class="text-xs text-slate-500">Country of origin</dt><dd><%= product.country_of_origin || '—' %></dd></div>
+        <div class="col-span-2"><dt class="text-xs text-slate-500">Description</dt><dd><%= product.description || '—' %></dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Request history</h3>
+        <span class="ml-auto text-xs text-slate-400"><%= history.length %></span></div>
+      <table class="data">
+        <thead><tr><th>WF ID</th><th>Type</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+          <% if (!history.length) { %><tr><td colspan="5" class="text-center text-slate-500 p-4">No history.</td></tr><% } %>
+          <% history.forEach(h => { %>
+            <tr>
+              <td class="font-mono text-xs"><%= h.wf_id %></td>
+              <td class="text-xs"><%= h.request_type.replace(/_/g,' ') %></td>
+              <td><span class="chip <%= statusClass(h.status) %>"><%= h.status.replace(/_/g,' ') %></span></td>
+              <td class="text-xs text-slate-500"><%= fmtDate(h.created_at) %></td>
+              <td><a href="/requests/<%= h.id %>" class="text-brand-600 hover:underline text-sm">View →</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Actions</h3></div>
+      <div class="card-body space-y-2">
+        <a href="/products/<%= product.id %>/update" class="btn btn-secondary w-full justify-center">Update product</a>
+      </div>
+    </section>
+  </aside>
+</div>
+
+</main></div>
+</body></html>

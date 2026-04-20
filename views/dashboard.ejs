@@ -1,0 +1,137 @@
+<%- include('partials/head', { pageTitle: 'Dashboard — iDOT PIM' }) %>
+<%- include('partials/nav') %>
+<div class="main-content">
+<%- include('partials/topbar', { topTitle: 'Dashboard', topSub: 'Overview of your master data operations' }) %>
+<main class="p-6">
+
+<!-- KPI Cards -->
+<section class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+  <% const k = [
+    {label:'Open requests', v: kpi.open, color:'text-blue-600'},
+    {label:'Completed', v: kpi.completed, color:'text-emerald-600'},
+    {label:'SLA breaches', v: kpi.breaching, color:'text-red-600'},
+    {label:'Active vendors', v: kpi.vendors, color:'text-slate-700'},
+    {label:'Active customers', v: kpi.customers, color:'text-slate-700'},
+    {label:'Active products', v: kpi.products, color:'text-slate-700'},
+  ]; %>
+  <% k.forEach(x => { %>
+    <div class="card card-body">
+      <div class="text-xs uppercase tracking-wider text-slate-500 mb-1"><%= x.label %></div>
+      <div class="text-3xl font-bold <%= x.color %>"><%= x.v %></div>
+    </div>
+  <% }) %>
+</section>
+
+<!-- My Tasks + Submitted -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card lg:col-span-2">
+    <div class="card-header"><h3 class="font-semibold">Tasks assigned to my role (<%= currentUser.role.replace(/_/g,' ') %>)</h3>
+      <span class="ml-auto text-xs text-slate-400"><%= myTasks.length %> open</span></div>
+    <div class="overflow-x-auto">
+      <table class="data">
+        <thead><tr><th>WF ID</th><th>Title</th><th>Step</th><th>Status</th><th>SLA</th><th></th></tr></thead>
+        <tbody>
+          <% if (!myTasks.length) { %>
+            <tr><td colspan="6" class="text-center text-slate-500 p-6">🎉 Nothing waiting — you're all caught up!</td></tr>
+          <% } %>
+          <% myTasks.forEach(t => { %>
+            <tr>
+              <td class="font-mono text-xs"><%= t.wf_id %></td>
+              <td><%= t.title %></td>
+              <td class="text-xs text-slate-600"><%= t.current_step %></td>
+              <td><span class="chip <%= statusClass(t.status) %>"><%= t.status.replace(/_/g,' ') %></span></td>
+              <td class="text-xs <%= new Date(t.sla_due) < new Date() ? 'text-red-600 font-semibold' : 'text-slate-500' %>"><%= fmtDate(t.sla_due) %></td>
+              <td><a href="/requests/<%= t.id %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Quick actions</h3></div>
+    <div class="card-body space-y-2">
+      <a href="/vendors/new/onboarding" class="btn btn-primary w-full justify-center">+ New Vendor Onboarding</a>
+      <a href="/customers/new/onboarding" class="btn btn-secondary w-full justify-center">+ New Customer Onboarding</a>
+      <a href="/products/new/create" class="btn btn-secondary w-full justify-center">+ New Product Creation</a>
+      <a href="/vendors/new/one-time" class="btn btn-ghost w-full justify-center">+ One-Time Vendor</a>
+      <a href="/requests?mine=1" class="btn btn-ghost w-full justify-center">My Requests</a>
+    </div>
+  </div>
+</section>
+
+<!-- Charts row -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Requests by domain</h3></div>
+    <div class="card-body"><canvas id="chartDomain"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Requests by status</h3></div>
+    <div class="card-body"><canvas id="chartStatus"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Recent notifications</h3></div>
+    <div class="card-body">
+      <% if (!notifications.length) { %><p class="text-slate-500 text-sm">No notifications.</p><% } %>
+      <ul class="space-y-2 text-sm">
+        <% notifications.forEach(n => { %>
+          <li class="flex items-start gap-2 <%= n.read_flag ? 'opacity-60' : '' %>">
+            <span class="mt-1 w-2 h-2 rounded-full bg-brand-500 flex-shrink-0"></span>
+            <div class="flex-1">
+              <div><%= n.subject %></div>
+              <div class="text-xs text-slate-400"><%= fmtDate(n.created_at) %><% if (n.wf_id) { %> · <a class="text-brand-600 hover:underline" href="/requests/<%= n.request_id %>"><%= n.wf_id %></a><% } %></div>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- My submitted -->
+<section class="card">
+  <div class="card-header"><h3 class="font-semibold">Requests I submitted</h3></div>
+  <div class="overflow-x-auto">
+    <table class="data">
+      <thead><tr><th>WF ID</th><th>Domain</th><th>Type</th><th>Title</th><th>Status</th><th>Step</th><th>Updated</th><th></th></tr></thead>
+      <tbody>
+        <% if (!mySubmitted.length) { %>
+          <tr><td colspan="8" class="text-center text-slate-500 p-6">No requests submitted yet. Use a quick action above to get started.</td></tr>
+        <% } %>
+        <% mySubmitted.forEach(t => { %>
+          <tr>
+            <td class="font-mono text-xs"><%= t.wf_id %></td>
+            <td><%= t.domain %></td>
+            <td class="text-xs"><%= t.request_type.replace(/_/g,' ') %></td>
+            <td><%= t.title %></td>
+            <td><span class="chip <%= statusClass(t.status) %>"><%= t.status.replace(/_/g,' ') %></span></td>
+            <td class="text-xs text-slate-500"><%= t.current_step %></td>
+            <td class="text-xs text-slate-500"><%= fmtDate(t.updated_at) %></td>
+            <td><a href="/requests/<%= t.id %>" class="text-brand-600 hover:underline text-sm">View →</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main></div>
+
+<script>
+  const byDomain = <%- JSON.stringify(byDomain) %>;
+  const byStatus = <%- JSON.stringify(byStatus) %>;
+  new Chart(document.getElementById('chartDomain'), {
+    type: 'doughnut',
+    data: { labels: byDomain.map(x=>x.domain), datasets:[{ data: byDomain.map(x=>x.n),
+              backgroundColor: ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444'] }] },
+    options: { plugins:{ legend:{ position:'bottom' } }, cutout:'65%' }
+  });
+  new Chart(document.getElementById('chartStatus'), {
+    type: 'bar',
+    data: { labels: byStatus.map(x=>x.status), datasets:[{ data: byStatus.map(x=>x.n), backgroundColor:'#3b82f6' }] },
+    options: { plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ font:{ size:10 } } } } }
+  });
+</script>
+</body></html>

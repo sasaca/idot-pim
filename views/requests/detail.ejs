@@ -1,0 +1,240 @@
+<%- include('../partials/head', { pageTitle: request.wf_id }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: request.title, topSub: request.wf_id + ' · ' + request.domain + ' · ' + request.request_type.replace(/_/g,' ') }) %>
+<main class="p-6">
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+<!-- LEFT: details -->
+<div class="lg:col-span-2 space-y-6">
+
+  <!-- Status summary -->
+  <section class="card card-body">
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="chip <%= statusClass(request.status) %> text-sm"><%= request.status.replace(/_/g,' ') %></span>
+      <span class="chip bg-slate-100 text-slate-700">Risk: <%= request.risk %></span>
+      <span class="chip bg-slate-100 text-slate-700">Priority: <%= request.priority %></span>
+      <% if (request.sla_due) { %>
+        <span class="text-xs text-slate-500">SLA due: <%= fmtDate(request.sla_due) %></span>
+      <% } %>
+    </div>
+    <% if (request.erp_response_status) { %>
+      <div class="mt-3 p-3 rounded <%= request.erp_response_status === 'SUCCESS' ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200' %>">
+        <div class="text-xs font-semibold uppercase tracking-wide"><%= request.erp_response_status === 'SUCCESS' ? 'ERP Integration — Success' : 'ERP Integration — Failed' %></div>
+        <div class="text-sm mt-1"><%= request.erp_response_desc %> <% if (request.erp_supplier_id) { %> · <span class="font-mono"><%= request.erp_supplier_id %></span><% } %></div>
+      </div>
+    <% } %>
+  </section>
+
+  <!-- Workflow timeline -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Workflow</h3>
+      <span class="ml-auto text-xs text-slate-400"><%= flow.length %> steps</span></div>
+    <div class="card-body">
+      <div class="timeline">
+        <% flow.forEach((step, i) => {
+             const done = steps.some(s => s.step_name === step.name && ['APPROVED','SUBMITTED','COMPLETED'].includes(s.action));
+             const current = step.name === request.current_step;
+             const rejected = steps.some(s => s.step_name === step.name && s.action === 'REJECTED');
+             const cls = rejected ? 'reject' : done ? 'done' : '';
+        %>
+          <div class="timeline-item <%= cls %>">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-medium"><%= i + 1 %>. <%= step.name %></span>
+              <span class="chip bg-slate-100 text-slate-700 text-[10px]"><%= step.role.replace(/_/g,' ') %></span>
+              <% if (step.optional) { %><span class="chip bg-amber-50 text-amber-700 text-[10px]">optional</span><% } %>
+              <% if (current && !done) { %><span class="chip bg-blue-100 text-blue-700 text-[10px]">CURRENT</span><% } %>
+              <% if (done) { %><span class="chip bg-emerald-100 text-emerald-700 text-[10px]">DONE</span><% } %>
+              <% if (rejected) { %><span class="chip bg-red-100 text-red-700 text-[10px]">REJECTED</span><% } %>
+            </div>
+            <% const history = steps.filter(s => s.step_name === step.name); %>
+            <% history.forEach(h => { %>
+              <div class="text-xs text-slate-500 mt-1">
+                <%= h.action %> <% if (h.user_name) { %>by <%= h.user_name %><% } %>
+                <% if (h.comment) { %>· <span class="italic">"<%= h.comment %>"</span><% } %>
+                · <%= fmtDate(h.completed_at || h.started_at) %>
+              </div>
+            <% }) %>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+
+  <!-- Payload / form data -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Submitted data</h3></div>
+    <div class="card-body text-sm">
+      <% function renderObj(obj, depth=0) { %>
+        <% for (const k in obj) { const v = obj[k]; %>
+          <% if (v && typeof v === 'object' && !Array.isArray(v)) { %>
+            <div class="mt-2"><div class="text-xs uppercase tracking-wider font-semibold text-slate-500"><%= k.replace(/_/g,' ') %></div>
+              <div class="ml-3 border-l-2 border-slate-200 pl-3"><% renderObj(v, depth+1) %></div></div>
+          <% } else { %>
+            <div class="flex gap-4 py-1 border-b border-slate-100 text-[13px]">
+              <span class="text-slate-500 w-48 flex-shrink-0"><%= k.replace(/_/g,' ') %></span>
+              <span class="font-medium"><%= v === null || v === '' ? '—' : Array.isArray(v) ? v.join(', ') : v %></span>
+            </div>
+          <% } %>
+        <% } %>
+      <% } %>
+      <% renderObj(request.payloadObj) %>
+    </div>
+  </section>
+
+  <!-- Compliance checks -->
+  <% if (compliance.length) { %>
+    <section class="card">
+      <div class="card-header"><h3 class="font-semibold">Compliance checks</h3></div>
+      <table class="data">
+        <thead><tr><th>Check</th><th>Result</th><th>Notes</th><th>When</th></tr></thead>
+        <tbody>
+          <% compliance.forEach(c => { %>
+            <tr>
+              <td class="text-xs"><%= c.check_type.replace(/_/g,' ') %></td>
+              <td><span class="chip <%= ['PASS','NO_MATCH'].includes(c.result) ? 'bg-emerald-100 text-emerald-700' : ['FAIL','MATCH','100_MATCH'].includes(c.result) ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700' %>"><%= c.result %></span></td>
+              <td class="text-xs text-slate-600 max-w-lg truncate" title="<%= c.notes %>"><%= c.notes %></td>
+              <td class="text-xs text-slate-500"><%= fmtDate(c.created_at) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  <% } %>
+
+  <!-- Comments / activity -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Activity & comments</h3></div>
+    <div class="card-body space-y-3">
+      <% comments.forEach(c => { %>
+        <div class="<%= c.is_system ? 'bg-slate-50 border' : 'bg-white border' %> rounded p-3 text-sm">
+          <div class="flex items-center gap-2 text-xs text-slate-500 mb-1">
+            <span class="font-semibold <%= c.is_system ? 'text-slate-500' : 'text-slate-700' %>"><%= c.author_name || 'System' %></span>
+            <span>·</span><span><%= fmtDate(c.created_at) %></span>
+            <% if (c.is_system) { %><span class="chip bg-slate-200 text-slate-600 text-[10px] ml-auto">system</span><% } %>
+          </div>
+          <div class="whitespace-pre-wrap"><%= c.body %></div>
+        </div>
+      <% }) %>
+      <form method="post" action="/requests/<%= request.id %>/comment" class="flex gap-2">
+        <input name="body" placeholder="Add a comment…" class="input flex-1" required>
+        <button class="btn btn-secondary">Post</button>
+      </form>
+    </div>
+  </section>
+</div>
+
+<!-- RIGHT: actions / subject -->
+<aside class="space-y-6">
+  <!-- Actions -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Actions</h3></div>
+    <div class="card-body">
+      <% if (canAct) { %>
+        <form method="post" action="/requests/<%= request.id %>/action" class="space-y-3" id="actionForm">
+          <label class="field">
+            <span class="label">Comment (optional for approve, required for reject / info)</span>
+            <textarea name="comment" rows="3" class="input" placeholder="Add a comment..."></textarea>
+          </label>
+
+          <% if (!['BU_REQUESTOR','SUPPLIER','CUSTOMER'].includes(currentUser.role)) { %>
+            <label class="field" id="rejectReasonWrap" style="display:none">
+              <span class="label">Reject reason code *</span>
+              <select name="reason_code_reject" class="input">
+                <option value="">— select a reason —</option>
+                <% (reasonCodes.REJECT || []).forEach(r => { %>
+                  <option value="<%= r.code %>"><%= r.label %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label class="field" id="infoReasonWrap" style="display:none">
+              <span class="label">Request-more-info code *</span>
+              <select name="reason_code_info" class="input">
+                <option value="">— select a reason —</option>
+                <% (reasonCodes.REQUEST_INFO || []).forEach(r => { %>
+                  <option value="<%= r.code %>"><%= r.label %></option>
+                <% }) %>
+              </select>
+            </label>
+          <% } %>
+
+          <div class="grid grid-cols-2 gap-2">
+            <% if (['BU_REQUESTOR','SUPPLIER','CUSTOMER','CUSTOMER_SERVICE','SALES'].includes(currentUser.role) && request.status === 'NEW') { %>
+              <button name="action" value="submit" class="btn btn-primary col-span-2 justify-center">Submit →</button>
+            <% } else { %>
+              <button name="action" value="approve" class="btn btn-success justify-center">Approve</button>
+              <button name="action" value="reject" class="btn btn-danger justify-center" type="button" onclick="showReason('reject')">Reject</button>
+              <button name="action" value="info" class="btn btn-warn col-span-2 justify-center" type="button" onclick="showReason('info')">Request more info</button>
+              <button name="action" value="reject" class="btn btn-danger justify-center col-span-2 hidden" id="confirmReject">Confirm reject</button>
+              <button name="action" value="info"   class="btn btn-warn   justify-center col-span-2 hidden" id="confirmInfo">Confirm request</button>
+            <% } %>
+          </div>
+        </form>
+        <script>
+          function showReason(kind){
+            const rej = document.getElementById('rejectReasonWrap');
+            const inf = document.getElementById('infoReasonWrap');
+            const btnR = document.getElementById('confirmReject');
+            const btnI = document.getElementById('confirmInfo');
+            if (kind==='reject'){ rej.style.display=''; inf.style.display='none'; btnR.classList.remove('hidden'); btnI.classList.add('hidden'); }
+            else              { rej.style.display='none'; inf.style.display=''; btnR.classList.add('hidden'); btnI.classList.remove('hidden'); }
+          }
+        </script>
+      <% } else { %>
+        <p class="text-sm text-slate-500">
+          <% if (['COMPLETED','REJECTED','CANCELLED'].includes(request.status)) { %>
+            This request is <%= request.status.toLowerCase() %>.
+          <% } else { %>
+            Waiting on <strong><%= (request.current_assignee_role || '').replace(/_/g,' ') %></strong>.
+          <% } %>
+        </p>
+      <% } %>
+      <% if (request.requestor_id === currentUser.id && !['COMPLETED','REJECTED','CANCELLED'].includes(request.status)) { %>
+        <form method="post" action="/requests/<%= request.id %>/cancel" class="mt-3">
+          <button class="btn btn-ghost w-full justify-center text-red-600">Cancel request</button>
+        </form>
+      <% } %>
+    </div>
+  </section>
+
+  <!-- Requestor info -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Request info</h3></div>
+    <dl class="card-body text-sm space-y-1">
+      <div class="flex gap-2"><dt class="text-slate-500 w-28">WF ID</dt><dd class="font-mono"><%= request.wf_id %></dd></div>
+      <div class="flex gap-2"><dt class="text-slate-500 w-28">Requestor</dt><dd><%= request.requestor_name %></dd></div>
+      <div class="flex gap-2"><dt class="text-slate-500 w-28">Email</dt><dd class="text-xs"><%= request.requestor_email %></dd></div>
+      <div class="flex gap-2"><dt class="text-slate-500 w-28">Region</dt><dd><%= request.requestor_region || '—' %></dd></div>
+      <div class="flex gap-2"><dt class="text-slate-500 w-28">Created</dt><dd class="text-xs"><%= fmtDate(request.created_at) %></dd></div>
+      <div class="flex gap-2"><dt class="text-slate-500 w-28">Updated</dt><dd class="text-xs"><%= fmtDate(request.updated_at) %></dd></div>
+      <% if (request.completed_at) { %><div class="flex gap-2"><dt class="text-slate-500 w-28">Completed</dt><dd class="text-xs"><%= fmtDate(request.completed_at) %></dd></div><% } %>
+    </dl>
+  </section>
+
+  <!-- Subject record -->
+  <% if (subject) { %>
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Subject record</h3></div>
+    <div class="card-body text-sm">
+      <% if (request.domain === 'VENDOR') { %>
+        <div class="font-semibold"><%= subject.legal_name %></div>
+        <div class="text-xs text-slate-500"><%= subject.erp_supplier_id || '' %></div>
+        <a href="/vendors/<%= subject.id %>" class="btn btn-secondary mt-2 text-xs">View vendor →</a>
+      <% } else if (request.domain === 'CUSTOMER') { %>
+        <div class="font-semibold"><%= subject.legal_name %></div>
+        <div class="text-xs text-slate-500"><%= subject.erp_customer_id || '' %></div>
+        <a href="/customers/<%= subject.id %>" class="btn btn-secondary mt-2 text-xs">View customer →</a>
+      <% } else if (request.domain === 'PRODUCT') { %>
+        <div class="font-semibold"><%= subject.name %></div>
+        <div class="text-xs text-slate-500"><%= subject.sku || '' %></div>
+        <a href="/products/<%= subject.id %>" class="btn btn-secondary mt-2 text-xs">View product →</a>
+      <% } %>
+    </div>
+  </section>
+  <% } %>
+</aside>
+</div>
+
+</main></div>
+</body></html>

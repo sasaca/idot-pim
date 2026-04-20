@@ -1,0 +1,512 @@
+<%#
+  Document Upload section — place at the top of any form.
+  Drops PDFs / business cards / invoices here and Claude populates matching
+  fields in the form below. Reuses /api/chat/:domain.
+
+  Locals:
+    docDomain - one of CUSTOMER_ONBOARDING | VENDOR_ONBOARDING | PRODUCT_CREATE | CUSTOMER_MODIFY
+    docTitle  - optional header text (default: "Document Upload")
+    docBlurb  - optional sub-header copy
+%>
+<% const _docDomain = typeof docDomain === 'string' ? docDomain : 'CUSTOMER_ONBOARDING'; %>
+<% const _docTitle  = typeof docTitle  === 'string' ? docTitle  : 'Document Upload'; %>
+<% const _docBlurb  = typeof docBlurb  === 'string' ? docBlurb  : 'Drop a PDF, business card, invoice, tax form, or spec sheet here and Claude will populate matching fields in the form below.'; %>
+
+<style>
+  .du-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 16px; margin: 0 0 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .du-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .du-card-header strong { font-size: 15px; color: #111827; }
+  .du-card-header .du-badge {
+    background: #ede9fe; color: #5b21b6; font-size: 10px;
+    padding: 2px 8px; border-radius: 9999px; font-weight: 600; letter-spacing: .03em;
+  }
+  .du-blurb { color: #4b5563; font-size: 13px; margin: 0 0 12px 0; }
+  .du-drop {
+    border: 2px dashed #c7d2fe; background: #f5f3ff; border-radius: 10px;
+    padding: 20px; text-align: center; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .du-drop:hover { background: #ede9fe; }
+  .du-drop.du-drag { background: #e0e7ff; border-color: #6366f1; }
+  .du-drop p { margin: 0; color: #374151; font-size: 13px; }
+  .du-drop p.du-tiny { color: #6b7280; font-size: 11px; margin-top: 6px; }
+  .du-drop button {
+    background: #4f46e5; color: #fff; border: none; padding: 6px 14px;
+    border-radius: 6px; font-size: 13px; cursor: pointer; margin-left: 4px;
+  }
+  .du-drop button:hover { background: #4338ca; }
+  .du-hidden { display: none; }
+  .du-status { margin-top: 12px; font-size: 12px; color: #4b5563; }
+  .du-status.du-error { color: #b91c1c; }
+  .du-status.du-ok { color: #047857; }
+  .du-status.du-warn { color: #b45309; }
+  .du-spin {
+    display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid #c7d2fe; border-top-color: #4f46e5;
+    animation: duSpin 0.8s linear infinite; vertical-align: -2px; margin-right: 6px;
+  }
+  @keyframes duSpin { to { transform: rotate(360deg); } }
+  .du-updates {
+    margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .du-chip {
+    background: #dcfce7; color: #065f46; border: 1px solid #86efac;
+    font-size: 11px; padding: 2px 8px; border-radius: 9999px;
+  }
+  .du-chip.du-unmatched {
+    background: #fee2e2; color: #991b1b; border-color: #fca5a5;
+  }
+  .du-assistant {
+    margin-top: 10px; padding: 8px 10px; background: #f3f4f6;
+    border-left: 3px solid #6366f1; border-radius: 4px;
+    font-size: 12px; color: #374151; line-height: 1.4;
+    white-space: pre-wrap;
+  }
+  .du-filelist {
+    margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .du-file { background: #e0e7ff; color: #1e3a8a; font-size: 11px;
+    padding: 2px 8px; border-radius: 9999px; }
+  .du-flash { animation: duFlash 1.4s ease-out; }
+  @keyframes duFlash {
+    0%   { background-color: #fef08a; }
+    100% { background-color: transparent; }
+  }
+</style>
+
+<div class="du-card" id="du-card">
+  <div class="du-card-header">
+    <strong><%= _docTitle %></strong>
+    <span class="du-badge">AI-powered</span>
+  </div>
+  <p class="du-blurb"><%= _docBlurb %></p>
+
+  <div class="du-drop" id="du-drop">
+    <input type="file" id="du-file" class="du-hidden" accept="image/*,application/pdf" multiple />
+    <p><strong>Drop files here</strong> or <button type="button" id="du-pick">Browse…</button></p>
+    <p class="du-tiny">PDFs and images up to 15MB each. Multiple files OK.</p>
+  </div>
+
+  <div class="du-filelist" id="du-filelist"></div>
+  <div class="du-status" id="du-status"></div>
+  <div class="du-assistant" id="du-assistant" style="display:none;"></div>
+  <div class="du-updates" id="du-updates"></div>
+</div>
+
+<script>
+(function() {
+  var DOMAIN = <%- JSON.stringify(_docDomain) %>;
+  var DEBUG = true;
+
+  var card = document.getElementById('du-card');
+  if (!card) return;
+
+  var drop = document.getElementById('du-drop');
+  var file = document.getElementById('du-file');
+  var pick = document.getElementById('du-pick');
+  var fileList = document.getElementById('du-filelist');
+  var status = document.getElementById('du-status');
+  var assistant = document.getElementById('du-assistant');
+  var updatesEl = document.getElementById('du-updates');
+
+  function log() {
+    if (!DEBUG) return;
+    try { console.log.apply(console, ['[doc-upload]'].concat(Array.from(arguments))); } catch(e) {}
+  }
+
+  // Common aliases: Claude's schema name -> likely equivalents in actual forms
+  var ALIASES = {
+    legal_name:    ['name_1','name1','vendor_name','customer_name','company_name','legal_entity_name','entity_name','business_name'],
+    tax_id:        ['ein','ssn','tin','tax_id_ein','taxid','federal_tax_id','vat_id','vat_number','tax_number'],
+    vat_id:        ['vat_number','tax_id'],
+    duns:          ['duns_number','duns_num'],
+    dba:           ['dba_name','doing_business_as','trade_name','tradename'],
+    contact_name:  ['primary_contact','primary_contact_name','contact','contact_person','contact_full_name'],
+    contact_email: ['email','primary_email','primary_contact_email','contact_email_address','email_address'],
+    contact_phone: ['phone','primary_phone','primary_contact_phone','telephone','phone_number'],
+    primary_contact_name: ['contact_name','primary_contact','contact'],
+    primary_contact_email:['contact_email','email','primary_email','email_address'],
+    primary_contact_phone:['contact_phone','phone','primary_phone'],
+    full_address:  ['address','street','street_address','address_line_1','address1','addr1'],
+    address_line_1:['address','street','address1','addr1','full_address'],
+    address_line_2:['address2','addr2','suite','unit'],
+    city:          ['town','locality'],
+    region:        ['state','province','county'],
+    state:         ['region','province'],
+    postal_code:   ['zip','zip_code','zipcode','postcode'],
+    country:       ['country_code','country_iso','nation'],
+    country_code:  ['country','country_iso'],
+    currency_code: ['currency','ccy','iso_currency'],
+    payment_terms: ['terms','payment_term'],
+    incoterms:     ['incoterm','delivery_terms'],
+    entity_type:   ['business_type','organization_type','org_type','company_type','vendor_type'],
+    website:       ['url','homepage','web_site'],
+    bank_account:  ['account_number','bank_acct','acct_no'],
+    iban:          ['iban_number'],
+    swift:         ['swift_code','bic','bic_code'],
+    credit_limit:  ['credit_line','credit_amount'],
+    product_name:  ['name','description','item_name','material_name'],
+    sku:           ['material_number','item_number','part_number','product_code'],
+    gtin:          ['upc','ean','barcode'],
+  };
+
+  function norm(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  function pickMainForm() {
+    var forms = Array.from(document.querySelectorAll('form'));
+    if (forms.length === 0) return document;
+    var best = forms[0], bestN = -1;
+    forms.forEach(function(f) {
+      var n = f.querySelectorAll('input[name], select[name], textarea[name]').length;
+      if (n > bestN) { bestN = n; best = f; }
+    });
+    log('Picked form with', bestN, 'named inputs out of', forms.length, 'forms');
+    return best;
+  }
+
+  function findField(form, updateName) {
+    var target = norm(updateName);
+    if (!target) return null;
+
+    // 1. exact [name=X]
+    var el = form.querySelector('[name="' + updateName + '"]');
+    if (el) return { el: el, how: 'exact-name' };
+
+    // 2. [data-field="X"]
+    el = form.querySelector('[data-field="' + updateName + '"]');
+    if (el) return { el: el, how: 'data-field' };
+
+    var nodes = Array.from(form.querySelectorAll('input[name], select[name], textarea[name]'));
+
+    // 3. normalized-name match
+    for (var i = 0; i < nodes.length; i++) {
+      if (norm(nodes[i].name) === target) return { el: nodes[i], how: 'normalized' };
+    }
+
+    // 4. alias map (forwards and reverse)
+    var aliases = (ALIASES[updateName] || []).slice();
+    Object.keys(ALIASES).forEach(function(k) {
+      if (ALIASES[k].indexOf(updateName) !== -1 && aliases.indexOf(k) === -1) aliases.push(k);
+    });
+    for (var a = 0; a < aliases.length; a++) {
+      var alt = aliases[a];
+      var altN = norm(alt);
+      for (var j = 0; j < nodes.length; j++) {
+        if (norm(nodes[j].name) === altN) return { el: nodes[j], how: 'alias:' + alt };
+      }
+    }
+
+    // 5. substring match — both sides must be >= 4 chars (prevents e.g. "0" matching "f_1099")
+    if (target.length >= 4) {
+      var cands = nodes.filter(function(n) {
+        var nn = norm(n.name);
+        if (nn.length < 4) return false;
+        return nn.indexOf(target) !== -1 || target.indexOf(nn) !== -1;
+      });
+      if (cands.length > 0) {
+        cands.sort(function(a, b) { return a.name.length - b.name.length; });
+        return { el: cands[0], how: 'substring:' + cands[0].name };
+      }
+    }
+
+    // 6. label-text match
+    var labels = Array.from(form.querySelectorAll('label'));
+    for (var li = 0; li < labels.length; li++) {
+      var ltext = norm(labels[li].textContent || '');
+      if (ltext.length < 3) continue;
+      if (ltext === target || ltext.indexOf(target) !== -1 || target.indexOf(ltext) !== -1) {
+        var forId = labels[li].getAttribute('for');
+        if (forId) {
+          var byId = form.querySelector('#' + CSS.escape(forId));
+          if (byId) return { el: byId, how: 'label-for:' + labels[li].textContent.trim() };
+        }
+        var sibling = labels[li].parentElement ? labels[li].parentElement.querySelector('input[name], select[name], textarea[name]') : null;
+        if (sibling) return { el: sibling, how: 'label-sibling:' + labels[li].textContent.trim() };
+      }
+    }
+
+    log('No match for', updateName);
+    return null;
+  }
+
+  // ** Critical: normalize whatever the server returns into a flat {name: value} map **
+  // Handles both the fixed shape ({legal_name: "X"}) and the broken/legacy shape
+  // ([{fields: {legal_name: "X"}, rationale: "..."}]).
+  function coerceFormUpdates(raw) {
+    if (!raw) return { map: {}, note: null };
+    if (Array.isArray(raw)) {
+      var merged = {};
+      var sawWrapper = false;
+      raw.forEach(function(item) {
+        if (!item || typeof item !== 'object') return;
+        if (item.fields && typeof item.fields === 'object') {
+          sawWrapper = true;
+          Object.assign(merged, item.fields);
+        } else {
+          Object.assign(merged, item);
+        }
+      });
+      return {
+        map: merged,
+        note: sawWrapper
+          ? 'Server returned legacy array-of-wrappers shape — unwrapped client-side. Update lib/claude.js + restart server to fix upstream.'
+          : 'Server returned array shape — merged client-side. Update lib/claude.js + restart server to fix upstream.'
+      };
+    }
+    if (typeof raw === 'object') {
+      // Check for {fields: {...}} wrapper (single object, not in an array)
+      if (raw.fields && typeof raw.fields === 'object' && Object.keys(raw).every(function(k) { return k === 'fields' || k === 'rationale'; })) {
+        return { map: raw.fields, note: 'Server returned single-object wrapper — unwrapped client-side.' };
+      }
+      return { map: raw, note: null };
+    }
+    return { map: {}, note: 'Unrecognized formUpdates shape: ' + typeof raw };
+  }
+
+  // --- wiring --------------------------------------------------------------
+  pick.addEventListener('click', function(e) { e.stopPropagation(); file.click(); });
+  drop.addEventListener('click', function() { file.click(); });
+  file.addEventListener('change', function() {
+    var fs = Array.from(file.files || []);
+    file.value = '';
+    if (fs.length > 0) handleFiles(fs);
+  });
+
+  ['dragenter', 'dragover'].forEach(function(ev) {
+    drop.addEventListener(ev, function(e) {
+      e.preventDefault(); e.stopPropagation();
+      drop.classList.add('du-drag');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function(ev) {
+    drop.addEventListener(ev, function(e) {
+      e.preventDefault(); e.stopPropagation();
+      drop.classList.remove('du-drag');
+    });
+  });
+  drop.addEventListener('drop', function(e) {
+    var fs = Array.from(e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : []);
+    if (fs.length > 0) handleFiles(fs);
+  });
+
+  function collectFormState() {
+    var state = {};
+    var extras = [];
+    var form = pickMainForm();
+    var nodes = form.querySelectorAll('input[name], select[name], textarea[name]');
+    nodes.forEach(function(n) {
+      var name = n.name;
+      if (!name) return;
+      if (name.indexOf('pf_') === 0 && extras.indexOf(name) === -1) extras.push(name);
+      if (n.type === 'checkbox') state[name] = !!n.checked;
+      else if (n.type === 'radio') { if (n.checked) state[name] = n.value; }
+      else state[name] = n.value;
+    });
+    return { state: state, extras: extras, form: form };
+  }
+
+  function applyUpdates(patch) {
+    if (!patch || typeof patch !== 'object') return { applied: {}, missed: [] };
+    var form = pickMainForm();
+    var applied = {}, missed = [];
+
+    Object.keys(patch).forEach(function(name) {
+      var val = patch[name];
+      // Skip nulls/undefined/empty values — Claude uses them to mean "not found in document"
+      if (val === null || val === undefined || val === '') return;
+      var hit = findField(form, name);
+      if (!hit) { missed.push(name); return; }
+      var el = hit.el;
+      log('Matched', name, '→', el.name || el.id, '(' + hit.how + ') =', val);
+
+      if (el.tagName === 'SELECT') {
+        var target = String(val);
+        var targetN = norm(target);
+        var matched = false;
+        var opts = el.querySelectorAll('option');
+        for (var i = 0; i < opts.length; i++) {
+          if (opts[i].value === target) { el.value = opts[i].value; matched = true; break; }
+        }
+        if (!matched) {
+          for (var j = 0; j < opts.length; j++) {
+            if (norm(opts[j].value) === targetN) { el.value = opts[j].value; matched = true; break; }
+          }
+        }
+        if (!matched) {
+          for (var k = 0; k < opts.length; k++) {
+            if (norm(opts[k].textContent || '') === targetN) { el.value = opts[k].value; matched = true; break; }
+          }
+        }
+        if (!matched) { missed.push(name + ' (no matching option for "' + target + '")'); return; }
+      } else if (el.type === 'checkbox') {
+        var s = String(val).toLowerCase();
+        el.checked = !(s === 'false' || s === '0' || s === 'no' || s === '');
+      } else if (el.type === 'radio') {
+        var radios = form.querySelectorAll('[name="' + el.name + '"]');
+        var vN = norm(val);
+        var anyMatched = false;
+        radios.forEach(function(r) {
+          if (norm(r.value) === vN) { r.checked = true; anyMatched = true; }
+        });
+        if (!anyMatched) { missed.push(name + ' (no radio value matched "' + val + '")'); return; }
+      } else {
+        el.value = String(val);
+      }
+      try { el.dispatchEvent(new Event('input',  { bubbles: true })); } catch (e) {}
+      try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+      el.classList.remove('du-flash');
+      void el.offsetWidth;
+      el.classList.add('du-flash');
+      applied[name] = val;
+    });
+    return { applied: applied, missed: missed };
+  }
+
+  function readAsBase64(f) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() {
+        var result = reader.result || '';
+        var b64 = String(result).split(',')[1] || '';
+        resolve({ name: f.name, mime: f.type || 'application/octet-stream', dataBase64: b64 });
+      };
+      reader.onerror = function() { reject(reader.error); };
+      reader.readAsDataURL(f);
+    });
+  }
+
+  function setStatus(html, cls) {
+    status.innerHTML = html || '';
+    status.className = 'du-status' + (cls ? ' ' + cls : '');
+  }
+
+  function renderFileList(files) {
+    fileList.innerHTML = '';
+    files.forEach(function(f) {
+      var chip = document.createElement('span');
+      chip.className = 'du-file';
+      chip.textContent = '📎 ' + f.name;
+      fileList.appendChild(chip);
+    });
+  }
+
+  function renderUpdates(applied, missed) {
+    updatesEl.innerHTML = '';
+    var okKeys = Object.keys(applied || {});
+    if (okKeys.length > 0) {
+      var hdr = document.createElement('div');
+      hdr.style.width = '100%'; hdr.style.marginBottom = '4px';
+      hdr.style.fontSize = '12px'; hdr.style.color = '#065f46'; hdr.style.fontWeight = '600';
+      hdr.textContent = 'Populated ' + okKeys.length + ' field' + (okKeys.length === 1 ? '' : 's') + ':';
+      updatesEl.appendChild(hdr);
+      okKeys.forEach(function(k) {
+        var chip = document.createElement('span');
+        chip.className = 'du-chip';
+        chip.textContent = k;
+        updatesEl.appendChild(chip);
+      });
+    }
+    if (missed && missed.length > 0) {
+      var hdr2 = document.createElement('div');
+      hdr2.style.width = '100%'; hdr2.style.marginTop = '8px'; hdr2.style.marginBottom = '4px';
+      hdr2.style.fontSize = '12px'; hdr2.style.color = '#991b1b'; hdr2.style.fontWeight = '600';
+      hdr2.textContent = 'Could not place ' + missed.length + ' field' + (missed.length === 1 ? '' : 's') + ' (no matching input found):';
+      updatesEl.appendChild(hdr2);
+      missed.forEach(function(k) {
+        var chip = document.createElement('span');
+        chip.className = 'du-chip du-unmatched';
+        chip.textContent = k;
+        updatesEl.appendChild(chip);
+      });
+    }
+  }
+
+  async function handleFiles(files) {
+    var tooBig = files.filter(function(f) { return f.size > 15 * 1024 * 1024; });
+    if (tooBig.length > 0) {
+      setStatus('⚠ Skipping files over 15MB: ' + tooBig.map(function(f) { return f.name; }).join(', '), 'du-error');
+      files = files.filter(function(f) { return f.size <= 15 * 1024 * 1024; });
+      if (files.length === 0) return;
+    }
+
+    renderFileList(files);
+    assistant.style.display = 'none'; assistant.textContent = '';
+    updatesEl.innerHTML = '';
+    setStatus('<span class="du-spin"></span>Reading ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' and extracting fields…');
+
+    try {
+      var attachments = await Promise.all(files.map(readAsBase64));
+      var snap = collectFormState();
+      log('Form state snapshot:', snap.state);
+      log('Extra field names:', snap.extras);
+
+      var resp = await fetch('/api/chat/' + DOMAIN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{
+            role: 'user',
+            content: 'Please extract all relevant fields from the attached document(s) and populate the form via the update_form_fields tool. CRITICAL: Use ONLY field names that appear as keys in the provided formState object — do not invent new field names. If the document has data that does not map to any existing field, mention it in your summary. After updating, respond with one or two sentences describing what you extracted.'
+          }],
+          formState: snap.state,
+          extraFieldNames: snap.extras,
+          attachments: attachments,
+        }),
+      });
+      var data = await resp.json();
+
+      if (!resp.ok) {
+        var msg = data && data.message ? data.message : 'Request failed (' + resp.status + ')';
+        if (data && data.error === 'NO_API_KEY') {
+          msg = 'ANTHROPIC_API_KEY is not set on the server.';
+        }
+        setStatus('⚠ ' + msg, 'du-error');
+        return;
+      }
+
+      log('Claude returned formUpdates (raw):', data.formUpdates);
+      var coerced = coerceFormUpdates(data.formUpdates);
+      log('Coerced to flat map:', coerced.map);
+      if (coerced.note) log('NOTE:', coerced.note);
+
+      var applied = {}, missed = [];
+      if (Object.keys(coerced.map).length > 0) {
+        var result = applyUpdates(coerced.map);
+        applied = result.applied;
+        missed = result.missed;
+      }
+
+      var n = Object.keys(applied).length;
+      var extraWarn = coerced.note ? ' [' + coerced.note + ']' : '';
+      if (n > 0) {
+        setStatus('✓ Populated ' + n + ' field' + (n === 1 ? '' : 's') + ' from the document.'
+          + (missed.length > 0 ? ' (' + missed.length + ' could not be matched — see below.)' : '')
+          + extraWarn,
+          coerced.note ? 'du-warn' : 'du-ok');
+      } else if (missed.length > 0) {
+        setStatus('⚠ Claude extracted ' + missed.length + ' field'
+          + (missed.length === 1 ? '' : 's')
+          + ' but none matched an input in this form. Open the browser console for details.' + extraWarn, 'du-error');
+      } else {
+        setStatus('Claude did not return any field updates.' + extraWarn, 'du-error');
+      }
+      renderUpdates(applied, missed);
+
+      if (data.assistantText) {
+        assistant.style.display = 'block';
+        assistant.textContent = data.assistantText;
+      }
+    } catch (e) {
+      setStatus('⚠ ' + (e && e.message ? e.message : String(e)), 'du-error');
+    }
+  }
+})();
+</script>

@@ -1,0 +1,439 @@
+<%- include('../partials/head', { pageTitle: 'New Customer Onboarding' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'New Customer Onboarding', topSub: 'Partner-function driven: Sold-To · Ship-To · Bill-To · Payer' }) %>
+<main class="p-6 max-w-6xl">
+
+
+<%- include('../partials/doc_upload', { docDomain: 'CUSTOMER_ONBOARDING', docTitle: 'Document Upload — Customer Onboarding' }) %>
+<%- include('../partials/address_autocomplete') %>
+<form method="post" action="/customers/new/onboarding" class="space-y-6" id="custForm">
+
+  <!-- WIZARD: Partner function configuration -->
+  <section class="card" id="pf-wizard">
+    <div class="card-header">
+      <h3 class="font-semibold">1. Partner function configuration</h3>
+      <span class="ml-auto text-xs text-slate-400">SAP-style partner roles</span>
+    </div>
+    <div class="card-body space-y-4">
+      <p class="text-sm text-slate-600">
+        A customer can play one or more partner roles:
+        <span class="chip bg-slate-100 text-slate-700 text-[10px]">Sold-To (SP)</span>
+        <span class="chip bg-slate-100 text-slate-700 text-[10px]">Ship-To (SH)</span>
+        <span class="chip bg-slate-100 text-slate-700 text-[10px]">Bill-To (BP)</span>
+        <span class="chip bg-slate-100 text-slate-700 text-[10px]">Payer (PY)</span>.
+        Answer two quick questions — we'll decide how many partner records to create.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field">
+          <span class="label">Are Sold-To, Bill-To, Ship-To and Payer all the same partner?</span>
+          <select id="q_allSame" class="input">
+            <option value="">— select —</option>
+            <option value="yes">Yes — end-to-end (single record)</option>
+            <option value="no">No — multiple partners</option>
+          </select>
+        </label>
+
+        <label class="field" id="q_payerSameWrap" style="display:none">
+          <span class="label">Are the Payer and Bill-To the same partner?</span>
+          <select id="q_payerSame" class="input">
+            <option value="">— select —</option>
+            <option value="yes">Yes</option>
+            <option value="no">No — they are different</option>
+          </select>
+        </label>
+
+        <label class="field" id="q_soldSameWrap" style="display:none">
+          <span class="label">Are the Sold-To and Ship-To the same partner?</span>
+          <select id="q_soldSame" class="input">
+            <option value="">— select —</option>
+            <option value="yes">Yes</option>
+            <option value="no">No — they are different</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="pf-summary" class="p-3 bg-slate-50 border border-slate-200 rounded text-sm" style="display:none">
+        <div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Records to be created</div>
+        <div id="pf-summary-text" class="font-medium">—</div>
+        <input type="hidden" name="partner_function" id="partner_function" value="">
+        <input type="hidden" name="pf_mode" id="pf_mode" value="">
+      </div>
+    </div>
+  </section>
+
+  <!-- Tabs: one per partner record -->
+  <section class="card" id="pf-tabs-card" style="display:none">
+    <div class="card-header">
+      <h3 class="font-semibold">2. Partner records</h3>
+      <span class="ml-auto text-xs text-slate-400">Fill each tab — use <em>Copy from</em> to avoid re-typing</span>
+    </div>
+    <div class="card-body">
+      <div class="flex flex-wrap gap-2 border-b border-slate-200 mb-4" id="pf-tab-buttons"></div>
+      <div id="pf-tab-content"></div>
+    </div>
+  </section>
+
+  <!-- Commercial / Finance setup -->
+  <section class="card" id="commercial-card" style="display:none">
+    <div class="card-header"><h3 class="font-semibold">3. Sales area &amp; finance setup</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field"><span class="label">Sales organization *</span>
+        <select name="sales_org" required class="input">
+          <option value="">—</option>
+          <% (ref.SALES_ORG || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Distribution channel</span>
+        <select name="dist_channel" class="input">
+          <option value="">—</option>
+          <% (ref.DISTRIBUTION_CHANNEL || [{code:'DIRECT',label:'Direct'},{code:'RESELLER',label:'Reseller'},{code:'DISTRIBUTOR',label:'Distributor'},{code:'OEM',label:'OEM'}]).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Sales region</span><input name="sales_region" class="input"></label>
+      <label class="field"><span class="label">Division</span><input name="division" class="input"></label>
+      <label class="field"><span class="label">Company code *</span><input name="company_code" required class="input"></label>
+      <label class="field"><span class="label">Currency *</span>
+        <select name="currency_code" required class="input">
+          <% (ref.CURRENCY || []).forEach(c => { %><option value="<%= c.code %>"><%= c.code %> — <%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Payment terms *</span>
+        <select name="payment_terms" required class="input">
+          <% (ref.PAYMENT_TERM || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Credit limit (USD)</span><input name="credit_limit" type="number" step="0.01" class="input"></label>
+      <label class="field"><span class="label">Incoterms</span>
+        <select name="incoterms" class="input">
+          <option value="">—</option>
+          <% (ref.INCOTERM || []).forEach(c => { %><option value="<%= c.code %>"><%= c.code %> — <%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Tax classification</span>
+        <select name="tax_class" class="input"><option>TAXABLE</option><option>EXEMPT</option><option>EXPORT</option></select></label>
+      <label class="field"><span class="label">Customer group</span>
+        <select name="customer_group" class="input">
+          <option value="">—</option>
+          <% (ref.CUSTOMER_GROUP || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+      <label class="field"><span class="label">Market / segment</span>
+        <select name="market" class="input">
+          <option value="">—</option>
+          <% (ref.MARKET || []).forEach(c => { %><option value="<%= c.code %>"><%= c.label %></option><% }) %>
+        </select></label>
+    </div>
+  </section>
+
+  <!-- Compliance flags -->
+  <section class="card" id="compliance-card" style="display:none">
+    <div class="card-header"><h3 class="font-semibold">4. Compliance &amp; regulated attributes</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-4">
+      <label class="field"><span class="label">Quality class</span>
+        <select name="quality_class" class="input">
+          <option value="">—</option>
+          <option value="PHARMA">Pharma / GxP regulated</option>
+          <option value="MEDICAL_DEVICE">Medical device</option>
+          <option value="CONSUMER">Consumer / non-regulated</option>
+        </select></label>
+      <label class="field"><span class="label">GxP flag</span>
+        <select name="gxp_flag" class="input"><option value="0">No</option><option value="1">Yes</option></select></label>
+      <label class="field"><span class="label">SOX flag</span>
+        <select name="sox_flag" class="input"><option value="0">No</option><option value="1">Yes</option></select></label>
+    </div>
+  </section>
+
+  <!-- Invoice preview -->
+  <section class="card" id="invoice-card" style="display:none">
+    <div class="card-header">
+      <h3 class="font-semibold">5. Invoice preview</h3>
+      <span class="ml-auto text-xs text-slate-400">How the master record will appear on a commercial invoice</span>
+    </div>
+    <div class="card-body">
+      <div id="invoice-preview" class="bg-white border-2 border-dashed border-slate-300 rounded-lg p-6 text-sm">
+        <div class="text-center text-slate-400 italic">Fill out partner records to see invoice preview.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="flex gap-2" id="submit-bar" style="display:none">
+    <button class="btn btn-primary">Submit onboarding request →</button>
+    <a href="/customers" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+<!-- Reference data passthroughs -->
+<script id="ref-countries" type="application/json"><%- JSON.stringify(ref.COUNTRY || []) %></script>
+
+<script>
+(function(){
+  // ---------- STATE ----------
+  const state = { mode:'', tabs:[], data:{} };
+  const countries = JSON.parse(document.getElementById('ref-countries').textContent || '[]');
+
+  // ---------- WIZARD LOGIC ----------
+  const qAll    = document.getElementById('q_allSame');
+  const qPayer  = document.getElementById('q_payerSame');
+  const qSold   = document.getElementById('q_soldSame');
+  const wrapPayer = document.getElementById('q_payerSameWrap');
+  const wrapSold  = document.getElementById('q_soldSameWrap');
+
+  qAll.addEventListener('change', refreshWizard);
+  qPayer.addEventListener('change', refreshWizard);
+  qSold.addEventListener('change', refreshWizard);
+
+  function refreshWizard(){
+    const all = qAll.value;
+    wrapPayer.style.display = (all === 'no') ? '' : 'none';
+    wrapSold.style.display  = (all === 'no') ? '' : 'none';
+    if (all === 'yes') { setMode('END_TO_END'); return; }
+    if (all === 'no') {
+      const p = qPayer.value, s = qSold.value;
+      if (!p || !s) { hideAll(); return; }
+      if (p === 'yes' && s === 'yes') setMode('SOLD_SHIP__BILL_PAY');   // 2 records
+      else if (p === 'yes' && s === 'no') setMode('SOLD__SHIP__BILL_PAY'); // 3 records
+      else if (p === 'no' && s === 'yes') setMode('SOLD_SHIP__BILL__PAY'); // 3 records
+      else setMode('ALL_FOUR');                                             // 4 records
+      return;
+    }
+    hideAll();
+  }
+
+  function hideAll(){
+    document.getElementById('pf-summary').style.display='none';
+    document.getElementById('pf-tabs-card').style.display='none';
+    document.getElementById('commercial-card').style.display='none';
+    document.getElementById('compliance-card').style.display='none';
+    document.getElementById('invoice-card').style.display='none';
+    document.getElementById('submit-bar').style.display='none';
+  }
+
+  function setMode(mode){
+    state.mode = mode;
+    document.getElementById('pf_mode').value = mode;
+    document.getElementById('partner_function').value = mode.includes('END_TO_END') ? 'END_TO_END' :
+      (mode === 'SOLD_SHIP__BILL_PAY' ? 'SOLD_SHIP,BILL_PAY'
+       : mode === 'SOLD__SHIP__BILL_PAY' ? 'SOLD_TO,SHIP_TO,BILL_PAY'
+       : mode === 'SOLD_SHIP__BILL__PAY' ? 'SOLD_SHIP,BILL_TO,PAYER'
+       : 'SOLD_TO,SHIP_TO,BILL_TO,PAYER');
+    const tabs = tabsForMode(mode);
+    state.tabs = tabs;
+    // Populate summary
+    document.getElementById('pf-summary').style.display='';
+    document.getElementById('pf-summary-text').textContent =
+      tabs.length + ' partner record' + (tabs.length>1?'s':'') + ': ' + tabs.map(t=>t.label).join(' · ');
+    // Build tabs
+    buildTabs();
+    document.getElementById('pf-tabs-card').style.display='';
+    document.getElementById('commercial-card').style.display='';
+    document.getElementById('compliance-card').style.display='';
+    document.getElementById('invoice-card').style.display='';
+    document.getElementById('submit-bar').style.display='';
+    refreshInvoice();
+  }
+
+  function tabsForMode(mode){
+    switch(mode){
+      case 'END_TO_END':             return [{key:'END', label:'End-to-End (SP/SH/BP/PY)', roles:['SP','SH','BP','PY']}];
+      case 'SOLD_SHIP__BILL_PAY':    return [{key:'SS',  label:'Sold-To + Ship-To', roles:['SP','SH']}, {key:'BP', label:'Bill-To + Payer', roles:['BP','PY']}];
+      case 'SOLD__SHIP__BILL_PAY':   return [{key:'SP',  label:'Sold-To', roles:['SP']}, {key:'SH', label:'Ship-To', roles:['SH']}, {key:'BPY', label:'Bill-To + Payer', roles:['BP','PY']}];
+      case 'SOLD_SHIP__BILL__PAY':   return [{key:'SS',  label:'Sold-To + Ship-To', roles:['SP','SH']}, {key:'BP', label:'Bill-To', roles:['BP']}, {key:'PY', label:'Payer', roles:['PY']}];
+      case 'ALL_FOUR':               return [{key:'SP',label:'Sold-To',roles:['SP']}, {key:'SH',label:'Ship-To',roles:['SH']}, {key:'BP',label:'Bill-To',roles:['BP']}, {key:'PY',label:'Payer',roles:['PY']}];
+      default: return [];
+    }
+  }
+
+  function buildTabs(){
+    const btns = document.getElementById('pf-tab-buttons');
+    const body = document.getElementById('pf-tab-content');
+    btns.innerHTML=''; body.innerHTML='';
+    state.tabs.forEach((t,i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'px-3 py-2 text-sm border-b-2 ' + (i===0 ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-800');
+      b.textContent = t.label;
+      b.dataset.key = t.key;
+      b.addEventListener('click', () => selectTab(t.key));
+      btns.appendChild(b);
+      const pane = document.createElement('div');
+      pane.dataset.pane = t.key;
+      pane.style.display = (i===0 ? '' : 'none');
+      pane.appendChild(renderPartnerForm(t));
+      body.appendChild(pane);
+    });
+  }
+
+  function selectTab(key){
+    document.querySelectorAll('#pf-tab-buttons button').forEach(b => {
+      const active = (b.dataset.key === key);
+      b.className = 'px-3 py-2 text-sm border-b-2 ' + (active ? 'border-brand-600 text-brand-700 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-800');
+    });
+    document.querySelectorAll('#pf-tab-content [data-pane]').forEach(p => {
+      p.style.display = (p.dataset.pane === key) ? '' : 'none';
+    });
+  }
+
+  function renderPartnerForm(tab){
+    const wrap = document.createElement('div');
+    wrap.className = 'space-y-4';
+
+    // Copy-from dropdown
+    if (state.tabs.length > 1){
+      const other = state.tabs.filter(t => t.key !== tab.key);
+      const bar = document.createElement('div');
+      bar.className = 'flex items-center gap-2';
+      bar.innerHTML = '<span class="text-xs text-slate-500">Copy from:</span>';
+      const sel = document.createElement('select');
+      sel.className = 'input max-w-xs text-sm';
+      sel.innerHTML = '<option value="">—</option>' + other.map(o => `<option value="${o.key}">${o.label}</option>`).join('');
+      const btn = document.createElement('button');
+      btn.type='button'; btn.className='btn btn-secondary text-xs'; btn.textContent='Copy';
+      btn.addEventListener('click', () => { if (sel.value) copyPartner(sel.value, tab.key); });
+      bar.appendChild(sel); bar.appendChild(btn);
+      wrap.appendChild(bar);
+    }
+
+    // Fields
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+    grid.innerHTML = `
+      <label class="field"><span class="label">Legal / Name 1 *</span>
+        <input name="pf_${tab.key}_name_1" data-pf="${tab.key}" data-field="name_1" required class="input partner-input"></label>
+      <label class="field"><span class="label">Name 2</span>
+        <input name="pf_${tab.key}_name_2" data-pf="${tab.key}" data-field="name_2" class="input partner-input"></label>
+      <label class="field"><span class="label">Name 3</span>
+        <input name="pf_${tab.key}_name_3" data-pf="${tab.key}" data-field="name_3" class="input partner-input"></label>
+      <label class="field"><span class="label">Name 4</span>
+        <input name="pf_${tab.key}_name_4" data-pf="${tab.key}" data-field="name_4" class="input partner-input"></label>
+      <label class="field md:col-span-2"><span class="label">Address line 1 *</span>
+        <input name="pf_${tab.key}_address_line1" data-pf="${tab.key}" data-field="address_line1" required class="input partner-input"></label>
+      <label class="field md:col-span-2"><span class="label">Address line 2</span>
+        <input name="pf_${tab.key}_address_line2" data-pf="${tab.key}" data-field="address_line2" class="input partner-input"></label>
+      <label class="field"><span class="label">City *</span>
+        <input name="pf_${tab.key}_city" data-pf="${tab.key}" data-field="city" required class="input partner-input"></label>
+      <label class="field"><span class="label">State / Province</span>
+        <input name="pf_${tab.key}_state" data-pf="${tab.key}" data-field="state" class="input partner-input"></label>
+      <label class="field"><span class="label">Postal code *</span>
+        <input name="pf_${tab.key}_postal_code" data-pf="${tab.key}" data-field="postal_code" required class="input partner-input"></label>
+      <label class="field"><span class="label">Country *</span>
+        <select name="pf_${tab.key}_country" data-pf="${tab.key}" data-field="country" required class="input partner-input">
+          <option value="">—</option>
+          ${countries.map(c => `<option value="${c.code}">${c.code} — ${c.label}</option>`).join('')}
+        </select></label>
+      <label class="field"><span class="label">Tax ID *</span>
+        <input name="pf_${tab.key}_tax_id" data-pf="${tab.key}" data-field="tax_id" required class="input partner-input"></label>
+      <label class="field"><span class="label">VAT / GST no.</span>
+        <input name="pf_${tab.key}_vat_no" data-pf="${tab.key}" data-field="vat_no" class="input partner-input"></label>
+      <label class="field"><span class="label">Primary contact name</span>
+        <input name="pf_${tab.key}_contact_name" data-pf="${tab.key}" data-field="contact_name" class="input partner-input"></label>
+      <label class="field"><span class="label">Primary contact email</span>
+        <input name="pf_${tab.key}_contact_email" data-pf="${tab.key}" data-field="contact_email" type="email" class="input partner-input"></label>
+    `;
+    wrap.appendChild(grid);
+    // Role preview chips
+    const roleBar = document.createElement('div');
+    roleBar.className = 'mt-2 text-xs text-slate-500';
+    roleBar.innerHTML = 'This partner plays: ' + tab.roles.map(r => {
+      const lbl = { SP:'Sold-To', SH:'Ship-To', BP:'Bill-To', PY:'Payer' }[r];
+      return `<span class="chip bg-brand-100 text-brand-700 text-[10px] ml-1">${lbl}</span>`;
+    }).join('');
+    wrap.appendChild(roleBar);
+    return wrap;
+  }
+
+  function copyPartner(fromKey, toKey){
+    document.querySelectorAll(`#pf-tab-content [data-pane="${fromKey}"] .partner-input`).forEach(src => {
+      const field = src.dataset.field;
+      const dst = document.querySelector(`#pf-tab-content [data-pane="${toKey}"] [data-field="${field}"]`);
+      if (dst) dst.value = src.value;
+    });
+    refreshInvoice();
+  }
+
+  // ---------- INVOICE PREVIEW ----------
+  document.getElementById('custForm').addEventListener('input', refreshInvoice);
+  document.getElementById('custForm').addEventListener('change', refreshInvoice);
+
+  function readPartner(key){
+    const pane = document.querySelector(`#pf-tab-content [data-pane="${key}"]`);
+    if (!pane) return null;
+    const d = {};
+    pane.querySelectorAll('.partner-input').forEach(i => d[i.dataset.field] = i.value);
+    return d;
+  }
+
+  function addrBlock(d){
+    if (!d) return '<em class="text-slate-400">(no data)</em>';
+    const name = [d.name_1, d.name_2, d.name_3, d.name_4].filter(Boolean).join(' · ') || '<em class="text-slate-400">(no name)</em>';
+    const lines = [
+      `<div class="font-semibold">${escapeHtml(name)}</div>`,
+      d.address_line1 ? `<div>${escapeHtml(d.address_line1)}</div>` : '',
+      d.address_line2 ? `<div>${escapeHtml(d.address_line2)}</div>` : '',
+      `<div>${escapeHtml([d.city, d.state, d.postal_code].filter(Boolean).join(', '))}</div>`,
+      d.country ? `<div>${escapeHtml(d.country)}</div>` : '',
+      d.tax_id  ? `<div class="text-xs text-slate-500 mt-1">Tax ID: ${escapeHtml(d.tax_id)}</div>` : '',
+      d.vat_no  ? `<div class="text-xs text-slate-500">VAT/GST: ${escapeHtml(d.vat_no)}</div>` : '',
+    ].filter(Boolean).join('');
+    return lines;
+  }
+
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function partnerForRole(role){
+    // Map role -> which tab holds it in current mode
+    const t = state.tabs.find(t => t.roles.includes(role));
+    return t ? readPartner(t.key) : null;
+  }
+
+  function refreshInvoice(){
+    const sp = partnerForRole('SP'), sh = partnerForRole('SH'), bp = partnerForRole('BP'), py = partnerForRole('PY');
+    const currency = document.querySelector('[name=currency_code]')?.value || 'USD';
+    const terms    = document.querySelector('[name=payment_terms]')?.value || '—';
+    const inco     = document.querySelector('[name=incoterms]')?.value || '—';
+    const inv = document.getElementById('invoice-preview');
+    inv.innerHTML = `
+      <div class="flex justify-between items-start mb-4 pb-4 border-b border-slate-200">
+        <div>
+          <div class="text-lg font-bold tracking-tight">COMMERCIAL INVOICE</div>
+          <div class="text-xs text-slate-500">preview · no ERP ID yet</div>
+        </div>
+        <div class="text-right text-xs text-slate-500">
+          <div>Invoice #: <span class="font-mono">INV-PREVIEW</span></div>
+          <div>Date: ${new Date().toISOString().slice(0,10)}</div>
+          <div>Currency: ${escapeHtml(currency)}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="p-3 bg-slate-50 rounded"><div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Sold-To (SP)</div>${addrBlock(sp)}</div>
+        <div class="p-3 bg-slate-50 rounded"><div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Ship-To (SH)</div>${addrBlock(sh)}</div>
+        <div class="p-3 bg-slate-50 rounded"><div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Bill-To (BP)</div>${addrBlock(bp)}</div>
+        <div class="p-3 bg-slate-50 rounded"><div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Payer (PY)</div>${addrBlock(py)}</div>
+      </div>
+      <div class="grid grid-cols-3 gap-4 text-xs border-t border-slate-200 pt-3">
+        <div><span class="text-slate-500">Payment terms:</span> <span class="font-medium">${escapeHtml(terms)}</span></div>
+        <div><span class="text-slate-500">Incoterms:</span> <span class="font-medium">${escapeHtml(inco)}</span></div>
+        <div><span class="text-slate-500">Currency:</span> <span class="font-medium">${escapeHtml(currency)}</span></div>
+      </div>
+    `;
+  }
+
+  // Submit: promote first partner record's fields into top-level convenience names
+  document.getElementById('custForm').addEventListener('submit', function(e){
+    const first = state.tabs[0];
+    if (!first) return;
+    const d = readPartner(first.key) || {};
+    const hidden = (k, v) => { const i = document.createElement('input'); i.type='hidden'; i.name=k; i.value=v||''; this.appendChild(i); };
+    hidden('legal_name', d.name_1);
+    hidden('name_1', d.name_1); hidden('name_2', d.name_2); hidden('name_3', d.name_3); hidden('name_4', d.name_4);
+    hidden('tax_id', d.tax_id);
+    hidden('bill_to_line1', d.address_line1);
+    hidden('bill_to_city', d.city); hidden('bill_to_state', d.state); hidden('bill_to_zip', d.postal_code);
+    hidden('country', d.country);
+    // Ship-to from SH partner if present
+    const shP = partnerForRole('SH');
+    if (shP) {
+      hidden('ship_to_line1', shP.address_line1); hidden('ship_to_city', shP.city);
+      hidden('ship_to_state', shP.state); hidden('ship_to_zip', shP.postal_code);
+      hidden('ship_to_country', shP.country);
+    }
+  });
+})();
+</script>
+</main></div>
+</body></html>

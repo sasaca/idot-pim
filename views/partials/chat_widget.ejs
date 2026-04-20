@@ -1,0 +1,378 @@
+<%#
+  Floating Claude chatbot widget.
+  Locals:
+    chatDomain   - one of CUSTOMER_ONBOARDING | VENDOR_ONBOARDING | PRODUCT_CREATE | CUSTOMER_MODIFY
+    chatTitle    - header text shown in the panel
+    chatOpener   - optional opening assistant message shown before the user types
+%>
+<% const _domain = typeof chatDomain === 'string' ? chatDomain : 'CUSTOMER_ONBOARDING'; %>
+<% const _title  = typeof chatTitle  === 'string' ? chatTitle  : 'Ask Claude'; %>
+<% const _opener = typeof chatOpener === 'string' ? chatOpener : 'Hi! I can help fill in this form. Describe the company, paste an email, or attach a PDF / business-card photo and I will populate the fields for you.'; %>
+
+<style>
+  .cc-fab {
+    position: fixed; right: 22px; bottom: 22px; z-index: 9998;
+    background: #111827; color: #fff; border: none; border-radius: 9999px;
+    padding: 12px 18px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 10px 25px rgba(0,0,0,.2);
+  }
+  .cc-fab:hover { background: #1f2937; }
+  .cc-panel {
+    position: fixed; right: 22px; bottom: 78px; width: 380px; max-width: calc(100vw - 44px);
+    height: 560px; max-height: calc(100vh - 120px);
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.18);
+    display: none; flex-direction: column; overflow: hidden; z-index: 9999;
+    font-family: inherit;
+  }
+  .cc-panel.cc-open { display: flex; }
+  .cc-header {
+    background: #111827; color: #fff; padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cc-header strong { font-size: 14px; }
+  .cc-header button {
+    background: transparent; color: #fff; border: none; cursor: pointer; font-size: 18px;
+  }
+  .cc-body {
+    flex: 1 1 auto; overflow-y: auto; padding: 12px; background: #f9fafb;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .cc-msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.4; }
+  .cc-msg-user { align-self: flex-end; background: #2563eb; color: #fff; border-bottom-right-radius: 4px; }
+  .cc-msg-assistant { align-self: flex-start; background: #fff; color: #111827; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
+  .cc-msg-system { align-self: center; background: #fef3c7; color: #92400e; font-size: 11px; padding: 4px 10px; border-radius: 9999px; }
+  .cc-msg-update { align-self: flex-start; background: #dcfce7; color: #065f46; border: 1px solid #86efac; font-size: 11px; border-radius: 8px; padding: 6px 10px; }
+  .cc-msg-update code { background: rgba(0,0,0,.05); padding: 1px 4px; border-radius: 3px; }
+  .cc-attach-list { align-self: flex-end; display: flex; flex-wrap: wrap; gap: 4px; max-width: 85%; }
+  .cc-attach-chip { background: #e0e7ff; color: #1e3a8a; border-radius: 9999px; font-size: 11px; padding: 3px 8px; }
+  .cc-footer { border-top: 1px solid #e5e7eb; padding: 8px; background: #fff; }
+  .cc-attach-tray { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+  .cc-attach-pending { background: #e0e7ff; color: #1e3a8a; border-radius: 9999px; font-size: 11px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 6px; }
+  .cc-attach-pending button { background: transparent; border: none; color: #1e3a8a; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+  .cc-input-row { display: flex; gap: 6px; align-items: flex-end; }
+  .cc-input-row textarea {
+    flex: 1 1 auto; resize: none; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 8px; font-family: inherit; font-size: 13px; min-height: 38px; max-height: 120px;
+  }
+  .cc-icon-btn {
+    background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 8px 10px; cursor: pointer; font-size: 14px;
+  }
+  .cc-send {
+    background: #2563eb; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 13px;
+  }
+  .cc-send:disabled { background: #9ca3af; cursor: not-allowed; }
+  .cc-typing { align-self: flex-start; color: #6b7280; font-size: 12px; font-style: italic; padding: 4px 8px; }
+  .cc-flash {
+    animation: ccFlash 1.4s ease-out;
+  }
+  @keyframes ccFlash {
+    0%   { background-color: #fef08a; }
+    100% { background-color: transparent; }
+  }
+  .cc-hidden-file { display: none; }
+</style>
+
+<button type="button" class="cc-fab" id="cc-fab" aria-label="Open chat assistant">🤖 Ask Claude</button>
+
+<div class="cc-panel" id="cc-panel" role="dialog" aria-label="Claude chat assistant">
+  <div class="cc-header">
+    <strong><%= _title %></strong>
+    <button type="button" id="cc-close" aria-label="Close chat">×</button>
+  </div>
+  <div class="cc-body" id="cc-body">
+    <div class="cc-msg cc-msg-assistant" id="cc-opener"><%= _opener %></div>
+  </div>
+  <div class="cc-footer">
+    <div class="cc-attach-tray" id="cc-attach-tray"></div>
+    <div class="cc-input-row">
+      <input type="file" id="cc-file" class="cc-hidden-file" accept="image/*,application/pdf" multiple />
+      <button type="button" class="cc-icon-btn" id="cc-attach-btn" title="Attach PDF or image">📎</button>
+      <textarea id="cc-input" placeholder="Tell Claude about the company, or attach a document..."></textarea>
+      <button type="button" class="cc-send" id="cc-send">Send</button>
+    </div>
+    <div id="cc-status" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var DOMAIN = <%- JSON.stringify(_domain) %>;
+
+  var fab = document.getElementById('cc-fab');
+  var panel = document.getElementById('cc-panel');
+  var closeBtn = document.getElementById('cc-close');
+  var body = document.getElementById('cc-body');
+  var input = document.getElementById('cc-input');
+  var sendBtn = document.getElementById('cc-send');
+  var fileInput = document.getElementById('cc-file');
+  var attachBtn = document.getElementById('cc-attach-btn');
+  var tray = document.getElementById('cc-attach-tray');
+  var statusEl = document.getElementById('cc-status');
+
+  if (!fab || !panel) return;
+
+  // Conversation state (full history we send to the server each turn).
+  var history = [];
+  var pendingFiles = []; // [{name, mime, dataBase64}]
+  var sending = false;
+  var typingEl = null;
+
+  fab.addEventListener('click', function() {
+    panel.classList.add('cc-open');
+    input.focus();
+  });
+  closeBtn.addEventListener('click', function() { panel.classList.remove('cc-open'); });
+
+  attachBtn.addEventListener('click', function() { fileInput.click(); });
+
+  fileInput.addEventListener('change', function() {
+    var files = Array.from(fileInput.files || []);
+    fileInput.value = '';
+    files.forEach(function(f) {
+      if (f.size > 15 * 1024 * 1024) {
+        appendSystem('Skipped ' + f.name + ': over 15MB');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function() {
+        var result = reader.result || '';
+        var b64 = String(result).split(',')[1] || '';
+        pendingFiles.push({ name: f.name, mime: f.type || 'application/octet-stream', dataBase64: b64 });
+        renderTray();
+      };
+      reader.readAsDataURL(f);
+    });
+  });
+
+  function renderTray() {
+    tray.innerHTML = '';
+    pendingFiles.forEach(function(f, i) {
+      var chip = document.createElement('span');
+      chip.className = 'cc-attach-pending';
+      chip.textContent = f.name;
+      var rm = document.createElement('button');
+      rm.type = 'button';
+      rm.textContent = '×';
+      rm.addEventListener('click', function() {
+        pendingFiles.splice(i, 1);
+        renderTray();
+      });
+      chip.appendChild(rm);
+      tray.appendChild(chip);
+    });
+  }
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  });
+  sendBtn.addEventListener('click', send);
+
+  function appendMsg(role, text) {
+    var el = document.createElement('div');
+    el.className = 'cc-msg cc-msg-' + role;
+    el.textContent = text;
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+    return el;
+  }
+  function appendSystem(text) {
+    var el = document.createElement('div');
+    el.className = 'cc-msg cc-msg-system';
+    el.textContent = text;
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+    return el;
+  }
+  function appendUpdate(fields) {
+    var el = document.createElement('div');
+    el.className = 'cc-msg cc-msg-update';
+    var keys = Object.keys(fields);
+    if (keys.length === 0) return null;
+    el.innerHTML = '<strong>Updated ' + keys.length + ' field' + (keys.length === 1 ? '' : 's') + ':</strong> '
+      + keys.map(function(k) { return '<code>' + k + '</code>'; }).join(', ');
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+    return el;
+  }
+  function appendAttachChips(files) {
+    if (!files || !files.length) return;
+    var row = document.createElement('div');
+    row.className = 'cc-attach-list';
+    files.forEach(function(f) {
+      var chip = document.createElement('span');
+      chip.className = 'cc-attach-chip';
+      chip.textContent = '📎 ' + f.name;
+      row.appendChild(chip);
+    });
+    body.appendChild(row);
+    body.scrollTop = body.scrollHeight;
+  }
+  function showTyping() {
+    if (typingEl) return;
+    typingEl = document.createElement('div');
+    typingEl.className = 'cc-typing';
+    typingEl.textContent = 'Claude is thinking…';
+    body.appendChild(typingEl);
+    body.scrollTop = body.scrollHeight;
+  }
+  function hideTyping() {
+    if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
+    typingEl = null;
+  }
+
+  // Collect the current form-state from the page.
+  function collectFormState() {
+    var state = {};
+    var extras = [];
+    // Prefer the first form on the page; fall back to document.
+    var form = document.querySelector('form') || document;
+    var nodes = form.querySelectorAll('input[name], select[name], textarea[name]');
+    nodes.forEach(function(n) {
+      var name = n.name;
+      if (!name) return;
+      if (name.indexOf('pf_') === 0 && extras.indexOf(name) === -1) extras.push(name);
+      if (n.type === 'checkbox') {
+        state[name] = !!n.checked;
+      } else if (n.type === 'radio') {
+        if (n.checked) state[name] = n.value;
+      } else {
+        state[name] = n.value;
+      }
+    });
+    return { state: state, extras: extras };
+  }
+
+  // Apply a patch from the model. Tries [name=..] then [data-field=..].
+  // For SELECT, tries exact value, uppercase value, or option by label.
+  function applyUpdates(updates) {
+    if (!updates || typeof updates !== 'object') return {};
+    var applied = {};
+    Object.keys(updates).forEach(function(name) {
+      var val = updates[name];
+      var form = document.querySelector('form') || document;
+      var el = form.querySelector('[name="' + name + '"]') || form.querySelector('[data-field="' + name + '"]');
+      if (!el) return;
+      if (el.tagName === 'SELECT') {
+        var targetStr = String(val == null ? '' : val);
+        var matched = false;
+        var opts = el.querySelectorAll('option');
+        for (var i = 0; i < opts.length; i++) {
+          if (opts[i].value === targetStr) { el.value = opts[i].value; matched = true; break; }
+        }
+        if (!matched) {
+          var up = targetStr.toUpperCase();
+          for (var j = 0; j < opts.length; j++) {
+            if (opts[j].value.toUpperCase() === up) { el.value = opts[j].value; matched = true; break; }
+          }
+        }
+        if (!matched) {
+          for (var k = 0; k < opts.length; k++) {
+            if ((opts[k].textContent || '').trim().toUpperCase() === targetStr.toUpperCase()) {
+              el.value = opts[k].value; matched = true; break;
+            }
+          }
+        }
+        if (!matched) return;
+      } else if (el.type === 'checkbox') {
+        el.checked = Boolean(val);
+      } else if (el.type === 'radio') {
+        var radios = form.querySelectorAll('[name="' + name + '"]');
+        radios.forEach(function(r) { r.checked = (String(r.value) === String(val)); });
+      } else {
+        el.value = val == null ? '' : String(val);
+      }
+      // Fire events so downstream listeners (preview panes, conditional UI) update.
+      try { el.dispatchEvent(new Event('input',  { bubbles: true })); } catch (e) {}
+      try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+      // Flash the field.
+      el.classList.remove('cc-flash');
+      void el.offsetWidth;
+      el.classList.add('cc-flash');
+      applied[name] = val;
+    });
+    return applied;
+  }
+
+  async function send() {
+    if (sending) return;
+    var text = (input.value || '').trim();
+    var files = pendingFiles.slice();
+    if (!text && files.length === 0) return;
+
+    sending = true;
+    sendBtn.disabled = true;
+
+    if (text) appendMsg('user', text);
+    appendAttachChips(files);
+
+    // Build user message. We send plain text to history; the server splices attachments.
+    history.push({ role: 'user', content: text || '(see attachments)' });
+
+    input.value = '';
+    pendingFiles = [];
+    renderTray();
+    showTyping();
+
+    var snap = collectFormState();
+
+    try {
+      var resp = await fetch('/api/chat/' + DOMAIN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: history,
+          formState: snap.state,
+          extraFieldNames: snap.extras,
+          attachments: files,
+        }),
+      });
+      var data = await resp.json();
+      hideTyping();
+      if (!resp.ok) {
+        var msg = data && data.message ? data.message : 'Request failed (' + resp.status + ')';
+        if (data && data.error === 'NO_API_KEY') {
+          msg = 'ANTHROPIC_API_KEY is not set on the server. Restart with the env var in place.';
+        }
+        appendSystem('⚠ ' + msg);
+        sending = false;
+        sendBtn.disabled = false;
+        return;
+      }
+      if (data.assistantText) {
+        appendMsg('assistant', data.assistantText);
+      }
+      if (data.formUpdates && Object.keys(data.formUpdates).length > 0) {
+        var applied = applyUpdates(data.formUpdates);
+        appendUpdate(applied);
+      }
+      // Replace history with the canonical transcript from the server.
+      if (Array.isArray(data.messages)) {
+        history = data.messages.map(function(m) { return { role: m.role, content: m.content }; });
+      }
+    } catch (e) {
+      hideTyping();
+      appendSystem('⚠ Network error: ' + (e && e.message ? e.message : e));
+    } finally {
+      sending = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  // Probe server config so the user gets a heads-up if the key is missing.
+  fetch('/api/chat/config').then(function(r) { return r.json(); }).then(function(cfg) {
+    if (cfg && cfg.ready === false) {
+      statusEl.textContent = '⚠ ANTHROPIC_API_KEY not set on the server — chat will fail until it is.';
+      statusEl.style.color = '#b91c1c';
+    } else if (cfg && cfg.model) {
+      statusEl.textContent = 'Model: ' + cfg.model;
+    }
+  }).catch(function() { /* ignore */ });
+})();
+</script>

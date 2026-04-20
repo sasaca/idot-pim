@@ -1,0 +1,79 @@
+<%
+/*
+  workflow_legal.ejs
+  -----------------------------------------------------------------------------
+  Stage 5 — Legal & compliance review. View-only snapshot of everything
+  already captured, plus compliance fields + approve/reject decision.
+
+  FIELDS TODO: fill in the compliance checklist fields (sanctions screening,
+  conflict-of-interest, anti-bribery, contract review, etc.)
+  -----------------------------------------------------------------------------
+*/
+%>
+<%- include('../partials/header', { title: 'Legal & Compliance Review' }) %>
+
+<main class="mx-auto max-w-4xl px-4 py-8">
+  <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
+
+  <!-- ======================= Everything captured so far ===================== -->
+  <section class="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">Full vendor record</h2>
+    <!-- TODO: render a readonly summary of all fields collected so far. -->
+    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+      Placeholder for consolidated read-only view (initial submission + supplier
+      inputs + Vendor Admin technical setup).
+    </div>
+  </section>
+
+  <!-- ======================= Compliance form + decision ===================== -->
+  <form method="post" action="/vendors/<%= vendor.id %>/workflow/legal-decision"
+        class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900">Compliance checks</h2>
+      <p class="mt-1 text-sm text-gray-500">Complete the review and render a decision.</p>
+    </div>
+
+    <!-- ===================== LEGAL FIELDS — TODO ============================= -->
+    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+      Placeholder for compliance fields (sanctions hit Y/N, ABAC attestation,
+      contract reference, conflict of interest disclosure, risk rating, etc.).
+      Field list pending.
+    </div>
+    <!-- ======================================================================= -->
+
+    <fieldset class="space-y-3">
+      <legend class="text-sm font-medium text-gray-700">Final decision</legend>
+      <label class="flex items-start gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50">
+        <input type="radio" name="decision" value="approve" class="mt-1" required>
+        <span>
+          <span class="block font-medium text-gray-900">Approve — complete onboarding</span>
+          <span class="block text-sm text-gray-500">Vendor becomes active; workflow ends at Confirmation.</span>
+        </span>
+      </label>
+      <label class="flex items-start gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50">
+        <input type="radio" name="decision" value="reject" class="mt-1">
+        <span>
+          <span class="block font-medium text-gray-900">Reject on compliance grounds</span>
+          <span class="block text-sm text-gray-500">Terminal; a new submission is required to try again.</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <label class="block">
+      <span class="text-sm font-medium text-gray-700">Reviewer comment</span>
+      <textarea name="comment" rows="4"
+                class="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
+                placeholder="Required when rejecting."></textarea>
+    </label>
+
+    <div class="flex justify-end gap-3">
+      <a href="/vendors/queue" class="rounded px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cancel</a>
+      <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+        Submit decision
+      </button>
+    </div>
+  </form>
+</main>
+
+<%- include('../partials/footer') %>

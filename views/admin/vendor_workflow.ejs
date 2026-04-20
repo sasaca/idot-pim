@@ -1,0 +1,488 @@
+<%- include('../partials/head', { pageTitle: 'Vendor Workflow Admin' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', {
+  topTitle: 'Vendor Master — Workflow Configuration',
+  topSub: 'Reorder onboarding stages and set the triggers that control which stages run. Create multiple named scenarios — exactly one is active at any time.',
+}) %>
+<main class="p-6 max-w-5xl">
+
+<div class="mb-4 flex items-center gap-3">
+  <a href="/vendors" class="btn btn-ghost">← Back to Vendors</a>
+</div>
+
+<div id="vwa-alert" class="hidden mb-3 p-3 rounded border text-sm"></div>
+
+<!-- ============ Scenario selector bar ============ -->
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="flex items-center gap-3 flex-wrap">
+      <label class="text-xs font-semibold text-slate-600">Scenario</label>
+      <select id="vwa-scenario" class="input max-w-md"></select>
+      <span id="vwa-active-badge" class="tag tag-always hidden">Active</span>
+      <span id="vwa-dirty-badge"  class="tag tag-triggered hidden">Unsaved changes</span>
+      <div class="flex gap-2 ml-auto">
+        <button id="vwa-new"       class="btn btn-secondary text-xs">＋ New</button>
+        <button id="vwa-rename"    class="btn btn-ghost text-xs">Rename</button>
+        <button id="vwa-duplicate" class="btn btn-ghost text-xs">Duplicate</button>
+        <button id="vwa-activate"  class="btn btn-ghost text-xs">Set as active</button>
+        <button id="vwa-delete"    class="btn btn-ghost text-xs text-red-600">Delete</button>
+      </div>
+    </div>
+    <div class="mt-2 text-xs text-slate-500" id="vwa-meta"></div>
+  </div>
+</div>
+
+<!-- ============ Stages editor ============ -->
+<div class="card mb-4">
+  <div class="card-header"><h3 class="font-semibold">Stages</h3>
+    <span class="ml-auto text-xs text-slate-500">
+      Drag or use arrows to reorder. Stages with no triggers always run.
+      Trigger fields come straight from the onboarding form.
+    </span>
+  </div>
+  <div class="card-body">
+    <div id="vwa-stages" class="space-y-3"></div>
+  </div>
+</div>
+
+<div class="flex gap-2">
+  <button id="vwa-save"  class="btn btn-primary">Save scenario</button>
+  <button id="vwa-reset" class="btn btn-ghost">Reset this scenario to default</button>
+</div>
+
+<!-- ============ Dry-run ============ -->
+<div class="mt-6 card">
+  <div class="card-header"><h3 class="font-semibold">Try it — dry-run the rules</h3></div>
+  <div class="card-body">
+    <p class="text-xs text-slate-500 mb-3">
+      Enter simulated form values one per line (<code>field=value</code>) then click
+      <strong>Evaluate</strong> to see which stages this scenario would activate.
+    </p>
+    <textarea id="vwa-dry-input" rows="5" class="input font-mono text-xs"
+              placeholder="requestor_legal_entity_region=LATAM&#10;conflict_of_interest=Yes"></textarea>
+    <div class="flex items-center gap-3 mt-2">
+      <button id="vwa-dry-run" type="button" class="btn btn-secondary">Evaluate</button>
+      <div id="vwa-dry-result" class="text-sm"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var STAGE_CATALOG  = <%- JSON.stringify(stageCatalog) %>;
+  var TRIGGER_FIELDS = <%- JSON.stringify(triggerFields) %>;
+  var YESNO_OPTIONS  = <%- JSON.stringify(yesnoOptions) %>;
+  var SCENARIOS      = <%- JSON.stringify(scenarios || []) %>;
+  var INITIAL_ID     = <%= currentScenario ? currentScenario.id : 'null' %>;
+
+  var DEFAULT_STAGES = STAGE_CATALOG.map(function (s) {
+    return { stage: s.stage, label: s.label, triggers: [], trigger_mode: 'ALL' };
+  });
+</script>
+
+<style>
+  .vwa-stage { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+  .vwa-stage-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb; border-radius: 8px 8px 0 0;
+  }
+  .vwa-stage-head .grip { color: #9ca3af; cursor: grab; user-select: none; }
+  .vwa-stage-head .title { font-weight: 600; color: #111827; flex: 1; }
+  .vwa-stage-head .pos-btn {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 4px;
+    width: 26px; height: 26px; line-height: 1;
+    cursor: pointer; font-size: 14px;
+  }
+  .vwa-stage-head .pos-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+  .vwa-stage-body { padding: 12px 14px; }
+  .tag {
+    display: inline-block; font-size: 10px; padding: 2px 7px;
+    border-radius: 9999px; font-weight: 600; letter-spacing: .03em;
+    text-transform: uppercase;
+  }
+  .tag-always    { background: #dcfce7; color: #065f46; }
+  .tag-triggered { background: #dbeafe; color: #1e3a8a; }
+
+  .vwa-trigger-list { margin: 8px 0; }
+  .vwa-trigger {
+    display: grid; grid-template-columns: 1.5fr 1fr 1.5fr auto; gap: 8px;
+    align-items: center; padding: 6px 0;
+  }
+  .vwa-trigger select, .vwa-trigger input {
+    font-size: 13px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px;
+    background: #fff; width: 100%;
+  }
+  .vwa-trigger .del-trig {
+    background: transparent; color: #dc2626; border: none; cursor: pointer;
+    font-size: 14px; padding: 4px 8px;
+  }
+  .vwa-mode-row { font-size: 12px; color: #4b5563; margin-top: 6px; }
+  .vwa-mode-row select { font-size: 12px; padding: 2px 6px; }
+  .vwa-add-trig {
+    background: #eff6ff; color: #1e40af; border: 1px dashed #93c5fd;
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  }
+  .vwa-dragover { outline: 2px dashed #3b82f6; outline-offset: -4px; }
+  #vwa-dry-result .hit { color: #059669; font-weight: 600; }
+  #vwa-dry-result .miss { color: #9ca3af; text-decoration: line-through; }
+</style>
+
+<script>
+(function () {
+  var stagesEl    = document.getElementById('vwa-stages');
+  var alertEl     = document.getElementById('vwa-alert');
+  var scenarioSel = document.getElementById('vwa-scenario');
+  var activeBadge = document.getElementById('vwa-active-badge');
+  var dirtyBadge  = document.getElementById('vwa-dirty-badge');
+  var metaEl      = document.getElementById('vwa-meta');
+
+  // ---- Current in-memory state ---------------------------------------------
+  var state = {
+    currentId: INITIAL_ID,
+    stages:    [],     // stages of currently-viewed scenario
+    dirty:     false,
+  };
+
+  function scenarioById(id) { return SCENARIOS.find(function (s) { return s.id === id; }); }
+  function currentScenario() { return scenarioById(state.currentId); }
+  function setDirty(v) {
+    state.dirty = v;
+    dirtyBadge.classList.toggle('hidden', !v);
+  }
+
+  function loadScenarioIntoState(id) {
+    var sc = scenarioById(id);
+    if (!sc) return;
+    state.currentId = id;
+    state.stages = JSON.parse(JSON.stringify(
+      (sc.stages && sc.stages.length) ? sc.stages : DEFAULT_STAGES
+    ));
+    setDirty(false);
+    renderBar();
+    renderStages();
+  }
+
+  function renderBar() {
+    scenarioSel.innerHTML = SCENARIOS.map(function (s) {
+      return '<option value="' + s.id + '"' + (s.id === state.currentId ? ' selected' : '') + '>' +
+        esc(s.name) + (s.is_active ? '  (active)' : '') + '</option>';
+    }).join('');
+    var cur = currentScenario();
+    activeBadge.classList.toggle('hidden', !(cur && cur.is_active));
+    metaEl.textContent = cur && cur.updated_at
+      ? ('Last updated: ' + cur.updated_at)
+      : '';
+  }
+
+  // ---- Rendering helpers (stages) ------------------------------------------
+  function fieldByName(name) { return TRIGGER_FIELDS.find(function (f) { return f.name === name; }); }
+  function optionsForField(name) {
+    var f = fieldByName(name); if (!f) return [];
+    return f.type === 'yesno' ? YESNO_OPTIONS : (f.options || []);
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) {
+      return { '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function renderTrigger(stageIdx, trigIdx, trig) {
+    var fieldOpts = TRIGGER_FIELDS.map(function (f) {
+      return '<option value="' + esc(f.name) + '"' +
+        (trig.field === f.name ? ' selected' : '') + '>' + esc(f.label) + '</option>';
+    }).join('');
+    var valueOpts = optionsForField(trig.field);
+    var valueCtrl;
+    if (valueOpts.length > 0) {
+      valueCtrl = '<select data-role="trig-value" data-stage="' + stageIdx + '" data-trig="' + trigIdx + '">' +
+        '<option value="">— select —</option>' +
+        valueOpts.map(function (o) {
+          return '<option value="' + esc(o) + '"' + (trig.value === o ? ' selected' : '') + '>' + esc(o) + '</option>';
+        }).join('') + '</select>';
+    } else {
+      valueCtrl = '<input type="text" data-role="trig-value" data-stage="' + stageIdx + '" data-trig="' + trigIdx + '" value="' + esc(trig.value || '') + '">';
+    }
+    var missingField = trig.field && !fieldByName(trig.field);
+    var fieldWarn = missingField
+      ? ' <span style="color:#dc2626;font-size:11px;" title="This field no longer exists in the form">⚠</span>'
+      : '';
+    return '<div class="vwa-trigger">' +
+      '<select data-role="trig-field" data-stage="' + stageIdx + '" data-trig="' + trigIdx + '">' +
+        '<option value="">— field —</option>' + fieldOpts +
+        (missingField ? '<option value="' + esc(trig.field) + '" selected>' + esc(trig.field) + ' (removed)</option>' : '') +
+      '</select>' +
+      '<select data-role="trig-op" data-stage="' + stageIdx + '" data-trig="' + trigIdx + '">' +
+        ['equals','not_equals'].map(function (op) {
+          return '<option value="' + op + '"' + ((trig.operator || 'equals') === op ? ' selected' : '') + '>' + op.replace('_', ' ') + '</option>';
+        }).join('') +
+      '</select>' +
+      valueCtrl +
+      '<button type="button" class="del-trig" data-role="del-trig" data-stage="' + stageIdx + '" data-trig="' + trigIdx + '" title="Remove">✕</button>' +
+    '</div>' + (missingField ? '<div style="font-size:11px;color:#dc2626;margin:-4px 0 4px 0;">Field "' + esc(trig.field) + '" is not in the onboarding form right now.</div>' : '');
+  }
+
+  function renderStage(stage, idx, total) {
+    var triggers = stage.triggers || [];
+    var tag = triggers.length === 0
+      ? '<span class="tag tag-always">Always active</span>'
+      : '<span class="tag tag-triggered">Triggered</span>';
+
+    var trigHtml = triggers.map(function (t, ti) { return renderTrigger(idx, ti, t); }).join('');
+    var mode = stage.trigger_mode === 'ANY' ? 'ANY' : 'ALL';
+    var modeHtml = triggers.length > 1
+      ? '<div class="vwa-mode-row">Match <select data-role="mode" data-stage="' + idx + '">' +
+          '<option value="ALL"' + (mode === 'ALL' ? ' selected' : '') + '>ALL triggers</option>' +
+          '<option value="ANY"' + (mode === 'ANY' ? ' selected' : '') + '>ANY trigger</option>' +
+        '</select></div>'
+      : '';
+
+    return '<div class="vwa-stage" draggable="true" data-idx="' + idx + '">' +
+      '<div class="vwa-stage-head">' +
+        '<span class="grip" title="Drag to reorder">⋮⋮</span>' +
+        '<span class="title">' + (idx + 1) + '. ' + esc(stage.label) + '</span>' +
+        tag +
+        '<button type="button" class="pos-btn" data-role="up" data-idx="' + idx + '" ' + (idx === 0 ? 'disabled' : '') + ' title="Move up">↑</button>' +
+        '<button type="button" class="pos-btn" data-role="down" data-idx="' + idx + '" ' + (idx === total - 1 ? 'disabled' : '') + ' title="Move down">↓</button>' +
+      '</div>' +
+      '<div class="vwa-stage-body">' +
+        '<div class="text-xs text-slate-500 mb-1">Active when:</div>' +
+        '<div class="vwa-trigger-list">' + (trigHtml || '<div class="text-xs text-slate-400 italic">No triggers — stage always runs.</div>') + '</div>' +
+        modeHtml +
+        '<button type="button" class="vwa-add-trig" data-role="add-trig" data-stage="' + idx + '">+ Add trigger</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderStages() {
+    stagesEl.innerHTML = state.stages.map(function (s, i) { return renderStage(s, i, state.stages.length); }).join('');
+    bindDnD();
+  }
+
+  // ---- State mutations ------------------------------------------------------
+  function move(from, to) {
+    if (to < 0 || to >= state.stages.length) return;
+    var item = state.stages.splice(from, 1)[0];
+    state.stages.splice(to, 0, item);
+    setDirty(true);
+    renderStages();
+  }
+  function addTrigger(idx) {
+    state.stages[idx].triggers = state.stages[idx].triggers || [];
+    state.stages[idx].triggers.push({ field: '', operator: 'equals', value: '' });
+    setDirty(true);
+    renderStages();
+  }
+  function delTrigger(stageIdx, trigIdx) {
+    state.stages[stageIdx].triggers.splice(trigIdx, 1);
+    setDirty(true);
+    renderStages();
+  }
+
+  // ---- Event delegation -----------------------------------------------------
+  stagesEl.addEventListener('click', function (e) {
+    var t = e.target;
+    var role = t.getAttribute && t.getAttribute('data-role');
+    if (!role) return;
+    if (role === 'up')        move(Number(t.dataset.idx), Number(t.dataset.idx) - 1);
+    else if (role === 'down') move(Number(t.dataset.idx), Number(t.dataset.idx) + 1);
+    else if (role === 'add-trig') addTrigger(Number(t.dataset.stage));
+    else if (role === 'del-trig') delTrigger(Number(t.dataset.stage), Number(t.dataset.trig));
+  });
+  stagesEl.addEventListener('change', function (e) {
+    var t = e.target;
+    var role = t.getAttribute && t.getAttribute('data-role');
+    if (!role) return;
+    var s = Number(t.dataset.stage);
+    if (role === 'mode') { state.stages[s].trigger_mode = t.value; setDirty(true); return; }
+    var ti = Number(t.dataset.trig);
+    var trig = state.stages[s].triggers[ti];
+    if (role === 'trig-field') {
+      trig.field = t.value; trig.value = '';
+      setDirty(true); renderStages();
+    } else if (role === 'trig-op')    { trig.operator = t.value; setDirty(true); }
+    else if (role === 'trig-value')   { trig.value = t.value; setDirty(true); }
+  });
+
+  // ---- Drag & drop ----------------------------------------------------------
+  var dragFrom = null;
+  function bindDnD() {
+    stagesEl.querySelectorAll('.vwa-stage').forEach(function (el) {
+      el.addEventListener('dragstart', function () {
+        dragFrom = Number(el.dataset.idx); el.style.opacity = '.4';
+      });
+      el.addEventListener('dragend',   function () { el.style.opacity = '1'; });
+      el.addEventListener('dragover',  function (e) { e.preventDefault(); el.classList.add('vwa-dragover'); });
+      el.addEventListener('dragleave', function () { el.classList.remove('vwa-dragover'); });
+      el.addEventListener('drop', function (e) {
+        e.preventDefault(); el.classList.remove('vwa-dragover');
+        var to = Number(el.dataset.idx);
+        if (dragFrom !== null && to !== dragFrom) move(dragFrom, to);
+        dragFrom = null;
+      });
+    });
+  }
+
+  // ---- Alerts ---------------------------------------------------------------
+  function showAlert(kind, msg) {
+    alertEl.className = 'mb-3 p-3 rounded border text-sm ' +
+      (kind === 'ok'
+        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        : 'bg-red-50 border-red-200 text-red-700');
+    alertEl.textContent = msg;
+    setTimeout(function () { alertEl.className = 'hidden'; }, 4000);
+  }
+  function confirmIfDirty() {
+    if (!state.dirty) return true;
+    return confirm('You have unsaved changes. Discard them?');
+  }
+
+  // ---- Scenario bar actions -------------------------------------------------
+  scenarioSel.addEventListener('change', function () {
+    var id = Number(scenarioSel.value);
+    if (id === state.currentId) return;
+    if (!confirmIfDirty()) { scenarioSel.value = String(state.currentId); return; }
+    loadScenarioIntoState(id);
+  });
+
+  async function jsonPost(url, body) {
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+    var data;
+    try { data = await res.json(); } catch { data = {}; }
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    return data;
+  }
+
+  document.getElementById('vwa-save').addEventListener('click', async function () {
+    try {
+      await jsonPost('/admin/vendor-workflow', { id: state.currentId, stages: state.stages });
+      // Update in-memory scenarios list to reflect new stages + updated_at.
+      var sc = scenarioById(state.currentId);
+      if (sc) {
+        sc.stages = JSON.parse(JSON.stringify(state.stages));
+        sc.updated_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      }
+      setDirty(false); renderBar();
+      showAlert('ok', 'Saved.');
+    } catch (err) { showAlert('err', 'Save failed: ' + err.message); }
+  });
+
+  document.getElementById('vwa-reset').addEventListener('click', function () {
+    if (!confirm('Reset this scenario to default (all stages always active)? Not saved until you click Save.')) return;
+    state.stages = JSON.parse(JSON.stringify(DEFAULT_STAGES));
+    setDirty(true); renderStages();
+  });
+
+  document.getElementById('vwa-new').addEventListener('click', async function () {
+    if (!confirmIfDirty()) return;
+    var name = prompt('Name for the new scenario:');
+    if (!name || !name.trim()) return;
+    try {
+      var r = await jsonPost('/admin/vendor-workflow/new', { name: name.trim() });
+      SCENARIOS.push(r.scenario);
+      loadScenarioIntoState(r.scenario.id);
+      showAlert('ok', 'Scenario "' + r.scenario.name + '" created.');
+    } catch (err) { showAlert('err', 'Create failed: ' + err.message); }
+  });
+
+  document.getElementById('vwa-rename').addEventListener('click', async function () {
+    var cur = currentScenario(); if (!cur) return;
+    var name = prompt('Rename scenario:', cur.name);
+    if (!name || !name.trim() || name.trim() === cur.name) return;
+    try {
+      await jsonPost('/admin/vendor-workflow/' + cur.id + '/rename', { name: name.trim() });
+      cur.name = name.trim(); renderBar();
+      showAlert('ok', 'Renamed.');
+    } catch (err) { showAlert('err', 'Rename failed: ' + err.message); }
+  });
+
+  document.getElementById('vwa-duplicate').addEventListener('click', async function () {
+    if (!confirmIfDirty()) return;
+    var cur = currentScenario(); if (!cur) return;
+    var name = prompt('Name for the duplicate:', cur.name + ' (copy)');
+    if (!name || !name.trim()) return;
+    try {
+      var r = await jsonPost('/admin/vendor-workflow/' + cur.id + '/duplicate', { name: name.trim() });
+      SCENARIOS.push(r.scenario);
+      loadScenarioIntoState(r.scenario.id);
+      showAlert('ok', 'Duplicated as "' + r.scenario.name + '".');
+    } catch (err) { showAlert('err', 'Duplicate failed: ' + err.message); }
+  });
+
+  document.getElementById('vwa-activate').addEventListener('click', async function () {
+    var cur = currentScenario(); if (!cur) return;
+    if (cur.is_active) { showAlert('ok', 'Already active.'); return; }
+    if (!confirm('Set "' + cur.name + '" as the active scenario? It will apply to all new vendor submissions.')) return;
+    try {
+      await jsonPost('/admin/vendor-workflow/' + cur.id + '/activate');
+      SCENARIOS.forEach(function (s) { s.is_active = (s.id === cur.id); });
+      renderBar();
+      showAlert('ok', '"' + cur.name + '" is now active.');
+    } catch (err) { showAlert('err', 'Activate failed: ' + err.message); }
+  });
+
+  document.getElementById('vwa-delete').addEventListener('click', async function () {
+    var cur = currentScenario(); if (!cur) return;
+    if (cur.is_active) { showAlert('err', 'Cannot delete the active scenario — activate a different one first.'); return; }
+    if (!confirm('Delete scenario "' + cur.name + '"? This cannot be undone.')) return;
+    try {
+      await jsonPost('/admin/vendor-workflow/' + cur.id + '/delete');
+      var idx = SCENARIOS.findIndex(function (s) { return s.id === cur.id; });
+      if (idx >= 0) SCENARIOS.splice(idx, 1);
+      var next = SCENARIOS.find(function (s) { return s.is_active; }) || SCENARIOS[0];
+      if (next) loadScenarioIntoState(next.id);
+      else { stagesEl.innerHTML = '<div class="text-sm text-slate-500">No scenarios left. Create one with "+ New".</div>'; scenarioSel.innerHTML = ''; }
+      showAlert('ok', 'Deleted.');
+    } catch (err) { showAlert('err', 'Delete failed: ' + err.message); }
+  });
+
+  // ---- Dry run --------------------------------------------------------------
+  function parseDryInput(txt) {
+    var out = {};
+    String(txt || '').split(/\r?\n/).forEach(function (line) {
+      var m = /^\s*([^=\s]+)\s*=\s*(.*)\s*$/.exec(line);
+      if (m) out[m[1]] = m[2];
+    });
+    return out;
+  }
+  function evalTrig(t, data) {
+    var actual = String(data[t.field] == null ? '' : data[t.field]).trim();
+    var expect = String(t.value == null ? '' : t.value).trim();
+    if (t.operator === 'not_equals') return actual !== expect;
+    return actual === expect;
+  }
+  function evalStage(s, data) {
+    var tr = s.triggers || [];
+    if (!tr.length) return true;
+    var mode = s.trigger_mode === 'ANY' ? 'ANY' : 'ALL';
+    return mode === 'ANY'
+      ? tr.some(function (t) { return evalTrig(t, data); })
+      : tr.every(function (t) { return evalTrig(t, data); });
+  }
+  document.getElementById('vwa-dry-run').addEventListener('click', function () {
+    var data = parseDryInput(document.getElementById('vwa-dry-input').value);
+    var parts = state.stages.map(function (s) {
+      var hit = evalStage(s, data);
+      return '<span class="' + (hit ? 'hit' : 'miss') + '">' + esc(s.label) + '</span>';
+    });
+    document.getElementById('vwa-dry-result').innerHTML = parts.join(' → ');
+  });
+
+  // ---- Boot -----------------------------------------------------------------
+  if (INITIAL_ID && scenarioById(INITIAL_ID)) {
+    loadScenarioIntoState(INITIAL_ID);
+  } else if (SCENARIOS.length) {
+    loadScenarioIntoState(SCENARIOS[0].id);
+  } else {
+    stagesEl.innerHTML = '<div class="text-sm text-slate-500">No scenarios yet. Click "+ New" to create one.</div>';
+  }
+})();
+</script>
+
+</main></div>
+</body></html>

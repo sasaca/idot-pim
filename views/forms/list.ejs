@@ -1,0 +1,23 @@
+<%- include('../partials/head', { pageTitle: 'Forms' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Forms', topSub: 'Published forms you can fill out.' }) %>
+<main class="p-6 max-w-5xl">
+<% if (!forms.length) { %>
+  <div class="card"><div class="card-body text-sm text-slate-500">No forms published yet.</div></div>
+<% } %>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+  <% forms.forEach(f => { %>
+    <a href="/forms/<%= f.id %>" class="card hover:shadow-md transition-shadow block">
+      <div class="card-body">
+        <div class="font-semibold text-slate-900"><%= f.name %></div>
+        <% if (f.description) { %>
+          <div class="text-sm text-slate-600 mt-1"><%= f.description %></div>
+        <% } %>
+        <div class="text-xs text-slate-400 mt-2">Updated <%= f.updated_at %></div>
+      </div>
+    </a>
+  <% }) %>
+</div>
+</main></div>
+</body></html>

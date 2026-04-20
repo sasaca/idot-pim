@@ -1,0 +1,29 @@
+<%- include('../partials/head', { pageTitle: 'Submitted' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Submission received', topSub: submission.form_name }) %>
+<main class="p-6 max-w-3xl">
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="chip bg-emerald-100 text-emerald-700">✓ Submitted</span>
+      <span class="text-xs text-slate-500">#<%= submission.id %> · <%= submission.submitted_at %></span>
+    </div>
+    <table class="data text-sm">
+      <tbody>
+        <% Object.keys(data).forEach(k => { %>
+          <tr><td class="font-medium"><%= k %></td><td><%= data[k] %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="flex gap-2">
+  <a href="/forms" class="btn btn-ghost">Back to forms</a>
+  <a href="/forms/<%= submission.form_id %>" class="btn btn-secondary">Submit another</a>
+</div>
+
+</main></div>
+</body></html>
