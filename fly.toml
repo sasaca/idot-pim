@@ -1,0 +1,50 @@
+# fly.toml — Fly.io deploy config for iDOT PIM.
+# -----------------------------------------------------------------------------
+# The `app = "..."` line is filled in by `fly launch` on first deploy. If
+# "idot-pim" is taken globally, Fly will suggest an alternative — accept it.
+#
+# Volume `idot_data` is created the first time you deploy and persists the
+# SQLite database + file uploads between releases.
+# -----------------------------------------------------------------------------
+
+primary_region = "sea"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV   = "production"
+  DB_PATH    = "/data/idot.sqlite"
+  UPLOAD_DIR = "/data/uploads"
+  PORT       = "8080"
+  # Secrets (ANTHROPIC_API_KEY, MAPBOX_TOKEN, SESSION_SECRET, BASIC_AUTH_USER,
+  # BASIC_AUTH_PASS) are injected at runtime via `fly secrets set …`.
+
+[http_service]
+  internal_port     = 8080
+  force_https       = true
+  auto_stop_machines  = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes         = ["app"]
+
+  [http_service.concurrency]
+    type       = "connections"
+    hard_limit = 200
+    soft_limit = 150
+
+  [[http_service.checks]]
+    interval      = "15s"
+    timeout       = "5s"
+    grace_period  = "30s"
+    method        = "GET"
+    path          = "/health"
+
+[[mounts]]
+  source       = "idot_data"
+  destination  = "/data"
+  initial_size = "1gb"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

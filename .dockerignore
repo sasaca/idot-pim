@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.example
+.claude
+.DS_Store
+db/idot.sqlite*
+uploads_store/*
+!uploads_store/.gitkeep
+*.bak
+README.md
+render.yaml
