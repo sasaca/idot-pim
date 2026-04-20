@@ -16,12 +16,12 @@
   <div class="overflow-x-auto">
     <table class="data">
       <thead><tr>
-        <th>Name</th><th>Description</th><th>Status</th><th>Fields</th>
+        <th>Name</th><th>Description</th><th>Domain</th><th>Status</th><th>Fields</th>
         <th>Submissions</th><th>Updated</th><th></th>
       </tr></thead>
       <tbody>
         <% if (!forms.length) { %>
-          <tr><td colspan="7" class="text-center text-slate-500 p-10">
+          <tr><td colspan="8" class="text-center text-slate-500 p-10">
             No forms yet. <a href="/admin/forms/new" class="text-brand-600 hover:underline">Create the first one →</a>
           </td></tr>
         <% } %>
@@ -29,6 +29,7 @@
           <tr>
             <td class="font-medium"><%= f.name %></td>
             <td class="text-xs text-slate-600"><%= f.description || '—' %></td>
+            <td class="text-xs"><span class="chip bg-slate-100 text-slate-700"><%= domainLabel(f.domain || 'general') %></span></td>
             <td><span class="chip <%= f.is_published ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700' %>">
               <%= f.is_published ? 'Published' : 'Draft' %></span></td>
             <td class="text-xs"><%= (schema.fields || []).length %></td>

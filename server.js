@@ -97,6 +97,7 @@ function requireAuth(req, res, next) {
 const vendorWorkflow = require('./routes/vendor_workflow');
 app.use('/vendors/queue',        requireAuth, vendorWorkflow.makeQueueRouter(db));
 app.use('/vendors/:id/workflow', requireAuth, vendorWorkflow(db));
+app.use('/vendors/forms',        requireAuth, require('./routes/vendor_forms'));
 
 // Routes
 app.use('/', require('./routes/auth'));

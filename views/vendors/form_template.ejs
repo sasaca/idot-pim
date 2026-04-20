@@ -1,0 +1,34 @@
+<%- include('../partials/head', { pageTitle: form.name + ' — Template' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', {
+  topTitle: form.name + ' (template)',
+  topSub: form.description || 'Read-only preview of the Vendor Master form template.',
+}) %>
+<main class="p-6 max-w-3xl">
+
+<div class="mb-3 flex items-center gap-2 flex-wrap">
+  <a href="/vendors/forms" class="btn btn-ghost">← All templates</a>
+  <span class="chip bg-slate-100 text-slate-700 text-[10px]">Vendor Master</span>
+  <% if (form.is_published) { %>
+    <span class="chip bg-emerald-100 text-emerald-700 text-[10px]">Published</span>
+  <% } else { %>
+    <span class="chip bg-slate-100 text-slate-700 text-[10px]">Draft</span>
+  <% } %>
+  <span class="ml-auto text-xs text-slate-400">Last updated <%= form.updated_at %></span>
+</div>
+
+<div class="mb-3 p-3 rounded border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+  👀 This is a <strong>read-only preview</strong>. Inputs are disabled — use it to review the template's layout and fields.
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <fieldset disabled style="border:0; padding:0; margin:0;">
+      <%- renderedHtml %>
+    </fieldset>
+  </div>
+</div>
+
+</main></div>
+</body></html>

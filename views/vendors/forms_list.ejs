@@ -1,0 +1,44 @@
+<%- include('../partials/head', { pageTitle: 'Vendor Form Templates' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', {
+  topTitle: 'Vendor Master — Form Templates',
+  topSub: 'All forms built for the Vendor Master domain. Click a form to preview its layout.',
+}) %>
+<main class="p-6 max-w-5xl">
+
+<div class="mb-4 flex items-center gap-2">
+  <a href="/vendors" class="btn btn-ghost">← Back to Vendors</a>
+</div>
+
+<% if (!forms.length) { %>
+  <div class="card"><div class="card-body text-sm text-slate-500">
+    No Vendor Master templates yet. Admins can create forms in <a href="/admin/forms/new" class="text-brand-600 hover:underline">Form Builder</a> and set the Domain to <strong>Vendor Master</strong>.
+  </div></div>
+<% } %>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+  <% forms.forEach(f => { let sch = { fields: [] }; try { sch = JSON.parse(f.schema_json || '{"fields":[]}') } catch(e){} %>
+    <a href="/vendors/forms/<%= f.id %>" class="card hover:shadow-md transition-shadow block">
+      <div class="card-body">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="font-semibold text-slate-900"><%= f.name %></span>
+          <% if (f.is_published) { %>
+            <span class="chip bg-emerald-100 text-emerald-700 text-[10px]">Published</span>
+          <% } else { %>
+            <span class="chip bg-slate-100 text-slate-700 text-[10px]">Draft</span>
+          <% } %>
+        </div>
+        <% if (f.description) { %>
+          <div class="text-sm text-slate-600"><%= f.description %></div>
+        <% } %>
+        <div class="text-xs text-slate-400 mt-2">
+          <%= (sch.fields || []).length %> fields · updated <%= f.updated_at %>
+        </div>
+      </div>
+    </a>
+  <% }) %>
+</div>
+
+</main></div>
+</body></html>

@@ -132,19 +132,21 @@ router.post('/reference/:category/:id/delete', (req, res) => {
 // ---------- Form builder ----------
 router.get('/forms', (req, res) => {
   const forms = db.prepare(`
-    SELECT f.id, f.name, f.description, f.schema_json, f.is_published, f.created_at, f.updated_at,
+    SELECT f.id, f.name, f.description, f.domain, f.schema_json, f.is_published,
+           f.created_at, f.updated_at,
            u.name AS created_by_name,
            (SELECT COUNT(*) FROM form_submissions s WHERE s.form_id = f.id) AS submission_count
       FROM form_definitions f LEFT JOIN users u ON u.id = f.created_by
      ORDER BY f.updated_at DESC
   `).all();
-  res.render('admin/forms_list', { forms });
+  res.render('admin/forms_list', { forms, domainLabel: formSchema.domainLabel });
 });
 
 router.get('/forms/new', (req, res) => {
   res.render('admin/form_builder', {
     form: null,
     fieldTypes: formSchema.FIELD_TYPES,
+    formDomains: formSchema.FORM_DOMAINS,
   });
 });
 
@@ -152,9 +154,13 @@ router.get('/forms/:id', (req, res) => {
   const form = db.prepare(`SELECT * FROM form_definitions WHERE id = ?`).get(req.params.id);
   if (!form) return res.status(404).render('error', { error: { message: 'Form not found' }});
   let schema; try { schema = JSON.parse(form.schema_json); } catch { schema = { fields: [] }; }
+  // Carry the row-level domain into the schema object passed to the builder
+  // so the UI's domain dropdown is pre-populated correctly.
+  schema.domain = form.domain || 'general';
   res.render('admin/form_builder', {
     form: { ...form, schema },
     fieldTypes: formSchema.FIELD_TYPES,
+    formDomains: formSchema.FORM_DOMAINS,
   });
 });
 
@@ -165,9 +171,10 @@ router.post('/forms', express.json(), (req, res) => {
   if (!schema.name) return res.status(400).json({ error: 'name_required' });
   const now = new Date().toISOString();
   const info = db.prepare(`
-    INSERT INTO form_definitions (name, description, schema_json, is_published, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, 0, ?, ?, ?)
-  `).run(schema.name, schema.description, JSON.stringify(schema), res.locals.currentUser.id, now, now);
+    INSERT INTO form_definitions (name, description, domain, schema_json, is_published, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 0, ?, ?, ?)
+  `).run(schema.name, schema.description, schema.domain, JSON.stringify(schema),
+         res.locals.currentUser.id, now, now);
   res.json({ ok: true, id: info.lastInsertRowid });
 });
 
@@ -180,9 +187,10 @@ router.post('/forms/:id', express.json(), (req, res) => {
   if (!schema.name) return res.status(400).json({ error: 'name_required' });
   db.prepare(`
     UPDATE form_definitions
-       SET name = ?, description = ?, schema_json = ?, updated_at = ?
+       SET name = ?, description = ?, domain = ?, schema_json = ?, updated_at = ?
      WHERE id = ?
-  `).run(schema.name, schema.description, JSON.stringify(schema), new Date().toISOString(), req.params.id);
+  `).run(schema.name, schema.description, schema.domain,
+         JSON.stringify(schema), new Date().toISOString(), req.params.id);
   res.json({ ok: true });
 });
 

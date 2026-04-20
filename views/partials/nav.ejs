@@ -18,7 +18,10 @@
     <% navItem('/dashboard', 'Dashboard', '◎', path.startsWith('/dashboard')); %>
     <% navItem('/requests', 'Requests', '✓', path.startsWith('/requests')); %>
     <div class="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-slate-500">Master Data</div>
-    <% navItem('/vendors', 'Vendors', '⚙', path.startsWith('/vendors')); %>
+    <% navItem('/vendors', 'Vendors', '⚙', path.startsWith('/vendors') && path !== '/vendors/forms' && !path.startsWith('/vendors/forms/')); %>
+    <% if (['VENDOR_ADMIN','MASTER_ADMIN'].includes(currentUser.role)) { %>
+      <% navItem('/vendors/forms', 'Vendor Forms', '📋', path === '/vendors/forms' || path.startsWith('/vendors/forms/')); %>
+    <% } %>
     <% navItem('/customers', 'Customers', '☰', path.startsWith('/customers')); %>
     <% navItem('/products', 'Products', '◫', path.startsWith('/products')); %>
     <div class="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-slate-500">Insights</div>
