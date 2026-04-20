@@ -1,3 +1,5 @@
+app = "idot-pim-sasaca"
+
 # fly.toml — Fly.io deploy config for iDOT PIM.
 # -----------------------------------------------------------------------------
 # The `app = "..."` line is filled in by `fly launch` on first deploy. If
@@ -7,7 +9,7 @@
 # SQLite database + file uploads between releases.
 # -----------------------------------------------------------------------------
 
-primary_region = "sea"
+primary_region = "sjc"
 
 [build]
   dockerfile = "Dockerfile"
