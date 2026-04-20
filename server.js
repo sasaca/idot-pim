@@ -1,4 +1,8 @@
 // iDOT Product Information Management — main server
+// Load .env (if present) into process.env. Works with any Node ≥ 18 —
+// replaces the former --env-file-if-exists CLI flag, which required Node 22.7+.
+require('dotenv').config();
+
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
