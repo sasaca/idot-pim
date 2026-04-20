@@ -8,7 +8,8 @@ const { similarity, digitsOnly } = require('../lib/fuzzy');
 const workflowConfig = require('../lib/workflow_config');
 const router = express.Router();
 
-const uploadOnboarding = multer({ dest: path.join(__dirname, '..', 'uploads_store') });
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads_store');
+const uploadOnboarding = multer({ dest: uploadDir });
 
 // Columns we map body fields directly into. Anything else lands in
 // vendors.extra_fields as JSON.

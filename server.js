@@ -28,6 +28,27 @@ app.use(session({
   cookie: { httpOnly: true, maxAge: 1000 * 60 * 60 * 8 },
 }));
 
+// Optional HTTP Basic Auth gate — protects the whole site when both env vars
+// are set. Recommended when deploying publicly, since the demo login accepts
+// any password. Leave unset for local dev to keep things frictionless.
+if (process.env.BASIC_AUTH_USER && process.env.BASIC_AUTH_PASS) {
+  const expected = 'Basic ' + Buffer.from(
+    `${process.env.BASIC_AUTH_USER}:${process.env.BASIC_AUTH_PASS}`
+  ).toString('base64');
+  app.use((req, res, next) => {
+    if (req.path === '/health') return next();
+    if (req.headers.authorization === expected) return next();
+    res.set('WWW-Authenticate', 'Basic realm="iDOT PIM"');
+    res.status(401).send('Authentication required.');
+  });
+  console.log('[boot] Basic Auth gate enabled');
+} else if (process.env.NODE_ENV === 'production') {
+  console.warn('[boot] ⚠  NODE_ENV=production but BASIC_AUTH_USER/BASIC_AUTH_PASS are not set — site is publicly reachable.');
+}
+
+// Unauthed health endpoint for load-balancer / uptime checks.
+app.get('/health', (req, res) => res.json({ ok: true, uptime: process.uptime() }));
+
 // Make current user & helpers available to all views
 app.use((req, res, next) => {
   const userId = req.session.userId;

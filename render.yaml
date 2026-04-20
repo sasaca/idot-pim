@@ -1,0 +1,47 @@
+# render.yaml — Render Blueprint for iDOT PIM
+# ----------------------------------------------------------------------------
+# Deploys a single Node web service with a persistent disk mounted at /var/data.
+# On push to `main`, Render rebuilds and redeploys automatically.
+#
+# First-time setup (one-time, in the browser):
+#   1. Sign in at https://render.com with your GitHub account.
+#   2. New → Blueprint → pick the `sasaca/idot-pim` repo.
+#   3. Render reads this file, creates the service + disk.
+#   4. Fill in the sync:false env vars when prompted:
+#        ANTHROPIC_API_KEY, MAPBOX_TOKEN, BASIC_AUTH_USER, BASIC_AUTH_PASS
+#      (SESSION_SECRET auto-generates.)
+#   5. Deploy. Live URL shows in the dashboard.
+# ----------------------------------------------------------------------------
+
+services:
+  - type: web
+    name: idot-pim
+    runtime: node
+    region: oregon
+    plan: starter        # $7/mo — required for persistent disk.
+    branch: main
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    disk:
+      name: idot-pim-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /var/data/idot.sqlite
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false     # set in dashboard (so it doesn't live in git)
+      - key: MAPBOX_TOKEN
+        sync: false
+      - key: BASIC_AUTH_USER
+        sync: false     # any username you pick
+      - key: BASIC_AUTH_PASS
+        sync: false     # any strong password you pick

@@ -3,8 +3,12 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'idot.sqlite');
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'idot.sqlite');
 const schemaPath = path.join(__dirname, 'schema.sql');
+// Make sure the DB's containing directory exists — important when DB_PATH
+// points to a freshly-mounted persistent volume on the host.
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 const firstRun = !fs.existsSync(dbPath);
 const db = new Database(dbPath);
