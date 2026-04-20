@@ -208,6 +208,102 @@ router.post('/api/dup-check', express.json(), (req, res) => {
   res.json(dupCheckVendor(req.body || {}));
 });
 
+// ---------- API: Online validation via Claude + web search ----------
+// Cross-checks Name / Address / Contact against public sources and returns
+// a structured report via a forced tool call.
+router.post('/api/online-validate', express.json(), async (req, res) => {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return res.status(503).json({ error: 'NO_API_KEY' });
+
+  const b = req.body || {};
+  const addressText = [b.address_line1, b.address_city, b.address_state, b.address_zip, b.address_country]
+    .filter(Boolean).join(', ');
+  const contactText = [b.contact_name, b.contact_email, b.contact_phone]
+    .filter(Boolean).join(' / ');
+
+  if (!b.legal_name && !addressText && !contactText) {
+    return res.status(400).json({ error: 'no_input' });
+  }
+
+  const categorySchema = {
+    type: 'object',
+    properties: {
+      status:      { type: 'string', enum: ['match', 'mismatch', 'not_found'] },
+      summary:     { type: 'string', description: 'One short line (<= 120 chars).' },
+      suggestions: { type: 'array', items: { type: 'string' }, description: 'Short alternatives — only when status is mismatch.' },
+    },
+    required: ['status', 'summary'],
+  };
+
+  const tools = [
+    { type: 'web_search_20250305', name: 'web_search', max_uses: 4 },
+    {
+      name: 'report_validation',
+      description: 'Emit the structured validation result. Call exactly once.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          name:    Object.assign({}, categorySchema, { description: 'Verification of the legal / company name.' }),
+          address: Object.assign({}, categorySchema, { description: 'Verification of the street/city/state/zip/country.' }),
+          contact: Object.assign({}, categorySchema, { description: 'Verification of the primary contact (name/email/phone).' }),
+        },
+        required: ['name', 'address', 'contact'],
+      },
+    },
+  ];
+
+  const userPrompt =
+`Verify the following supplier identity against authoritative public sources.
+Use web_search to confirm — the official company site, SEC filings, or other
+reputable references.
+
+Name:    ${b.legal_name || '(none provided)'}
+Address: ${addressText || '(none provided)'}
+Contact: ${contactText || '(none provided)'}
+
+For each category (name, address, contact):
+- "match"       the submitted value clearly matches public information
+- "mismatch"    it differs — provide 1-3 short alternative suggestions
+- "not_found"   no clear public record (small / private / unknown entity)
+
+Keep each summary to one short sentence. Suggestions must be concise
+alternatives (full values, not explanations). Call report_validation exactly
+once with the result.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        system: 'You are a precise master-data validation assistant. Use web_search to check facts, then emit the structured result. Never guess — when in doubt, mark as not_found.',
+        tools,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      return res.status(502).json({ error: 'anthropic', detail: data });
+    }
+    const block = (data.content || []).find(
+      (b) => b.type === 'tool_use' && b.name === 'report_validation'
+    );
+    if (!block) {
+      // Capture any text Claude produced for diagnostics.
+      const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+      return res.status(502).json({ error: 'no_report', text });
+    }
+    res.json({ result: block.input });
+  } catch (err) {
+    res.status(500).json({ error: 'internal', message: String(err.message || err) });
+  }
+});
+
 // ---------- API: ERP-side duplicate check ----------
 // Fuzzy-matches the incoming identity against erp_suppliers. Tax ID and DUNS
 // are exact-compared (digits only); name / address / erp_instance are scored
