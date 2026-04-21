@@ -78,6 +78,23 @@
     0%   { background-color: #fef08a; }
     100% { background-color: transparent; }
   }
+  /* Autopopulated-by-AI badge shown next to field labels. Removed the moment
+     the user edits the field (trusted input/change events). */
+  .autopop-ind {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-left: 6px; font-size: 10px; padding: 1px 7px;
+    border-radius: 9999px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%);
+    color: #5b21b6; border: 1px solid #ddd6fe;
+    cursor: help; user-select: none; vertical-align: middle;
+    animation: autopopFadeIn .35s ease-out;
+  }
+  .autopop-ind::before { content: '✨'; font-size: 10px; }
+  @keyframes autopopFadeIn {
+    0%   { transform: scale(.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
 </style>
 
 <div class="du-card" id="du-card">
@@ -365,10 +382,59 @@
       el.classList.remove('du-flash');
       void el.offsetWidth;
       el.classList.add('du-flash');
+      markAutopopulated(el);
       applied[name] = val;
     });
     return { applied: applied, missed: missed };
   }
+
+  // ---------- Autopopulated badge --------------------------------------------
+  // Tags a field's container with a sparkle "AI" pill next to its label. The
+  // listener armed below removes the pill on the first trusted user input.
+  function markAutopopulated(el) {
+    var container = el.closest('.vob-field') || el.closest('.field') || el.closest('label');
+    if (!container) return;
+    container.setAttribute('data-autopopulated', 'true');
+    // Avoid stacking multiple badges on re-runs.
+    var existing = container.querySelector('.autopop-ind');
+    if (existing) {
+      // Replay the animation.
+      existing.style.animation = 'none'; void existing.offsetWidth; existing.style.animation = '';
+      return;
+    }
+    // Prefer placing the badge inside the first label/legend of the container.
+    var anchor = container.querySelector(':scope > label, :scope > legend');
+    if (!anchor) anchor = container.querySelector('label, legend');
+    if (!anchor) return;
+    var badge = document.createElement('span');
+    badge.className = 'autopop-ind';
+    badge.title = 'AI-populated from the uploaded document. This mark will clear when you edit the field.';
+    badge.textContent = 'AI';
+    anchor.appendChild(badge);
+  }
+  function clearAutopopulated(container) {
+    if (!container) return;
+    var badge = container.querySelector('.autopop-ind');
+    if (badge) badge.remove();
+    container.removeAttribute('data-autopopulated');
+  }
+
+  // Arm a single delegated listener on the form that clears the badge the
+  // moment the user modifies an autopopulated field. Uses `Event.isTrusted`
+  // to distinguish between our own programmatic dispatch (above) and a real
+  // user interaction — JS-fired events have isTrusted=false and are ignored.
+  (function armAutopopClear() {
+    var form = pickMainForm();
+    ['input', 'change'].forEach(function (ev) {
+      form.addEventListener(ev, function (e) {
+        if (!e.isTrusted) return;
+        var target = e.target;
+        if (!target) return;
+        var container = target.closest('[data-autopopulated]');
+        if (container) clearAutopopulated(container);
+      }, true);
+    });
+  })();
 
   function readAsBase64(f) {
     return new Promise(function(resolve, reject) {
