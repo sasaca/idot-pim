@@ -208,6 +208,128 @@ router.post('/api/dup-check', express.json(), (req, res) => {
   res.json(dupCheckVendor(req.body || {}));
 });
 
+// ---------- API: Adverse media search via Claude + web search ----------
+// Legal / compliance team uses this to surface reputational issues about
+// the supplier — forced-labor allegations, corruption, sanctions hits,
+// major litigation, environmental violations, data breaches, etc.
+// Returns a strict structured report.
+router.post('/api/adverse-media', express.json(), async (req, res) => {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return res.status(503).json({ error: 'NO_API_KEY' });
+
+  const b = req.body || {};
+  const identity = [
+    b.legal_name && `Name: ${b.legal_name}`,
+    b.country && `Country: ${b.country}`,
+    b.city && `City: ${b.city}`,
+    b.tax_id && `Tax ID: ${b.tax_id}`,
+    b.duns && `DUNS: ${b.duns}`,
+    b.contact_name && `Primary contact: ${b.contact_name}`,
+  ].filter(Boolean).join('\n');
+
+  if (!b.legal_name) return res.status(400).json({ error: 'legal_name_required' });
+
+  const findingSchema = {
+    type: 'object',
+    properties: {
+      category: {
+        type: 'string',
+        enum: [
+          'Labor Practices', 'Corruption / Bribery', 'Sanctions / Watchlist',
+          'Environmental', 'Financial Irregularities', 'Litigation',
+          'Data Security', 'Reputational / Ethics', 'Other',
+        ],
+      },
+      severity: { type: 'string', enum: ['low', 'medium', 'high'] },
+      title:    { type: 'string', description: 'Short headline (<= 100 chars).' },
+      summary:  { type: 'string', description: '1-2 sentence summary of the issue.' },
+      year:     { type: 'string', description: 'Year or date range (optional).' },
+      source_hint: { type: 'string', description: 'Publication/domain that reported it (no raw URL).' },
+    },
+    required: ['category', 'severity', 'title', 'summary'],
+  };
+
+  const tools = [
+    { type: 'web_search_20250305', name: 'web_search', max_uses: 6 },
+    {
+      name: 'report_adverse_media',
+      description: 'Emit the structured adverse-media report. Call exactly once.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          overall_risk: { type: 'string', enum: ['none', 'low', 'medium', 'high'] },
+          summary:      { type: 'string', description: '1-2 sentence overall assessment.' },
+          findings:     { type: 'array', items: findingSchema },
+          recommendations: { type: 'array', items: { type: 'string' },
+                             description: 'Concise next-step actions for Legal.' },
+        },
+        required: ['overall_risk', 'summary', 'findings'],
+      },
+    },
+  ];
+
+  const userPrompt =
+`Conduct an adverse media search on this supplier and report findings.
+
+${identity}
+
+Focus on reputational / compliance concerns that would influence a Legal
+review of the vendor: forced labor or unsafe labor practices, corruption or
+bribery, sanctions / watchlist hits, environmental violations, major
+litigation, financial irregularities, data breaches, and serious ethics
+issues.
+
+Use web_search for recent, credible sources (major newspapers, regulators,
+court records). Do not fabricate findings — if nothing credible surfaces,
+return an empty findings list with overall_risk = "none".
+
+Rules for the structured output:
+- Each finding: category from the enum, severity (low/medium/high), a short
+  title, a 1-2 sentence summary, the year (if known), and a source_hint
+  (publication or domain — NOT a URL).
+- overall_risk rolls up the highest severity seen, or "none".
+- recommendations: up to 4 short bullets.
+
+Call report_adverse_media exactly once.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+        max_tokens: 8192,
+        system:
+          'You are a legal/compliance due-diligence assistant. Be precise, cite plausible publications, and never fabricate issues. ' +
+          'After your web searches, emit the structured result by calling report_adverse_media. Do NOT write any preamble, narration, or summary text — the tool call is your ONLY output. Cap findings at 10.',
+        tools,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) return res.status(502).json({ error: 'anthropic', detail: data });
+    const block = (data.content || []).find(
+      (x) => x.type === 'tool_use' && x.name === 'report_adverse_media'
+    );
+    const text = (data.content || []).filter((x) => x.type === 'text').map((x) => x.text).join('\n');
+    if (!block || !block.input || Object.keys(block.input).length === 0) {
+      return res.status(502).json({
+        error: 'no_report',
+        text,
+        stop_reason: data.stop_reason,
+        blocks: (data.content || []).map((x) => ({ type: x.type, name: x.name })),
+      });
+    }
+    res.json({ result: block.input });
+  } catch (err) {
+    res.status(500).json({ error: 'internal', message: String(err.message || err) });
+  }
+});
+
 // ---------- API: Online validation via Claude + web search ----------
 // Cross-checks Name / Address / Contact against public sources and returns
 // a structured report via a forced tool call.

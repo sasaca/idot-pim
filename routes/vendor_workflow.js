@@ -12,9 +12,14 @@
 // -----------------------------------------------------------------------------
 
 const express = require('express');
+const path = require('path');
+const multer = require('multer');
 
 const workflow = require('../lib/vendor_workflow');
 const workflowConfig = require('../lib/workflow_config');
+
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads_store');
+const uploadLegal = multer({ dest: uploadDir });
 const {
   requireRole,
   requireState,
@@ -141,6 +146,10 @@ module.exports = function makeRouter(db) {
     const banks = db.prepare(
       `SELECT * FROM vendor_banks WHERE vendor_id = ?`
     ).all(vendor.id);
+    const attachments = db.prepare(
+      `SELECT id, stage, filename, mimetype, size, uploaded_at
+         FROM vendor_attachments WHERE vendor_id = ? ORDER BY id DESC`
+    ).all(vendor.id);
     const actions = workflow.availableActions(
       vendor.workflow_state,
       getUserRoles(req)[0]  // just show the primary role's actions
@@ -152,10 +161,22 @@ module.exports = function makeRouter(db) {
       comments,
       addresses,
       banks,
+      attachments,
       actions,
       stateLabel: workflow.stateLabel(vendor.workflow_state),
       user: req.user || null,
     });
+  }
+
+  function saveUploadedFiles(vendorId, stage, userId, files) {
+    const stmt = db.prepare(`
+      INSERT INTO vendor_attachments
+        (vendor_id, stage, filename, mimetype, size, stored_path, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const f of files || []) {
+      stmt.run(vendorId, stage, f.originalname, f.mimetype, f.size, f.path, userId || null);
+    }
   }
 
   // Persist everything the supplier filled in on their form, then hand off to
@@ -310,12 +331,25 @@ module.exports = function makeRouter(db) {
     '/legal-decision',
     requireRole(workflow.ROLES.LEGAL),
     requireState(workflow.STATES.PENDING_LEGAL),
+    uploadLegal.any(),
     (req, res) => {
       const decision = String(req.body.decision || '').toLowerCase();
       const action = decision === 'approve' ? 'legal_approve'
                    : decision === 'reject'  ? 'legal_reject'
                    : null;
       if (!action) return res.status(400).json({ error: 'BAD_DECISION', got: decision });
+      try {
+        saveUploadedFiles(
+          res.locals.vendor.id,
+          'PENDING_LEGAL',
+          req.user && req.user.id,
+          req.files
+        );
+      } catch (e) {
+        return res.status(500).render('error', {
+          error: { message: 'Could not save attachments: ' + (e.message || e) },
+        });
+      }
       return doTransition(action, req, res);
     }
   );

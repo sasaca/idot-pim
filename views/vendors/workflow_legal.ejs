@@ -1,83 +1,255 @@
-<%
-/*
-  workflow_legal.ejs
-  -----------------------------------------------------------------------------
-  Stage 5 — Legal & compliance review. View-only snapshot of everything
-  already captured, plus compliance fields + approve/reject decision.
-
-  FIELDS TODO: fill in the compliance checklist fields (sanctions screening,
-  conflict-of-interest, anti-bribery, contract review, etc.)
-  -----------------------------------------------------------------------------
-*/
-%>
-<%- include('../partials/head', { pageTitle: 'Legal & Compliance Review' }) %>
+<%- include('../partials/head', { pageTitle: 'Adverse Media Search' }) %>
 <%- include('../partials/nav') %>
 <div class="main-content">
-<%- include('../partials/topbar', { topTitle: 'Legal & Compliance Review' }) %>
+<%- include('../partials/topbar', {
+  topTitle: 'Adverse Media Search',
+  topSub: 'Stage 5 — Legal & compliance review. Run adverse-media check, attach evidence, record decision.'
+}) %>
+<main class="p-6 max-w-5xl">
 
-<main class="mx-auto max-w-4xl px-4 py-8">
-  <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
+<%- include('_workflow_shared', { vendor, stateLabel, history, comments }) %>
 
-  <!-- ======================= Everything captured so far ===================== -->
-  <section class="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-    <h2 class="mb-4 text-lg font-semibold text-gray-900">Full vendor record</h2>
-    <!-- TODO: render a readonly summary of all fields collected so far. -->
-    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-      Placeholder for consolidated read-only view (initial submission + supplier
-      inputs + Vendor Admin technical setup).
+<%
+  const primary = (addresses || []).find(a => a.address_type === 'PRIMARY') || {};
+  const bank    = (banks || [])[0] || {};
+%>
+
+<style>
+  .ro-grid { display: grid; grid-template-columns: 180px 1fr; gap: 6px 16px; font-size: 13px; }
+  .ro-grid dt { color: #6b7280; font-weight: 500; }
+  .ro-grid dd { color: #111827; margin: 0; word-break: break-word; }
+  .ams-card { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; padding: 12px 14px; margin-bottom: 8px; }
+  .ams-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .ams-cat  { font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: .04em; }
+  .ams-title { font-weight: 600; color: #111827; }
+  .ams-meta { font-size: 11px; color: #6b7280; }
+  .ams-chip { margin-left: auto; font-size: 10px; padding: 2px 8px; border-radius: 9999px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .chip-none   { background: #dcfce7; color: #065f46; }
+  .chip-low    { background: #dbeafe; color: #1e3a8a; }
+  .chip-medium { background: #fef3c7; color: #92400e; }
+  .chip-high   { background: #fee2e2; color: #991b1b; }
+  .ams-summary { font-size: 13px; color: #374151; }
+  .ams-recs { margin: 8px 0 0 20px; padding: 0; font-size: 13px; color: #374151; }
+  .ams-recs li { margin: 3px 0; }
+  .attach-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 4px; font-size: 13px; }
+  .attach-name { flex: 1; color: #111827; }
+  .attach-meta { font-size: 11px; color: #6b7280; }
+</style>
+
+<!-- ====================== Vendor Snapshot (read-only) ====================== -->
+<section class="card mb-4">
+  <div class="card-header"><h3 class="font-semibold">Vendor — quick reference</h3>
+    <span class="ml-auto text-xs text-slate-500">View-only snapshot</span>
+  </div>
+  <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-6">
+    <dl class="ro-grid">
+      <dt>Legal name</dt>  <dd><%= vendor.legal_name || '—' %></dd>
+      <dt>Alpha name</dt>  <dd><%= vendor.secondary_alpha_name || '—' %></dd>
+      <dt>Tax ID</dt>      <dd><%= vendor.tax_id || '—' %></dd>
+      <dt>DUNS</dt>        <dd><%= vendor.duns || '—' %></dd>
+      <dt>ERP instance</dt><dd><%= vendor.erp_instance || '—' %></dd>
+      <dt>Category L1</dt> <dd><%= vendor.category_l1 || '—' %></dd>
+      <dt>Risk rating</dt> <dd>
+        <% const rr = vendor.risk_rating || 'LOW'; %>
+        <span class="chip <%= rr==='HIGH'?'bg-red-100 text-red-700':rr==='MEDIUM'?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700' %>"><%= rr %></span>
+      </dd>
+    </dl>
+    <dl class="ro-grid">
+      <dt>Contact</dt>     <dd><%= vendor.primary_contact_name || '—' %></dd>
+      <dt>Email</dt>       <dd><%= vendor.primary_contact_email || '—' %></dd>
+      <dt>Phone</dt>       <dd><%= vendor.primary_contact_phone || '—' %></dd>
+      <dt>Address</dt>     <dd>
+        <%= [primary.line1, primary.city, primary.state, primary.zip, primary.country].filter(Boolean).join(', ') || '—' %>
+      </dd>
+      <dt>Currency</dt>    <dd><%= vendor.currency_code || '—' %></dd>
+      <dt>Payment terms</dt><dd><%= vendor.ap_payment_terms || '—' %></dd>
+      <dt>Bank</dt>        <dd><%= bank.bank_name || '—' %></dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ====================== Claude Adverse Media Search ====================== -->
+<section class="card mb-4">
+  <div class="card-header"><h3 class="font-semibold">Claude — Adverse Media Search</h3></div>
+  <div class="card-body">
+    <p class="text-sm text-slate-500 mb-3">
+      Scans public sources for reputational issues — forced labor, corruption,
+      sanctions, environmental violations, major litigation, financial
+      irregularities, data breaches, and ethics concerns. No findings ≠ no risk;
+      always corroborate with your own review.
+    </p>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+      <button type="button" id="ams-btn" class="btn btn-default">Run adverse media search</button>
+      <span id="ams-status" style="font-size:12px;color:#6b7280;"></span>
+    </div>
+
+    <div id="ams-overall" style="display:none;"
+         class="mb-3 rounded border border-slate-200 bg-slate-50 p-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500 uppercase tracking-wide">Overall risk:</span>
+        <span id="ams-overall-chip" class="ams-chip chip-none">None</span>
+      </div>
+      <div id="ams-overall-summary" class="mt-1 text-sm text-slate-700"></div>
+    </div>
+
+    <div id="ams-findings"></div>
+
+    <div id="ams-recs-wrap" style="display:none;" class="mt-3">
+      <div class="text-xs text-slate-500 uppercase tracking-wide mb-1">Recommended next steps</div>
+      <ul id="ams-recs" class="ams-recs"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== Decision + Attachments + Comments (one form) ====================== -->
+<form method="post" action="/vendors/<%= vendor.id %>/workflow/legal-decision"
+      enctype="multipart/form-data" class="space-y-4">
+
+  <!-- Attachments -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Attachments</h3></div>
+    <div class="card-body">
+      <% if ((attachments || []).filter(a => a.stage === 'PENDING_LEGAL').length) { %>
+        <div class="mb-3">
+          <div class="text-xs text-slate-500 mb-1">Already uploaded</div>
+          <% attachments.filter(a => a.stage === 'PENDING_LEGAL').forEach(a => { %>
+            <div class="attach-row">
+              <span>📎</span>
+              <span class="attach-name"><%= a.filename %></span>
+              <span class="attach-meta"><%= (a.size/1024).toFixed(1) %> KB · <%= a.uploaded_at %></span>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+      <label class="field">
+        <span class="label">Add files (any format)</span>
+        <input type="file" name="attachments" multiple class="input" style="padding:6px;">
+      </label>
     </div>
   </section>
 
-  <!-- ======================= Compliance form + decision ===================== -->
-  <form method="post" action="/vendors/<%= vendor.id %>/workflow/legal-decision"
-        class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-6">
-
-    <div>
-      <h2 class="text-lg font-semibold text-gray-900">Compliance checks</h2>
-      <p class="mt-1 text-sm text-gray-500">Complete the review and render a decision.</p>
+  <!-- Comments -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Comments</h3></div>
+    <div class="card-body">
+      <label class="field">
+        <span class="label">Reviewer comment</span>
+        <textarea name="comment" rows="5" class="input"
+                  placeholder="Record findings, sources consulted, and the rationale for the decision."></textarea>
+      </label>
     </div>
+  </section>
 
-    <!-- ===================== LEGAL FIELDS — TODO ============================= -->
-    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-      Placeholder for compliance fields (sanctions hit Y/N, ABAC attestation,
-      contract reference, conflict of interest disclosure, risk rating, etc.).
-      Field list pending.
-    </div>
-    <!-- ======================================================================= -->
-
-    <fieldset class="space-y-3">
-      <legend class="text-sm font-medium text-gray-700">Final decision</legend>
-      <label class="flex items-start gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50">
-        <input type="radio" name="decision" value="approve" class="mt-1" required>
+  <!-- Decision -->
+  <section class="card">
+    <div class="card-header"><h3 class="font-semibold">Final decision</h3></div>
+    <div class="card-body space-y-3">
+      <label class="flex items-start gap-3 p-3 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer">
+        <input type="radio" name="decision" value="approve" required class="mt-1">
         <span>
-          <span class="block font-medium text-gray-900">Approve — complete onboarding</span>
-          <span class="block text-sm text-gray-500">Vendor becomes active; workflow ends at Confirmation.</span>
+          <span class="block font-medium text-slate-900">Approve — complete onboarding</span>
+          <span class="block text-sm text-slate-500">Vendor becomes active; workflow ends at Confirmation.</span>
         </span>
       </label>
-      <label class="flex items-start gap-3 rounded border border-gray-200 p-3 hover:bg-gray-50">
+      <label class="flex items-start gap-3 p-3 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer">
         <input type="radio" name="decision" value="reject" class="mt-1">
         <span>
-          <span class="block font-medium text-gray-900">Reject on compliance grounds</span>
-          <span class="block text-sm text-gray-500">Terminal; a new submission is required to try again.</span>
+          <span class="block font-medium text-slate-900">Reject on compliance grounds</span>
+          <span class="block text-sm text-slate-500">Terminal — a new submission is required to try again.</span>
         </span>
       </label>
-    </fieldset>
-
-    <label class="block">
-      <span class="text-sm font-medium text-gray-700">Reviewer comment</span>
-      <textarea name="comment" rows="4"
-                class="mt-1 w-full rounded border border-gray-300 p-2 text-sm"
-                placeholder="Required when rejecting."></textarea>
-    </label>
-
-    <div class="flex justify-end gap-3">
-      <a href="/vendors/queue" class="rounded px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cancel</a>
-      <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-        Submit decision
-      </button>
     </div>
-  </form>
-</main>
+  </section>
 
-</div>
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit decision</button>
+    <a href="/vendors/queue" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) {
+      return { '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  var btn = document.getElementById('ams-btn');
+  btn.addEventListener('click', async function () {
+    var statusEl = document.getElementById('ams-status');
+    var findingsEl = document.getElementById('ams-findings');
+    var overallEl = document.getElementById('ams-overall');
+    var chipEl    = document.getElementById('ams-overall-chip');
+    var sumEl     = document.getElementById('ams-overall-summary');
+    var recsWrap  = document.getElementById('ams-recs-wrap');
+    var recsEl    = document.getElementById('ams-recs');
+
+    var payload = {
+      legal_name: <%- JSON.stringify(vendor.legal_name || '') %>,
+      country:    <%- JSON.stringify(primary.country || '') %>,
+      city:       <%- JSON.stringify(primary.city || '') %>,
+      tax_id:     <%- JSON.stringify(vendor.tax_id || '') %>,
+      duns:       <%- JSON.stringify(vendor.duns || '') %>,
+      contact_name: <%- JSON.stringify(vendor.primary_contact_name || '') %>,
+    };
+
+    btn.disabled = true;
+    statusEl.textContent = 'Searching public sources…';
+    overallEl.style.display = 'none';
+    findingsEl.innerHTML = '';
+    recsWrap.style.display = 'none';
+
+    try {
+      var res = await fetch('/vendors/api/adverse-media', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      var data = await res.json();
+      if (!res.ok || !data.result) throw new Error(data.error || data.message || ('HTTP ' + res.status));
+      var r = data.result;
+
+      var risk = ['none','low','medium','high'].indexOf(r.overall_risk) >= 0 ? r.overall_risk : 'none';
+      var riskLabels = { none:'None', low:'Low', medium:'Medium', high:'High' };
+      chipEl.className = 'ams-chip chip-' + risk;
+      chipEl.textContent = riskLabels[risk];
+      sumEl.textContent = r.summary || '';
+      overallEl.style.display = '';
+
+      var findings = Array.isArray(r.findings) ? r.findings : [];
+      if (!findings.length) {
+        findingsEl.innerHTML = '<div class="text-sm text-slate-500 italic">No adverse media findings returned.</div>';
+      } else {
+        findingsEl.innerHTML = findings.map(function (f) {
+          var sev = ['low','medium','high'].indexOf(f.severity) >= 0 ? f.severity : 'low';
+          var sevLabels = { low:'Low', medium:'Medium', high:'High' };
+          var meta = [f.year, f.source_hint].filter(Boolean).join(' · ');
+          return '<div class="ams-card">' +
+            '<div class="ams-head">' +
+              '<span class="ams-cat">' + esc(f.category || 'Other') + '</span>' +
+              '<span class="ams-chip chip-' + sev + '">' + esc(sevLabels[sev]) + '</span>' +
+            '</div>' +
+            '<div class="ams-title">' + esc(f.title || '') + '</div>' +
+            '<div class="ams-summary">' + esc(f.summary || '') + '</div>' +
+            (meta ? '<div class="ams-meta mt-1">' + esc(meta) + '</div>' : '') +
+          '</div>';
+        }).join('');
+      }
+
+      var recs = Array.isArray(r.recommendations) ? r.recommendations : [];
+      if (recs.length) {
+        recsEl.innerHTML = recs.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+        recsWrap.style.display = '';
+      }
+      statusEl.textContent = 'Search complete.';
+    } catch (err) {
+      statusEl.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
+
+</main></div>
 </body></html>
