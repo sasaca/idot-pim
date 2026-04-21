@@ -1,56 +1,379 @@
-<%
-/*
-  workflow_vendor_admin.ejs
-  -----------------------------------------------------------------------------
-  Stage 4 — Vendor Admin team form. Internal team fills in technical fields
-  (ERP vendor codes, tax codes, payment terms mapping, account group, etc.)
-
-  FIELDS TODO: add the technical field layout in the marked section.
-  -----------------------------------------------------------------------------
-*/
-%>
 <%- include('../partials/head', { pageTitle: 'Vendor Admin Form' }) %>
 <%- include('../partials/nav') %>
 <div class="main-content">
-<%- include('../partials/topbar', { topTitle: 'Vendor Admin Form' }) %>
+<%- include('../partials/topbar', {
+  topTitle: 'Vendor Admin Form',
+  topSub: 'Review and correct the Requestor and Supplier data, fill in Vendor Admin technical setup, then send to Legal.'
+}) %>
+<main class="p-6 max-w-5xl">
 
-<main class="mx-auto max-w-4xl px-4 py-8">
-  <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
+<%- include('_workflow_shared', { vendor, stateLabel, history, comments }) %>
 
-  <form method="post" action="/vendors/<%= vendor.id %>/workflow/vendor-admin"
-        class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+<%
+  const primary = (addresses || []).find(a => a.address_type === 'PRIMARY') || {};
+  const remit   = (addresses || []).find(a => a.address_type === 'REMIT_TO') || {};
+  const mfg     = (addresses || []).find(a => a.address_type === 'MANUFACTURING') || {};
+  const bank    = (banks || [])[0] || {};
+  let ex = {}; try { ex = JSON.parse(vendor.extra_fields || '{}'); } catch {}
+  const vaExtra = ex.vendor_admin || {};
+  const COUNTRIES  = ['United States','Canada','Mexico','United Kingdom','Germany','France','India','China','Japan','Brazil','Other'];
+  const CURRENCIES = ['USD','EUR','GBP','INR','CNY','JPY','CAD','AUD','MXN','BRL'];
+  function sel(curr, v) { return curr === v ? 'selected' : ''; }
+  function selInt(curr, yesNo) {
+    if (curr === 1 && yesNo === 'Yes') return 'selected';
+    if (curr === 0 && yesNo === 'No')  return 'selected';
+    return '';
+  }
+%>
 
-    <div>
-      <h2 class="text-lg font-semibold text-gray-900">Technical setup</h2>
-      <p class="mt-1 text-sm text-gray-500">
-        Fill in ERP-side configuration needed to activate the vendor.
-      </p>
+<style>
+  details.section-card { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; margin-bottom: 12px; }
+  details.section-card > summary {
+    padding: 12px 16px; font-weight: 600; color: #111827; cursor: pointer;
+    list-style: none; display: flex; align-items: center; gap: 10px; user-select: none;
+  }
+  details.section-card > summary::-webkit-details-marker { display: none; }
+  details.section-card > summary::before {
+    content: '▸'; transition: transform .2s; color: #6b7280; font-size: 11px;
+  }
+  details.section-card[open] > summary::before { transform: rotate(90deg); }
+  details.section-card[open] > summary { border-bottom: 1px solid #e5e7eb; }
+  details.section-card .s-body { padding: 16px; }
+  details.section-card .s-chip {
+    margin-left: auto; font-size: 10px; padding: 2px 8px; border-radius: 9999px;
+    font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .s-editable { background: #dcfce7; color: #065f46; }
+  .s-viewonly { background: #e5e7eb; color: #4b5563; }
+  .s-new      { background: #dbeafe; color: #1e3a8a; }
+  .sub-title  { font-size: 13px; font-weight: 600; color: #374151;
+                border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin: 14px 0 10px; }
+</style>
+
+<!-- Vendor quick reference -->
+<section class="card mb-4">
+  <div class="card-header"><h3 class="font-semibold text-sm">Vendor — quick reference</h3></div>
+  <div class="card-body text-sm">
+    <strong><%= vendor.legal_name %></strong>
+    · Tax ID <%= vendor.tax_id || '—' %>
+    · DUNS <%= vendor.duns || '—' %>
+    · <%= primary.country || '—' %>
+    · ERP <%= vendor.erp_instance || '—' %>
+    · Risk <%= vendor.risk_rating || 'LOW' %>
+  </div>
+</section>
+
+<form method="post" action="/vendors/<%= vendor.id %>/workflow/vendor-admin" class="space-y-3">
+
+  <!-- ===================== 1) Requestor Form (editable) ===================== -->
+  <details class="section-card" open>
+    <summary>1. Requestor Form — Initial onboarding
+      <span class="s-chip s-editable">Editable</span>
+    </summary>
+    <div class="s-body">
+      <div class="sub-title">Identity</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Legal Name</span>
+          <input name="legal_name" class="input" value="<%= vendor.legal_name || '' %>"></label>
+        <label class="field"><span class="label">Secondary / Alpha Name</span>
+          <input name="secondary_alpha_name" class="input" value="<%= vendor.secondary_alpha_name || '' %>"></label>
+        <label class="field"><span class="label">Tax ID</span>
+          <input name="tax_id" class="input" value="<%= vendor.tax_id || '' %>"></label>
+        <label class="field"><span class="label">DUNS</span>
+          <input name="duns" class="input" value="<%= vendor.duns || '' %>"></label>
+      </div>
+
+      <div class="sub-title">Primary contact</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Contact Name</span>
+          <input name="primary_contact_name" class="input" value="<%= vendor.primary_contact_name || '' %>"></label>
+        <label class="field"><span class="label">Contact Email</span>
+          <input type="email" name="primary_contact_email" class="input" value="<%= vendor.primary_contact_email || '' %>"></label>
+        <label class="field"><span class="label">Contact Phone</span>
+          <input type="tel" name="primary_contact_phone" class="input" value="<%= vendor.primary_contact_phone || '' %>"></label>
+      </div>
+
+      <div class="sub-title">Address</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field md:col-span-2"><span class="label">Address Line 1</span>
+          <input name="addr_line1" class="input" value="<%= primary.line1 || '' %>"></label>
+        <label class="field"><span class="label">City</span>
+          <input name="addr_city" class="input" value="<%= primary.city || '' %>"></label>
+        <label class="field"><span class="label">State</span>
+          <input name="addr_state" class="input" value="<%= primary.state || '' %>"></label>
+        <label class="field"><span class="label">ZIP</span>
+          <input name="addr_zip" class="input" value="<%= primary.zip || '' %>"></label>
+        <label class="field"><span class="label">Country</span>
+          <select name="addr_country" class="input">
+            <option value="">—</option>
+            <% COUNTRIES.forEach(c => { %><option <%= sel(primary.country, c) %>><%= c %></option><% }) %>
+          </select></label>
+      </div>
+
+      <div class="sub-title">Classification / ERP</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Category L1</span>
+          <input name="category_l1" class="input" value="<%= vendor.category_l1 || '' %>"></label>
+        <label class="field"><span class="label">Category L2</span>
+          <input name="category_l2" class="input" value="<%= vendor.category_l2 || '' %>"></label>
+        <label class="field"><span class="label">Commodity Code</span>
+          <input name="commodity_code" class="input" value="<%= vendor.commodity_code || '' %>"></label>
+        <label class="field"><span class="label">ERP Instance</span>
+          <input name="erp_instance" class="input" value="<%= vendor.erp_instance || '' %>"></label>
+        <label class="field"><span class="label">Line of Business</span>
+          <input name="line_of_business" class="input" value="<%= vendor.line_of_business || '' %>"></label>
+        <label class="field"><span class="label">AP Payment Terms</span>
+          <input name="ap_payment_terms" class="input" value="<%= vendor.ap_payment_terms || '' %>"></label>
+      </div>
     </div>
+  </details>
 
-    <!-- ===================== VENDOR ADMIN FIELDS — TODO ====================== -->
-    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-      Placeholder for technical fields (account group, reconciliation account,
-      withholding tax code, purchasing org, company codes, payment method,
-      tolerance group, etc.). Field list pending.
+  <!-- ===================== 2) Supplier Form (editable) ===================== -->
+  <details class="section-card" open>
+    <summary>2. Supplier Form — Payment, banking, addresses
+      <span class="s-chip s-editable">Editable</span>
+    </summary>
+    <div class="s-body">
+      <div class="sub-title">Payment</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Payment Instrument</span>
+          <input name="payment_instrument" class="input" value="<%= vendor.payment_instrument || '' %>"></label>
+        <label class="field"><span class="label">Additional Tax ID</span>
+          <input name="additional_tax_id" class="input" value="<%= vendor.additional_tax_id || '' %>"></label>
+        <label class="field"><span class="label">Currency Code</span>
+          <select name="currency_code" class="input">
+            <option value="">—</option>
+            <% CURRENCIES.forEach(c => { %><option <%= sel(vendor.currency_code, c) %>><%= c %></option><% }) %>
+          </select></label>
+      </div>
+
+      <div class="sub-title">Bank</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Bank Name</span>
+          <input name="bank_name" class="input" value="<%= bank.bank_name || '' %>"></label>
+        <label class="field"><span class="label">Bank Account</span>
+          <input name="bank_account" class="input" value="<%= bank.bank_account || '' %>"></label>
+        <label class="field"><span class="label">IBAN</span>
+          <input name="iban" class="input" value="<%= bank.iban || '' %>"></label>
+        <label class="field"><span class="label">Swift</span>
+          <input name="swift" class="input" value="<%= bank.swift || '' %>"></label>
+        <label class="field"><span class="label">Bank Transit</span>
+          <input name="bank_transit" class="input" value="<%= bank.bank_transit || '' %>"></label>
+        <label class="field"><span class="label">Bank Country</span>
+          <select name="bank_country" class="input">
+            <option value="">—</option>
+            <% COUNTRIES.forEach(c => { %><option <%= sel(bank.bank_country, c) %>><%= c %></option><% }) %>
+          </select></label>
+      </div>
+
+      <div class="sub-title">Remit-To Address</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Remit City</span>
+          <input name="remit_to_city" class="input" value="<%= remit.city || '' %>"></label>
+        <label class="field"><span class="label">Remit State</span>
+          <input name="remit_to_state" class="input" value="<%= remit.state || '' %>"></label>
+        <label class="field"><span class="label">Remit ZIP</span>
+          <input name="remit_to_zip" class="input" value="<%= remit.zip || '' %>"></label>
+        <label class="field"><span class="label">Remit Country</span>
+          <select name="remit_to_country" class="input">
+            <option value="">—</option>
+            <% COUNTRIES.forEach(c => { %><option <%= sel(remit.country, c) %>><%= c %></option><% }) %>
+          </select></label>
+        <label class="field md:col-span-2"><span class="label">Remit Address</span>
+          <textarea name="remit_to_address" rows="2" class="input"><%= remit.line1 || '' %></textarea></label>
+      </div>
+
+      <div class="sub-title">Manufacturing Address</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Mfg City</span>
+          <input name="mfg_city" class="input" value="<%= mfg.city || '' %>"></label>
+        <label class="field"><span class="label">Mfg State</span>
+          <input name="mfg_state" class="input" value="<%= mfg.state || '' %>"></label>
+        <label class="field"><span class="label">Mfg ZIP</span>
+          <input name="mfg_zip" class="input" value="<%= mfg.zip || '' %>"></label>
+        <label class="field"><span class="label">Mfg Country</span>
+          <select name="mfg_country" class="input">
+            <option value="">—</option>
+            <% COUNTRIES.forEach(c => { %><option <%= sel(mfg.country, c) %>><%= c %></option><% }) %>
+          </select></label>
+        <label class="field md:col-span-2"><span class="label">Mfg Address</span>
+          <textarea name="mfg_address" rows="2" class="input"><%= mfg.line1 || '' %></textarea></label>
+      </div>
     </div>
-    <!-- ======================================================================= -->
+  </details>
 
-    <div>
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">Notes to Legal reviewer</span>
-        <textarea name="comment" rows="3"
-                  class="mt-1 w-full rounded border border-gray-300 p-2 text-sm"></textarea>
-      </label>
+  <!-- ===================== 3) Vendor Admin Form ===================== -->
+  <details class="section-card" open>
+    <summary>3. Vendor Admin — Technical setup
+      <span class="s-chip s-new">This stage</span>
+    </summary>
+    <div class="s-body">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Ap G/L Class</span>
+          <select name="ap_gl_class" class="input">
+            <option value="">-- None --</option>
+            <% ['A10 - Payables Domestic','A20 - Payables Foreign','A30 - Intercompany','A40 - Other'].forEach(o => { %>
+              <option <%= sel(vendor.ap_gl_class, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Factory / Special Payee</span>
+          <input name="factory_special_payee" class="input" value="<%= vaExtra.factory_special_payee || '' %>"></label>
+        <label class="field"><span class="label">Tax Rate Area</span>
+          <select name="tax_rate_area" class="input">
+            <option value="">-- None --</option>
+            <% ['TR00','TR01','TR02','TR10'].forEach(o => { %><option <%= sel(vendor.tax_rate_area, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Tax Explanation Code</span>
+          <select name="tax_explanation_code" class="input">
+            <option value="">-- None --</option>
+            <% ['E - Exempt','V - VAT','U - Use','S - Sales'].forEach(o => { %><option <%= sel(vendor.tax_explanation_code, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Tax Authority for A/P Withholding</span>
+          <input name="tax_authority_withholding" class="input" value="<%= vaExtra.tax_authority_withholding || '' %>"></label>
+        <label class="field"><span class="label">Withholding Percent</span>
+          <input name="withholding_percent" class="input" value="<%= vaExtra.withholding_percent || '' %>"></label>
+        <label class="field"><span class="label">Address Type - Payables</span>
+          <select name="address_type_payables" class="input">
+            <option value="">-- None --</option>
+            <% ['P - Primary','R - Remit-To','F - Factory'].forEach(o => { %><option <%= sel(vendor.address_type_payables, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Reporting Code</span>
+          <select name="reporting_code" class="input">
+            <option value="">-- None --</option>
+            <% ['R01','R02','R03'].forEach(o => { %><option <%= sel(vendor.reporting_code, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Classification Code 01</span>
+          <select name="classification_code_01" class="input">
+            <option value="">-- None --</option>
+            <% ['C01','C02','C03','C04'].forEach(o => { %><option <%= sel(vaExtra.classification_code_01, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">High Level Classification (PO / NONPO / Mixed)</span>
+          <select name="high_level_class" class="input">
+            <option value="">-- None --</option>
+            <% ['PO','NONPO','Mixed'].forEach(o => { %><option <%= sel(vendor.high_level_class, o) %>><%= o %></option><% }) %>
+          </select></label>
+      </div>
+
+      <div class="sub-title">Additional configuration</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Person / Corporation Code</span>
+          <select name="person_corp_code" class="input">
+            <option value="">-- None --</option>
+            <% ['P - Person','C - Corporation','N - Non-profit'].forEach(o => { %><option <%= sel(vendor.person_corp_code, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Sampling %</span>
+          <select name="sampling_percent" class="input">
+            <option value="">-- None --</option>
+            <% ['0','25','50','75','100'].forEach(o => { %><option <%= sel(String(vaExtra.sampling_percent), o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">IMS Integration - Prefix code</span>
+          <select name="ims_prefix_code" class="input">
+            <option value="">-- None --</option>
+            <% ['IMS-A','IMS-B','IMS-C'].forEach(o => { %><option <%= sel(vaExtra.ims_prefix_code, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">IMS Integration - Site Code</span>
+          <select name="ims_site_code" class="input">
+            <option value="">-- None --</option>
+            <% ['SITE01','SITE02','SITE03','SITE04'].forEach(o => { %><option <%= sel(vaExtra.ims_site_code, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Hold Payment Code</span>
+          <select name="hold_payment_code" class="input">
+            <option value="">-- None --</option>
+            <% ['H - Hold','R - Release','B - Block'].forEach(o => { %><option <%= sel(vendor.hold_payment_code, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Hold Order Code</span>
+          <select name="hold_order_code" class="input">
+            <option value="">-- None --</option>
+            <% ['H - Hold','R - Release','B - Block'].forEach(o => { %><option <%= sel(vendor.hold_order_code, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Default Expense Type</span>
+          <input name="default_expense_type" class="input" value="<%= vaExtra.default_expense_type || '' %>"></label>
+        <label class="field"><span class="label">Evaluated Receipts</span>
+          <input name="evaluated_receipts" class="input" value="<%= vaExtra.evaluated_receipts || '' %>"></label>
+      </div>
+
+      <div class="sub-title">Address Book Category Codes</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <% [11,14,15,16,17,18,19].forEach(n => { %>
+          <label class="field"><span class="label">Address Book Category Code <%= n %></span>
+            <select name="address_book_category_code_<%= n %>" class="input">
+              <option value="">-- None --</option>
+              <% ['CAT-A','CAT-B','CAT-C','CAT-D'].forEach(o => { %><option <%= sel(vaExtra['address_book_category_code_'+n], o) %>><%= o %></option><% }) %>
+            </select></label>
+        <% }) %>
+        <label class="field"><span class="label">Address Book Category Code 21 — AP Commodity code</span>
+          <select name="address_book_category_code_21" class="input">
+            <option value="">-- None --</option>
+            <% ['AP-01','AP-02','AP-03','AP-04'].forEach(o => { %><option <%= sel(vaExtra.address_book_category_code_21, o) %>><%= o %></option><% }) %>
+          </select></label>
+        <label class="field"><span class="label">Address Book Category Code 24 — Minority owned</span>
+          <select name="address_book_category_code_24" class="input">
+            <option value="">-- None --</option>
+            <% ['Y - Yes','N - No','U - Unknown'].forEach(o => { %><option <%= sel(vaExtra.address_book_category_code_24, o) %>><%= o %></option><% }) %>
+          </select></label>
+      </div>
+
+      <div class="sub-title">Compliance Information</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field"><span class="label">Financial Soundness Verified</span>
+          <select name="financial_soundness_verified" class="input">
+            <option value="">-- None --</option>
+            <option <%= selInt(vendor.financial_soundness_verified, 'Yes') %>>Yes</option>
+            <option <%= selInt(vendor.financial_soundness_verified, 'No')  %>>No</option>
+          </select></label>
+        <label class="field"><span class="label">MK Denial Verified</span>
+          <select name="mk_denial_verified" class="input">
+            <option value="">-- None --</option>
+            <option <%= selInt(vendor.mk_denial_verified, 'Yes') %>>Yes</option>
+            <option <%= selInt(vendor.mk_denial_verified, 'No')  %>>No</option>
+          </select></label>
+      </div>
     </div>
+  </details>
 
-    <div class="flex justify-end gap-3">
-      <a href="/vendors/queue" class="rounded px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Save draft</a>
-      <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-        Send to Legal
-      </button>
+  <!-- ===================== 4) Legal Review Form (view only) ===================== -->
+  <details class="section-card">
+    <summary>4. Legal Review Form — Upcoming stage
+      <span class="s-chip s-viewonly">View only</span>
+    </summary>
+    <div class="s-body">
+      <div class="mb-3 p-3 rounded border border-slate-200 bg-slate-50 text-sm text-slate-600">
+        Shown for context — Legal will fill this in after you submit. They will:
+        <ul class="list-disc list-inside mt-2 text-xs space-y-1">
+          <li>Run an AI-powered <strong>Adverse Media Search</strong> across labor / corruption / sanctions / environment / litigation / data-security categories.</li>
+          <li>Upload compliance evidence (screening reports, background checks, etc.).</li>
+          <li>Record reviewer comments.</li>
+          <li>Approve (→ Confirmed) or Reject (→ terminal state).</li>
+        </ul>
+      </div>
+      <fieldset disabled style="opacity:0.75;">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="field"><span class="label">Adverse Media — Overall Risk</span>
+            <input class="input" placeholder="(Claude search result)"></label>
+          <label class="field"><span class="label">Attachments</span>
+            <input type="text" class="input" placeholder="(Legal uploads)"></label>
+          <label class="field md:col-span-2"><span class="label">Reviewer Comments</span>
+            <textarea rows="2" class="input" placeholder="(Legal notes)"></textarea></label>
+          <label class="field"><span class="label">Final Decision</span>
+            <select class="input"><option>(Legal: Approve / Reject)</option></select></label>
+        </div>
+      </fieldset>
     </div>
-  </form>
-</main>
+  </details>
 
-</div>
+  <!-- Notes + submit -->
+  <section class="card">
+    <div class="card-body">
+      <label class="field"><span class="label">Notes to Legal reviewer</span>
+        <textarea name="comment" rows="3" class="input"
+                  placeholder="Anything the Legal reviewer should know — data corrections you made, risk flags, etc."></textarea></label>
+    </div>
+  </section>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Save and send to Legal →</button>
+    <a href="/vendors/queue" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+</main></div>
 </body></html>

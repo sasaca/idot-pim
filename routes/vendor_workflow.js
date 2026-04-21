@@ -168,6 +168,119 @@ module.exports = function makeRouter(db) {
     });
   }
 
+  // Persist everything the Vendor Admin can touch — including fixes to the
+  // Requestor and Supplier data — then the caller transitions to PENDING_LEGAL.
+  const persistVendorAdminData = db.transaction((vendor, b) => {
+    // 1) Identity + configuration columns on vendors. Identity fields
+    //    (legal_name, tax_id, duns) are never blanked — use COALESCE/NULLIF.
+    const ynToInt = (v) => v === 'Yes' ? 1 : v === 'No' ? 0 : null;
+    db.prepare(`
+      UPDATE vendors SET
+        legal_name            = COALESCE(NULLIF(?, ''), legal_name),
+        secondary_alpha_name  = ?,
+        tax_id                = COALESCE(NULLIF(?, ''), tax_id),
+        duns                  = COALESCE(NULLIF(?, ''), duns),
+        additional_tax_id     = ?,
+        category_l1           = ?,
+        category_l2           = ?,
+        commodity_code        = ?,
+        erp_instance          = ?,
+        line_of_business      = ?,
+        currency_code         = ?,
+        ap_payment_terms      = ?,
+        high_level_class      = ?,
+        primary_contact_name  = ?,
+        primary_contact_email = ?,
+        primary_contact_phone = ?,
+        payment_instrument    = ?,
+        ap_gl_class           = ?,
+        tax_rate_area         = ?,
+        tax_explanation_code  = ?,
+        address_type_payables = ?,
+        reporting_code        = ?,
+        hold_payment_code     = ?,
+        hold_order_code       = ?,
+        person_corp_code      = ?,
+        financial_soundness_verified = ?,
+        mk_denial_verified    = ?,
+        updated_at            = ?
+      WHERE id = ?
+    `).run(
+      b.legal_name, b.secondary_alpha_name, b.tax_id, b.duns, b.additional_tax_id,
+      b.category_l1, b.category_l2, b.commodity_code, b.erp_instance, b.line_of_business,
+      b.currency_code, b.ap_payment_terms, b.high_level_class,
+      b.primary_contact_name, b.primary_contact_email, b.primary_contact_phone,
+      b.payment_instrument, b.ap_gl_class, b.tax_rate_area, b.tax_explanation_code,
+      b.address_type_payables, b.reporting_code, b.hold_payment_code, b.hold_order_code,
+      b.person_corp_code,
+      ynToInt(b.financial_soundness_verified),
+      ynToInt(b.mk_denial_verified),
+      new Date().toISOString(),
+      vendor.id
+    );
+
+    // 2) Bank — authoritative, one row per vendor.
+    db.prepare(`DELETE FROM vendor_banks WHERE vendor_id = ?`).run(vendor.id);
+    if (b.bank_name || b.bank_account) {
+      db.prepare(`
+        INSERT INTO vendor_banks
+          (vendor_id, bank_name, bank_account, bank_transit, iban, swift, bank_country, approved)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+      `).run(vendor.id, b.bank_name, b.bank_account, b.bank_transit, b.iban, b.swift, b.bank_country);
+    }
+
+    // 3) Addresses — upsert PRIMARY / REMIT_TO / MANUFACTURING only if provided.
+    const replaceAddr = (type, row) => {
+      db.prepare(`DELETE FROM vendor_addresses WHERE vendor_id=? AND address_type=?`).run(vendor.id, type);
+      db.prepare(`
+        INSERT INTO vendor_addresses
+          (vendor_id, address_type, line1, line2, line3, line4, city, state, zip, country)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(vendor.id, type,
+        row.line1 || null, row.line2 || null, row.line3 || null, row.line4 || null,
+        row.city || null, row.state || null, row.zip || null, row.country || null);
+    };
+    if (b.addr_line1 || b.addr_city || b.addr_country || b.addr_zip) {
+      replaceAddr('PRIMARY', {
+        line1: b.addr_line1, line2: b.addr_line2, line3: b.addr_line3, line4: b.addr_line4,
+        city: b.addr_city, state: b.addr_state, zip: b.addr_zip, country: b.addr_country,
+      });
+    }
+    if (b.remit_to_country || b.remit_to_city || b.remit_to_address) {
+      replaceAddr('REMIT_TO', {
+        line1: b.remit_to_address, city: b.remit_to_city, state: b.remit_to_state,
+        zip: b.remit_to_zip, country: b.remit_to_country,
+      });
+    }
+    if (b.mfg_country || b.mfg_city || b.mfg_address) {
+      replaceAddr('MANUFACTURING', {
+        line1: b.mfg_address, city: b.mfg_city, state: b.mfg_state,
+        zip: b.mfg_zip, country: b.mfg_country,
+      });
+    }
+
+    // 4) extra_fields.vendor_admin — the fields without a dedicated column.
+    let extra = {};
+    try { extra = JSON.parse(vendor.extra_fields || '{}'); } catch {}
+    extra.vendor_admin = {
+      factory_special_payee:     b.factory_special_payee || null,
+      tax_authority_withholding: b.tax_authority_withholding || null,
+      withholding_percent:       b.withholding_percent || null,
+      classification_code_01:    b.classification_code_01 || null,
+      sampling_percent:          b.sampling_percent || null,
+      ims_prefix_code:           b.ims_prefix_code || null,
+      ims_site_code:             b.ims_site_code || null,
+      default_expense_type:      b.default_expense_type || null,
+      evaluated_receipts:        b.evaluated_receipts || null,
+      submitted_at:              new Date().toISOString(),
+    };
+    for (const n of [11, 14, 15, 16, 17, 18, 19, 21, 24]) {
+      const key = `address_book_category_code_${n}`;
+      if (b[key]) extra.vendor_admin[key] = b[key];
+    }
+    db.prepare(`UPDATE vendors SET extra_fields = ? WHERE id = ?`).run(JSON.stringify(extra), vendor.id);
+  });
+
   function saveUploadedFiles(vendorId, stage, userId, files) {
     const stmt = db.prepare(`
       INSERT INTO vendor_attachments
@@ -316,7 +429,16 @@ module.exports = function makeRouter(db) {
     '/vendor-admin',
     requireRole(workflow.ROLES.VENDOR_ADMIN),
     requireState(workflow.STATES.PENDING_VENDOR_ADMIN),
-    (req, res) => doTransition('vendor_admin_submit', req, res)
+    (req, res) => {
+      try {
+        persistVendorAdminData(res.locals.vendor, req.body || {});
+      } catch (e) {
+        return res.status(500).render('error', {
+          error: { message: 'Could not save Vendor Admin form: ' + (e.message || e) },
+        });
+      }
+      return doTransition('vendor_admin_submit', req, res);
+    }
   );
 
   // ============================================================== 4) Legal
