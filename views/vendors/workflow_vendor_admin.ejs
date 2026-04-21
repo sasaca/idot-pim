@@ -9,7 +9,10 @@
   -----------------------------------------------------------------------------
 */
 %>
-<%- include('../partials/header', { title: 'Vendor Admin Form' }) %>
+<%- include('../partials/head', { pageTitle: 'Vendor Admin Form' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Vendor Admin Form' }) %>
 
 <main class="mx-auto max-w-4xl px-4 py-8">
   <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
@@ -49,4 +52,5 @@
   </form>
 </main>
 
-<%- include('../partials/footer') %>
+</div>
+</body></html>

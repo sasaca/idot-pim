@@ -1,4 +1,7 @@
-<%- include('../partials/header', { title: 'Wrong stage' }) %>
+<%- include('../partials/head', { pageTitle: 'Wrong stage' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Wrong stage' }) %>
 <main class="mx-auto max-w-2xl px-4 py-16 text-center">
   <h1 class="text-2xl font-semibold text-gray-900">This page isn't available right now</h1>
   <p class="mt-2 text-gray-600">
@@ -11,4 +14,5 @@
     Back to my queue
   </a>
 </main>
-<%- include('../partials/footer') %>
+</div>
+</body></html>

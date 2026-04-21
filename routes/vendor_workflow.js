@@ -135,6 +135,12 @@ module.exports = function makeRouter(db) {
     const comments = db.prepare(`
       SELECT * FROM vendor_workflow_comments WHERE vendor_id = ? ORDER BY id ASC
     `).all(vendor.id);
+    const addresses = db.prepare(
+      `SELECT * FROM vendor_addresses WHERE vendor_id = ?`
+    ).all(vendor.id);
+    const banks = db.prepare(
+      `SELECT * FROM vendor_banks WHERE vendor_id = ?`
+    ).all(vendor.id);
     const actions = workflow.availableActions(
       vendor.workflow_state,
       getUserRoles(req)[0]  // just show the primary role's actions
@@ -144,11 +150,88 @@ module.exports = function makeRouter(db) {
       workflow,
       history,
       comments,
+      addresses,
+      banks,
       actions,
       stateLabel: workflow.stateLabel(vendor.workflow_state),
       user: req.user || null,
     });
   }
+
+  // Persist everything the supplier filled in on their form, then hand off to
+  // doTransition so the workflow advances to PENDING_VENDOR_ADMIN. Wrapped in
+  // a single transaction so a failure anywhere rolls back the whole write.
+  const persistSupplierData = db.transaction((vendor, b) => {
+    // 1) Identity + payment fields on the main vendor row.
+    db.prepare(`
+      UPDATE vendors SET
+        legal_name         = COALESCE(NULLIF(?, ''), legal_name),
+        payment_instrument = ?,
+        tax_id             = COALESCE(NULLIF(?, ''), tax_id),
+        additional_tax_id  = ?,
+        currency_code      = ?,
+        duns               = COALESCE(NULLIF(?, ''), duns),
+        updated_at         = ?
+      WHERE id = ?
+    `).run(
+      b.legal_name, b.payment_instrument, b.tax_id, b.additional_tax_id,
+      b.currency_code, b.duns, new Date().toISOString(), vendor.id
+    );
+
+    // 2) Bank — treat supplier submission as the authoritative set.
+    db.prepare(`DELETE FROM vendor_banks WHERE vendor_id = ?`).run(vendor.id);
+    if (b.bank_name || b.bank_account) {
+      db.prepare(`
+        INSERT INTO vendor_banks
+          (vendor_id, bank_name, bank_account, bank_transit, iban, swift, bank_country, approved)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+      `).run(vendor.id, b.bank_name, b.bank_account, b.bank_transit, b.iban, b.swift, b.bank_country);
+    }
+
+    // 3) Address block: upsert PRIMARY / REMIT_TO / MANUFACTURING.
+    const replaceAddress = (type, row) => {
+      db.prepare(`DELETE FROM vendor_addresses WHERE vendor_id=? AND address_type=?`).run(vendor.id, type);
+      if (!row) return;
+      db.prepare(`
+        INSERT INTO vendor_addresses
+          (vendor_id, address_type, line1, line2, line3, line4, city, state, zip, county, country, email, po_email)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(vendor.id, type,
+        row.line1 || null, row.line2 || null, row.line3 || null, row.line4 || null,
+        row.city || null, row.state || null, row.zip || null,
+        row.county || null, row.country || null, row.email || null, row.po_email || null);
+    };
+
+    replaceAddress('PRIMARY', {
+      line1: b.addr_line1, line2: b.addr_line2, line3: b.addr_line3, line4: b.addr_line4,
+      city: b.addr_city, state: b.addr_state, zip: b.addr_zip,
+      county: b.county_code, country: b.addr_country,
+    });
+    if (b.remit_to_country || b.remit_to_city || b.remit_to_address || b.remit_to_zip) {
+      replaceAddress('REMIT_TO', {
+        line1: b.remit_to_address, city: b.remit_to_city, state: b.remit_to_state,
+        zip: b.remit_to_zip, country: b.remit_to_country,
+        email: b.remit_to_supplier_email, po_email: b.remit_to_po_email,
+      });
+    }
+    if (b.mfg_country || b.mfg_city || b.mfg_address || b.mfg_zip) {
+      replaceAddress('MANUFACTURING', {
+        line1: b.mfg_address, city: b.mfg_city, state: b.mfg_state,
+        zip: b.mfg_zip, country: b.mfg_country,
+      });
+    }
+
+    // 4) Privacy ack → merge into extra_fields JSON.
+    let extra = {};
+    try { extra = JSON.parse(vendor.extra_fields || '{}'); } catch { extra = {}; }
+    extra.supplier = {
+      privacy_ack: b.privacy_ack === '1' || b.privacy_ack === 'on' || b.privacy_ack === true,
+      privacy_ack_at: new Date().toISOString(),
+    };
+    db.prepare(`UPDATE vendors SET extra_fields = ? WHERE id = ?`).run(
+      JSON.stringify(extra), vendor.id
+    );
+  });
 
   // ============================================================== 1) Supply Chain
   router.get(
@@ -188,7 +271,16 @@ module.exports = function makeRouter(db) {
     '/supplier',
     requireRole(workflow.ROLES.SUPPLIER),
     requireState(workflow.STATES.PENDING_SUPPLIER),
-    (req, res) => doTransition('supplier_submit', req, res)
+    (req, res) => {
+      try {
+        persistSupplierData(res.locals.vendor, req.body || {});
+      } catch (e) {
+        return res.status(500).render('error', {
+          error: { message: 'Could not save supplier form: ' + (e.message || e) },
+        });
+      }
+      return doTransition('supplier_submit', req, res);
+    }
   );
 
   // ============================================================== 3) Vendor Admin

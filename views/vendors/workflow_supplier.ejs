@@ -1,51 +1,333 @@
 <%
 /*
   workflow_supplier.ejs
-  -----------------------------------------------------------------------------
-  Stage 3 — Supplier self-service form. The external supplier fills in their
-  own details (banking, contacts, documents, certifications).
-
-  FIELDS TODO: add the supplier-provided form fields inside the marked section.
-  -----------------------------------------------------------------------------
+  ----------------------------------------------------------------------------
+  Stage 3 — Supplier self-service form. External supplier fills in identity,
+  payment, bank, and address details. On submit, captured into the vendor
+  row + vendor_banks + vendor_addresses, then workflow transitions to
+  PENDING_VENDOR_ADMIN.
 */
 %>
-<%- include('../partials/header', { title: 'Supplier Form' }) %>
+<%- include('../partials/head', { pageTitle: 'Supplier Form' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', {
+  topTitle: 'Supplier Form',
+  topSub: 'Confirm identity, banking, and address details. All fields marked * are required.'
+}) %>
+<main class="p-6 max-w-5xl">
 
-<main class="mx-auto max-w-4xl px-4 py-8">
-  <%- include('_workflow_shared', { vendor: vendor, stateLabel: stateLabel, history: history, comments: comments }) %>
+<%- include('_workflow_shared', { vendor, stateLabel, history, comments }) %>
 
-  <form method="post" action="/vendors/<%= vendor.id %>/workflow/supplier"
-        class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+<%
+  // Helpers: pre-populate from previously captured data.
+  const primary = (addresses || []).find(a => a.address_type === 'PRIMARY') || {};
+  const remit   = (addresses || []).find(a => a.address_type === 'REMIT_TO') || {};
+  const mfg     = (addresses || []).find(a => a.address_type === 'MANUFACTURING') || {};
+  const bank    = (banks || [])[0] || {};
+  const COUNTRIES = ['United States','Canada','Mexico','United Kingdom','Germany','France','India','China','Japan','Brazil','Other'];
+  const STATES    = ['00 - Blank','AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','IA','ID','IL','IN','KS','KY','LA','MA','MD','ME','MI','MN','MO','MS','MT','NC','ND','NE','NH','NJ','NM','NV','NY','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VA','VT','WA','WI','WV','WY'];
+  const CURRENCIES = ['USD','EUR','GBP','INR','CNY','JPY','CAD','AUD','MXN','BRL'];
+  const PAYMENT_INSTRUMENTS = ['Check','Wire Transfer','ACH','Credit Card','EFT','Bank Draft','SEPA'];
+%>
 
-    <div>
-      <h2 class="text-lg font-semibold text-gray-900">Supplier details</h2>
-      <p class="mt-1 text-sm text-gray-500">
-        Please complete the fields below. All information is confidential.
-      </p>
+<form method="post" action="/vendors/<%= vendor.id %>/workflow/supplier" class="space-y-4">
+
+  <!-- =================== Privacy Acknowledgment =================== -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="font-semibold">Privacy Acknowledgment</h3>
+      <span class="ml-auto text-xs text-red-600">* Indicates required</span>
     </div>
-
-    <!-- ===================== SUPPLIER FIELDS — TODO ========================== -->
-    <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-      Placeholder for supplier-filled fields (banking details, contacts,
-      certifications, document uploads, etc.). Field list pending.
-    </div>
-    <!-- ======================================================================= -->
-
-    <div>
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">Comments (optional)</span>
-        <textarea name="comment" rows="3"
-                  class="mt-1 w-full rounded border border-gray-300 p-2 text-sm"></textarea>
+    <div class="card-body">
+      <label class="flex items-start gap-3 p-3 rounded border border-red-200 bg-red-50">
+        <input type="checkbox" name="privacy_ack" value="1" required class="mt-1 accent-red-600">
+        <span class="text-sm text-slate-700">
+          <span class="text-red-600 font-bold">*</span>
+          I acknowledge that I have reviewed a copy of the Privacy Policy, which
+          describes the exchange of information where results can become part of
+          Supplier Engagement Screening and Supplier Background Check.
+        </span>
       </label>
     </div>
+  </div>
 
-    <div class="flex justify-end gap-3">
-      <a href="/vendors/queue" class="rounded px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Save draft</a>
-      <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-        Submit to iDOT
-      </button>
+  <!-- =================== Vendor Onboarded =================== -->
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Vendor Onboarded</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Legal Name</span>
+        <input name="legal_name" required class="input" value="<%= vendor.legal_name || '' %>">
+      </label>
     </div>
-  </form>
-</main>
+  </div>
 
-<%- include('../partials/footer') %>
+  <!-- =================== Payment Information =================== -->
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Payment Information</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Payment Instrument</span>
+        <select name="payment_instrument" required class="input">
+          <option value="">-- None --</option>
+          <% PAYMENT_INSTRUMENTS.forEach(p => { %>
+            <option <%= vendor.payment_instrument === p ? 'selected' : '' %>><%= p %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Tax ID</span>
+        <input name="tax_id" required class="input" value="<%= vendor.tax_id || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">Additional Tax ID</span>
+        <input name="additional_tax_id" class="input" value="<%= vendor.additional_tax_id || '' %>">
+      </label>
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Currency Code</span>
+        <select name="currency_code" required class="input">
+          <option value="">-- Select --</option>
+          <% CURRENCIES.forEach(c => { %>
+            <option <%= vendor.currency_code === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label">DUNS</span>
+        <input name="duns" class="input" value="<%= vendor.duns || '' %>">
+      </label>
+    </div>
+  </div>
+
+  <!-- =================== Bank Information =================== -->
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Bank Information</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Bank Name</span>
+        <input name="bank_name" required class="input" value="<%= bank.bank_name || '' %>">
+      </label>
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Bank Account Number</span>
+        <div style="position:relative;">
+          <input id="bank-account-input" name="bank_account" type="password" required class="input" style="padding-right:52px;" value="<%= bank.bank_account || '' %>">
+          <button type="button" id="bank-account-toggle"
+                  style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
+                         background:transparent;border:none;color:#2563eb;font-size:11px;
+                         font-weight:700;letter-spacing:.04em;cursor:pointer;">SHOW</button>
+        </div>
+      </label>
+      <label class="field">
+        <span class="label">IBAN</span>
+        <input name="iban" class="input" value="<%= bank.iban || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">Bank Transit Number</span>
+        <input name="bank_transit" class="input" value="<%= bank.bank_transit || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">Swift Code</span>
+        <input name="swift" class="input" value="<%= bank.swift || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">Bank Country Code</span>
+        <select name="bank_country" class="input">
+          <option value="">-- None --</option>
+          <% COUNTRIES.forEach(c => { %>
+            <option <%= bank.bank_country === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- =================== Vendor Address =================== -->
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Vendor Address</h3></div>
+    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Country/Territory/Area</span>
+        <select name="addr_country" required class="input">
+          <option value="">-- Select --</option>
+          <% COUNTRIES.forEach(c => { %>
+            <option <%= primary.country === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label">City</span>
+        <input name="addr_city" class="input" value="<%= primary.city || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">State Code</span>
+        <select name="addr_state" class="input">
+          <option value="">-- Select --</option>
+          <% STATES.forEach(s => { %>
+            <option <%= primary.state === s ? 'selected' : '' %>><%= s %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label"><span class="text-red-600">*</span> Address Line Details (Line 1)</span>
+        <input name="addr_line1" required class="input" value="<%= primary.line1 || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">Address Line Details (Line 2)</span>
+        <input name="addr_line2" class="input" value="<%= primary.line2 || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">Address Line Details (Line 3)</span>
+        <input name="addr_line3" class="input" value="<%= primary.line3 || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">Address Line Details (Line 4)</span>
+        <input name="addr_line4" class="input" value="<%= primary.line4 || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">County Code</span>
+        <input name="county_code" class="input" value="<%= primary.county || '' %>">
+      </label>
+      <label class="field">
+        <span class="label">ZIP Code</span>
+        <input name="addr_zip" class="input" value="<%= primary.zip || '' %>">
+      </label>
+    </div>
+  </div>
+
+  <!-- =================== Remit To Address =================== -->
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Remit To Address</h3></div>
+    <div class="card-body">
+      <label class="flex items-center gap-2 mb-4 text-red-600 font-semibold text-sm">
+        <input type="checkbox" id="copy-remit" class="accent-red-600">
+        Copy from Main Address
+      </label>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field">
+          <span class="label">Remit To Country</span>
+          <select name="remit_to_country" class="input">
+            <option value="">-- Select --</option>
+            <% COUNTRIES.forEach(c => { %>
+              <option <%= remit.country === c ? 'selected' : '' %>><%= c %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">Remit To State</span>
+          <select name="remit_to_state" class="input">
+            <option value="">-- Select --</option>
+            <% STATES.forEach(s => { %>
+              <option <%= remit.state === s ? 'selected' : '' %>><%= s %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field"><span class="label">Remit To City</span>
+          <input name="remit_to_city" class="input" value="<%= remit.city || '' %>">
+        </label>
+        <label class="field"><span class="label">Remit To Postal Code</span>
+          <input name="remit_to_zip" class="input" value="<%= remit.zip || '' %>">
+        </label>
+        <label class="field"><span class="label">Email to receive PO</span>
+          <input type="email" name="remit_to_po_email" class="input" value="<%= remit.po_email || '' %>">
+        </label>
+        <label class="field"><span class="label">Remit To Supplier Email</span>
+          <input type="email" name="remit_to_supplier_email" class="input" value="<%= remit.email || '' %>">
+        </label>
+        <label class="field md:col-span-2">
+          <span class="label">Remit To Address</span>
+          <textarea name="remit_to_address" rows="3" class="input"><%= remit.line1 || '' %></textarea>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== Manufacturing Address =================== -->
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Manufacturing Address</h3></div>
+    <div class="card-body">
+      <label class="flex items-center gap-2 mb-4 text-red-600 font-semibold text-sm">
+        <input type="checkbox" id="copy-mfg" class="accent-red-600">
+        Copy from Main Address
+      </label>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="field">
+          <span class="label">Manufacturing Country</span>
+          <select name="mfg_country" class="input">
+            <option value="">-- Select --</option>
+            <% COUNTRIES.forEach(c => { %>
+              <option <%= mfg.country === c ? 'selected' : '' %>><%= c %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">Manufacturing State</span>
+          <select name="mfg_state" class="input">
+            <option value="">-- Select --</option>
+            <% STATES.forEach(s => { %>
+              <option <%= mfg.state === s ? 'selected' : '' %>><%= s %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field"><span class="label">Manufacturing Postal Code</span>
+          <input name="mfg_zip" class="input" value="<%= mfg.zip || '' %>">
+        </label>
+        <label class="field"><span class="label">Manufacturing City</span>
+          <input name="mfg_city" class="input" value="<%= mfg.city || '' %>">
+        </label>
+        <label class="field md:col-span-2">
+          <span class="label">Manufacturing Address</span>
+          <textarea name="mfg_address" rows="3" class="input"><%= mfg.line1 || '' %></textarea>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== Comments + Submit =================== -->
+  <div class="card">
+    <div class="card-body">
+      <label class="field">
+        <span class="label">Comments (optional)</span>
+        <textarea name="comment" rows="2" class="input"
+                  placeholder="Anything the Vendor Admin should know…"></textarea>
+      </label>
+    </div>
+  </div>
+
+  <div class="flex gap-2">
+    <button class="btn btn-primary">Submit → Vendor Admin</button>
+    <a href="/vendors/queue" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+<script>
+  // Mask / unmask bank account.
+  (function () {
+    var inp = document.getElementById('bank-account-input');
+    var btn = document.getElementById('bank-account-toggle');
+    btn.addEventListener('click', function () {
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'HIDE'; }
+      else { inp.type = 'password'; btn.textContent = 'SHOW'; }
+    });
+  })();
+
+  // Copy-from-Main-Address for Remit / Manufacturing.
+  function copyMainTo(prefix) {
+    var get = function (n) { var el = document.querySelector('[name=' + n + ']'); return el ? el.value : ''; };
+    var set = function (n, v) { var el = document.querySelector('[name=' + n + ']'); if (el) el.value = v; };
+    set(prefix + '_country', get('addr_country'));
+    set(prefix + '_state',   get('addr_state'));
+    set(prefix + '_city',    get('addr_city'));
+    set(prefix + '_zip',     get('addr_zip'));
+    set(prefix + '_address', [get('addr_line1'), get('addr_line2'), get('addr_line3'), get('addr_line4')].filter(Boolean).join(', '));
+  }
+  document.getElementById('copy-remit').addEventListener('change', function (e) {
+    if (e.target.checked) copyMainTo('remit_to');
+  });
+  document.getElementById('copy-mfg').addEventListener('change', function (e) {
+    if (e.target.checked) copyMainTo('mfg');
+  });
+</script>
+
+</main></div>
+</body></html>
