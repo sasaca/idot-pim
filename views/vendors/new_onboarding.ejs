@@ -858,6 +858,18 @@
           <h2>Compliance Questions</h2>
           <div class="indicates-required">* Indicates required</div>
           <div class="vob-grid">
+            <div class="vob-field full">
+              <label>Diverse / Small Business Classification <span class="text-xs text-gray-500">(select all that apply)</span></label>
+              <div class="check-group">
+                <label><input type="checkbox" name="diverse_small_business[]" value="Small Business">Small Business</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Minority-Owned">Minority-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Women-Owned">Women-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Veteran-Owned">Veteran-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="Disability-Owned">Disability-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="LGBTQ-Owned">LGBTQ-Owned</label>
+                <label><input type="checkbox" name="diverse_small_business[]" value="None">None</label>
+              </div>
+            </div>
             <div class="vob-field">
               <label><span class="req">*</span>1099 Reportable</label>
               <div class="radio-group">
@@ -870,18 +882,6 @@
               <div class="radio-group">
                 <label><input type="radio" name="conflict_of_interest" value="Yes" required>Yes</label>
                 <label><input type="radio" name="conflict_of_interest" value="No">No</label>
-              </div>
-            </div>
-            <div class="vob-field full">
-              <label>Diverse / Small Business Classification <span class="text-xs text-gray-500">(select all that apply)</span></label>
-              <div class="check-group">
-                <label><input type="checkbox" name="diverse_small_business[]" value="Small Business">Small Business</label>
-                <label><input type="checkbox" name="diverse_small_business[]" value="Minority-Owned">Minority-Owned</label>
-                <label><input type="checkbox" name="diverse_small_business[]" value="Women-Owned">Women-Owned</label>
-                <label><input type="checkbox" name="diverse_small_business[]" value="Veteran-Owned">Veteran-Owned</label>
-                <label><input type="checkbox" name="diverse_small_business[]" value="Disability-Owned">Disability-Owned</label>
-                <label><input type="checkbox" name="diverse_small_business[]" value="LGBTQ-Owned">LGBTQ-Owned</label>
-                <label><input type="checkbox" name="diverse_small_business[]" value="None">None</label>
               </div>
             </div>
             <div class="vob-field">
@@ -907,11 +907,11 @@
               </div>
             </div>
             <div class="vob-field">
-              <label><span class="req">*</span>Terms for International/Canadian/Foreign Shipments (INCOTERMS)</label>
-              <select name="incoterms" required>
-                <option value="">-- Select --</option>
-                <% (lookups.tableByNum(89) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
-              </select>
+              <label><span class="req">*</span>Will The Employees or Representatives Perform Physical Work On-Site?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="physical_work_at_site" value="Yes" required>Yes</label>
+                <label><input type="radio" name="physical_work_at_site" value="No">No</label>
+              </div>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Are we Importer of Record (Handling Customs Documentation)?</label>
@@ -928,11 +928,11 @@
               </div>
             </div>
             <div class="vob-field">
-              <label><span class="req">*</span>Will The Employees or Representatives Perform Physical Work On-Site?</label>
-              <div class="radio-group">
-                <label><input type="radio" name="physical_work_at_site" value="Yes" required>Yes</label>
-                <label><input type="radio" name="physical_work_at_site" value="No">No</label>
-              </div>
+              <label><span class="req">*</span>Terms for International/Canadian/Foreign Shipments (INCOTERMS)</label>
+              <select name="incoterms" required>
+                <option value="">-- Select --</option>
+                <% (lookups.tableByNum(89) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
+              </select>
             </div>
             <div class="vob-field full">
               <label>Do You Already Have a Vendor Which Provides This Same Service / Product? If Yes, Please Mention the Name of the Vendor</label>
