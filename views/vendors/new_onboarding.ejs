@@ -521,11 +521,15 @@
           <div class="vob-grid">
             <div class="vob-field">
               <label><span class="req">*</span>Requestor's Name</label>
-              <input type="text" name="requestor_name" required>
+              <input type="text" name="requestor_name" required
+                     value="<%= currentUser ? currentUser.name : '' %>"
+                     readonly title="Auto-populated from your sign-in account">
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Requestor's Email</label>
-              <input type="email" name="requestor_email" required>
+              <input type="email" name="requestor_email" required
+                     value="<%= currentUser ? currentUser.email : '' %>"
+                     readonly title="Auto-populated from your sign-in account">
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Requestor's Department</label>
