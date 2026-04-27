@@ -413,11 +413,16 @@
 
             // Match the selected option in the phone-area select by ISO2 (so
             // multiple countries that share a dial code, e.g. +1, resolve to
-            // the right one).
+            // the right one). Setting select.value would just pick the first
+            // <option> with that value — not what we want here. Toggling the
+            // matched option's `.selected` property selects it specifically.
             function selectAreaForIso2(iso2) {
-              if (!iso2) { areaSel.value = ''; return; }
+              if (!iso2) { areaSel.selectedIndex = 0; return; }
               var opt = areaSel.querySelector('option[data-iso2="' + iso2 + '"]');
-              if (opt) areaSel.value = opt.value;
+              if (opt) {
+                opt.selected = true;
+                areaSel.dispatchEvent(new Event('change', { bubbles: true }));
+              }
             }
 
             // Auto-populate area code when the user picks a country.
