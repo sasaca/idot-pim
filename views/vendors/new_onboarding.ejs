@@ -544,8 +544,9 @@
           <div class="section-title">Supplier Identifiers</div>
           <div class="vob-grid">
             <div class="vob-field">
-              <label>Tax ID / EIN</label>
-              <input type="text" name="tax_id" placeholder="XX-XXXXXXX">
+              <label><span id="tax-id-label">Tax ID / EIN</span></label>
+              <input type="text" name="tax_id" data-tax-id placeholder="XX-XXXXXXX">
+              <div id="tax-id-error" style="font-size:12px;margin-top:4px;color:#6b7280;"></div>
             </div>
             <div class="vob-field">
               <label>DUNS #</label>
@@ -559,6 +560,77 @@
               </select>
             </div>
           </div>
+
+          <!-- Per-country Tax ID validation. Looks up rules by ISO2 (resolved
+               from the country select via PHONE_BY_COUNTRY) and tests the
+               value against every accepted format for that country. Falls
+               back to the _default rule for countries with no specific entry. -->
+          <script id="tax-id-rules" type="application/json"><%- JSON.stringify(lookups.TAX_ID_RULES) %></script>
+          <script>
+          (function () {
+            var RULES = JSON.parse(document.getElementById('tax-id-rules').textContent || '{}');
+            var BY_COUNTRY = JSON.parse(document.getElementById('phone-codes-by-country').textContent || '{}');
+            var countrySel = document.querySelector('[data-country-name]');
+            var taxInput   = document.querySelector('[data-tax-id]');
+            var labelEl    = document.getElementById('tax-id-label');
+            var errorEl    = document.getElementById('tax-id-error');
+            if (!countrySel || !taxInput || !errorEl) return;
+
+            function rulesForCountry() {
+              var rec = BY_COUNTRY[countrySel.value];
+              var iso2 = rec && rec.iso2;
+              return (iso2 && RULES[iso2]) || RULES._default;
+            }
+
+            function setLabel(rule) {
+              if (!labelEl) return;
+              labelEl.textContent = 'Tax ID / EIN' + (rule && rule.label ? ' (' + rule.label + ')' : '');
+            }
+
+            function setError(html) {
+              if (html) {
+                errorEl.innerHTML = html;
+                errorEl.style.color = '#b91c1c';
+                taxInput.style.borderColor = '#fca5a5';
+              } else {
+                errorEl.innerHTML = '';
+                errorEl.style.color = '#6b7280';
+                taxInput.style.borderColor = '';
+              }
+            }
+
+            function formatList(rule) {
+              return (rule.formats || []).map(function (f) {
+                return '<li>' + f.description + '</li>';
+              }).join('');
+            }
+
+            function validate() {
+              var rule = rulesForCountry();
+              setLabel(rule);
+              var raw = (taxInput.value || '').trim().toUpperCase();
+              if (!raw) { setError(''); return; }
+              var ok = (rule.formats || []).some(function (f) {
+                try { return new RegExp(f.pattern).test(raw); }
+                catch (e) { return false; }
+              });
+              if (ok) {
+                setError('');
+              } else {
+                setError(
+                  'Tax ID does not match an accepted format for this country. Accepted formats:<ul style="margin:4px 0 0 18px;list-style:disc;">' +
+                  formatList(rule) + '</ul>'
+                );
+              }
+            }
+
+            countrySel.addEventListener('change', validate);
+            taxInput.addEventListener('input', validate);
+            taxInput.addEventListener('blur', validate);
+            // Initialize label from default rule on first render.
+            setLabel(rulesForCountry());
+          })();
+          </script>
 
           <div class="section-title">Duplicate Check</div>
           <p class="text-sm text-gray-500 mb-2">

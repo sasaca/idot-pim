@@ -1,0 +1,404 @@
+{
+  "_default": {
+    "label": "Tax ID",
+    "formats": [
+      { "pattern": "^[A-Z0-9][A-Z0-9.\\-/ ]{2,28}[A-Z0-9]$", "description": "Tax ID — 4–30 letters / digits with optional dashes, dots, slashes, or spaces" }
+    ]
+  },
+
+  "US": { "label": "EIN / SSN / ITIN", "formats": [
+    { "pattern": "^\\d{2}-?\\d{7}$", "description": "EIN — 9 digits, formatted XX-XXXXXXX" },
+    { "pattern": "^\\d{3}-?\\d{2}-?\\d{4}$", "description": "SSN — 9 digits, formatted XXX-XX-XXXX" },
+    { "pattern": "^9\\d{2}-?\\d{2}-?\\d{4}$", "description": "ITIN — 9 digits starting with 9" }
+  ]},
+
+  "CA": { "label": "Business Number (BN) / SIN", "formats": [
+    { "pattern": "^\\d{9}$", "description": "BN — 9 digits" },
+    { "pattern": "^\\d{9}RT\\d{4}$", "description": "GST/HST — 9 digits + RT + 4 digits (e.g. 123456789RT0001)" },
+    { "pattern": "^\\d{3}-?\\d{3}-?\\d{3}$", "description": "SIN — 9 digits, formatted XXX-XXX-XXX" }
+  ]},
+
+  "MX": { "label": "RFC", "formats": [
+    { "pattern": "^[A-Z]{3}\\d{6}[A-Z0-9]{3}$", "description": "RFC corporate — 12 chars: 3 letters + 6 digits + 3 alphanumeric" },
+    { "pattern": "^[A-Z]{4}\\d{6}[A-Z0-9]{3}$", "description": "RFC individual — 13 chars: 4 letters + 6 digits + 3 alphanumeric" }
+  ]},
+
+  "BR": { "label": "CNPJ / CPF", "formats": [
+    { "pattern": "^\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}$", "description": "CNPJ — 14 digits, e.g. 12.345.678/0001-90" },
+    { "pattern": "^\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}$", "description": "CPF — 11 digits, e.g. 123.456.789-09" }
+  ]},
+
+  "AR": { "label": "CUIT / CUIL", "formats": [
+    { "pattern": "^\\d{2}-?\\d{8}-?\\d$", "description": "CUIT/CUIL — 11 digits, formatted XX-XXXXXXXX-X" }
+  ]},
+
+  "CL": { "label": "RUT", "formats": [
+    { "pattern": "^\\d{1,2}\\.?\\d{3}\\.?\\d{3}-?[0-9K]$", "description": "RUT — up to 9 chars: digits + check character (0–9 or K)" }
+  ]},
+
+  "CO": { "label": "NIT", "formats": [
+    { "pattern": "^\\d{8,10}-?\\d$", "description": "NIT — 9–11 digits with check digit (e.g. 900123456-7)" }
+  ]},
+
+  "PE": { "label": "RUC", "formats": [
+    { "pattern": "^\\d{11}$", "description": "RUC — 11 digits" }
+  ]},
+
+  "UY": { "label": "RUT", "formats": [
+    { "pattern": "^\\d{12}$", "description": "RUT — 12 digits" }
+  ]},
+
+  "VE": { "label": "RIF", "formats": [
+    { "pattern": "^[VEJPGC]-?\\d{8,9}-?\\d$", "description": "RIF — letter (V/E/J/P/G/C) + 9–10 digits, e.g. J-12345678-9" }
+  ]},
+
+  "EC": { "label": "RUC", "formats": [
+    { "pattern": "^\\d{13}$", "description": "RUC — 13 digits" }
+  ]},
+
+  "GB": { "label": "UTR / VAT / NI", "formats": [
+    { "pattern": "^\\d{10}$", "description": "UTR — 10 digits" },
+    { "pattern": "^GB\\d{9}$", "description": "VAT — GB + 9 digits" },
+    { "pattern": "^GB\\d{12}$", "description": "VAT (branch traders) — GB + 12 digits" },
+    { "pattern": "^[A-Z]{2}\\s?\\d{2}\\s?\\d{2}\\s?\\d{2}\\s?[A-Z]$", "description": "National Insurance — e.g. AB 12 34 56 C" }
+  ]},
+
+  "DE": { "label": "USt-IdNr / Steuer-ID", "formats": [
+    { "pattern": "^DE\\d{9}$", "description": "USt-IdNr (VAT) — DE + 9 digits" },
+    { "pattern": "^\\d{11}$", "description": "Steuer-ID (individual) — 11 digits" }
+  ]},
+
+  "FR": { "label": "SIREN / SIRET / TVA", "formats": [
+    { "pattern": "^\\d{9}$", "description": "SIREN — 9 digits" },
+    { "pattern": "^\\d{14}$", "description": "SIRET — 14 digits (SIREN + 5-digit establishment)" },
+    { "pattern": "^FR[A-Z0-9]{2}\\d{9}$", "description": "TVA — FR + 2 alphanumeric + 9 digits" }
+  ]},
+
+  "IT": { "label": "Partita IVA / Codice Fiscale", "formats": [
+    { "pattern": "^(IT)?\\d{11}$", "description": "Partita IVA — 11 digits (optionally prefixed IT)" },
+    { "pattern": "^[A-Z]{6}\\d{2}[A-Z]\\d{2}[A-Z]\\d{3}[A-Z]$", "description": "Codice Fiscale individual — 16 chars" }
+  ]},
+
+  "ES": { "label": "NIF / NIE / CIF", "formats": [
+    { "pattern": "^\\d{8}[A-Z]$", "description": "NIF (Spanish citizen) — 8 digits + letter" },
+    { "pattern": "^[XYZ]\\d{7}[A-Z]$", "description": "NIE (foreigner) — X/Y/Z + 7 digits + letter" },
+    { "pattern": "^[A-HJNPQRSUVW]\\d{7}[0-9A-J]$", "description": "CIF (legal entity) — 1 letter + 7 digits + 1 control char" }
+  ]},
+
+  "PT": { "label": "NIF / NIPC", "formats": [
+    { "pattern": "^\\d{9}$", "description": "NIF / NIPC — 9 digits" }
+  ]},
+
+  "NL": { "label": "BTW / RSIN / BSN", "formats": [
+    { "pattern": "^NL\\d{9}B\\d{2}$", "description": "BTW (VAT) — NL + 9 digits + B + 2 digits" },
+    { "pattern": "^\\d{9}$", "description": "RSIN / BSN — 9 digits" }
+  ]},
+
+  "BE": { "label": "BTW / Ondernemingsnummer", "formats": [
+    { "pattern": "^BE0?\\d{9,10}$", "description": "BTW / Ondernemingsnummer — BE + 9 or 10 digits" },
+    { "pattern": "^0?\\d{9}$", "description": "Ondernemingsnummer — 10 digits, often starting with 0" }
+  ]},
+
+  "LU": { "label": "Matricule / TVA", "formats": [
+    { "pattern": "^LU\\d{8}$", "description": "TVA — LU + 8 digits" },
+    { "pattern": "^\\d{11,13}$", "description": "Matricule — 11–13 digits" }
+  ]},
+
+  "CH": { "label": "UID / IDE", "formats": [
+    { "pattern": "^CHE-?\\d{3}\\.?\\d{3}\\.?\\d{3}$", "description": "UID — CHE-XXX.XXX.XXX" },
+    { "pattern": "^CHE\\d{9}$", "description": "UID — CHE + 9 digits" }
+  ]},
+
+  "AT": { "label": "UID", "formats": [
+    { "pattern": "^ATU\\d{8}$", "description": "UID — ATU + 8 digits" }
+  ]},
+
+  "IE": { "label": "VAT / PPS", "formats": [
+    { "pattern": "^IE\\d{7}[A-Z]{1,2}$", "description": "VAT — IE + 7 digits + 1–2 letters" },
+    { "pattern": "^\\d{7}[A-Z]{1,2}$", "description": "PPS — 7 digits + 1–2 letters" }
+  ]},
+
+  "DK": { "label": "CVR / CPR", "formats": [
+    { "pattern": "^(DK)?\\d{8}$", "description": "CVR — 8 digits (optionally prefixed DK)" },
+    { "pattern": "^\\d{6}-?\\d{4}$", "description": "CPR — 10 digits, formatted DDMMYY-XXXX" }
+  ]},
+
+  "SE": { "label": "Org. Nr / VAT", "formats": [
+    { "pattern": "^SE\\d{12}$", "description": "VAT — SE + 12 digits" },
+    { "pattern": "^\\d{6}-?\\d{4}$", "description": "Organisationsnummer — 10 digits, formatted XXXXXX-XXXX" }
+  ]},
+
+  "NO": { "label": "Org. nr / MVA", "formats": [
+    { "pattern": "^\\d{9}(MVA)?$", "description": "Organisasjonsnummer — 9 digits, optionally followed by MVA" }
+  ]},
+
+  "FI": { "label": "Y-tunnus / VAT", "formats": [
+    { "pattern": "^FI\\d{8}$", "description": "VAT — FI + 8 digits" },
+    { "pattern": "^\\d{7}-\\d$", "description": "Y-tunnus — 7 digits + check digit, e.g. 1234567-8" }
+  ]},
+
+  "IS": { "label": "Kennitala / VSK", "formats": [
+    { "pattern": "^\\d{6}-?\\d{4}$", "description": "Kennitala — 10 digits, formatted DDMMYY-XXXX" },
+    { "pattern": "^IS\\d{5,6}$", "description": "VSK — IS + 5–6 digits" }
+  ]},
+
+  "PL": { "label": "NIP", "formats": [
+    { "pattern": "^\\d{3}-?\\d{3}-?\\d{2}-?\\d{2}$", "description": "NIP — 10 digits, formatted XXX-XXX-XX-XX" },
+    { "pattern": "^PL\\d{10}$", "description": "VAT — PL + 10 digits" }
+  ]},
+
+  "CZ": { "label": "DIČ / IČO", "formats": [
+    { "pattern": "^CZ\\d{8,10}$", "description": "DIČ — CZ + 8–10 digits" },
+    { "pattern": "^\\d{8}$", "description": "IČO — 8 digits" }
+  ]},
+
+  "SK": { "label": "DIČ / IČO", "formats": [
+    { "pattern": "^SK\\d{10}$", "description": "DIČ — SK + 10 digits" },
+    { "pattern": "^\\d{8}$", "description": "IČO — 8 digits" }
+  ]},
+
+  "HU": { "label": "Adószám", "formats": [
+    { "pattern": "^HU\\d{8}$", "description": "VAT — HU + 8 digits" },
+    { "pattern": "^\\d{8}-\\d-\\d{2}$", "description": "Adószám — 8 digits + check + region code" }
+  ]},
+
+  "RO": { "label": "CUI / CIF", "formats": [
+    { "pattern": "^(RO)?\\d{2,10}$", "description": "CUI / CIF — 2–10 digits (optionally prefixed RO)" }
+  ]},
+
+  "BG": { "label": "BULSTAT / DDS", "formats": [
+    { "pattern": "^(BG)?\\d{9,10}$", "description": "BULSTAT — 9 or 10 digits (optionally prefixed BG)" }
+  ]},
+
+  "GR": { "label": "AFM (ΑΦΜ)", "formats": [
+    { "pattern": "^(EL|GR)?\\d{9}$", "description": "AFM — 9 digits (optionally prefixed EL or GR)" }
+  ]},
+
+  "HR": { "label": "OIB", "formats": [
+    { "pattern": "^(HR)?\\d{11}$", "description": "OIB — 11 digits (optionally prefixed HR)" }
+  ]},
+
+  "SI": { "label": "Davčna številka", "formats": [
+    { "pattern": "^(SI)?\\d{8}$", "description": "Davčna številka — 8 digits (optionally prefixed SI)" }
+  ]},
+
+  "EE": { "label": "Reg. kood / KMKR", "formats": [
+    { "pattern": "^EE\\d{9}$", "description": "KMKR (VAT) — EE + 9 digits" },
+    { "pattern": "^\\d{8}$", "description": "Registry code — 8 digits" }
+  ]},
+
+  "LV": { "label": "Reģ. nr / PVN", "formats": [
+    { "pattern": "^LV\\d{11}$", "description": "PVN (VAT) — LV + 11 digits" },
+    { "pattern": "^\\d{11}$", "description": "Reģ. Nr. — 11 digits" }
+  ]},
+
+  "LT": { "label": "PVM / Įmonės kodas", "formats": [
+    { "pattern": "^LT\\d{9,12}$", "description": "PVM — LT + 9 or 12 digits" },
+    { "pattern": "^\\d{9}$", "description": "Įmonės kodas — 9 digits" }
+  ]},
+
+  "MT": { "label": "VAT", "formats": [
+    { "pattern": "^MT\\d{8}$", "description": "VAT — MT + 8 digits" }
+  ]},
+
+  "CY": { "label": "VAT / TIC", "formats": [
+    { "pattern": "^CY\\d{8}[A-Z]$", "description": "VAT — CY + 8 digits + letter" }
+  ]},
+
+  "RU": { "label": "ИНН (INN)", "formats": [
+    { "pattern": "^\\d{10}$", "description": "INN (legal entity) — 10 digits" },
+    { "pattern": "^\\d{12}$", "description": "INN (individual / sole trader) — 12 digits" }
+  ]},
+
+  "TR": { "label": "VKN / TC Kimlik No", "formats": [
+    { "pattern": "^\\d{10}$", "description": "VKN (corporate) — 10 digits" },
+    { "pattern": "^\\d{11}$", "description": "TC Kimlik No (individual) — 11 digits" }
+  ]},
+
+  "UA": { "label": "ЄДРПОУ / ІПН", "formats": [
+    { "pattern": "^\\d{8}$", "description": "EDRPOU (legal entity) — 8 digits" },
+    { "pattern": "^\\d{10}$", "description": "IPN (individual) — 10 digits" },
+    { "pattern": "^\\d{12}$", "description": "IPN (sole proprietor) — 12 digits" }
+  ]},
+
+  "BY": { "label": "УНП (UNP)", "formats": [
+    { "pattern": "^\\d{9}$", "description": "UNP — 9 digits" }
+  ]},
+
+  "RS": { "label": "PIB / JMBG", "formats": [
+    { "pattern": "^\\d{9}$", "description": "PIB — 9 digits" },
+    { "pattern": "^\\d{13}$", "description": "JMBG (individual) — 13 digits" }
+  ]},
+
+  "IN": { "label": "PAN / TAN / GSTIN", "formats": [
+    { "pattern": "^[A-Z]{5}\\d{4}[A-Z]$", "description": "PAN — 10 chars: 5 letters + 4 digits + 1 letter" },
+    { "pattern": "^[A-Z]{4}\\d{5}[A-Z]$", "description": "TAN — 10 chars: 4 letters + 5 digits + 1 letter" },
+    { "pattern": "^\\d{2}[A-Z]{5}\\d{4}[A-Z]\\d[A-Z]\\d$", "description": "GSTIN — 15 chars: 2 digits + 5 letters + 4 digits + 1 letter + 1 digit + 1 letter + 1 alphanumeric" }
+  ]},
+
+  "CN": { "label": "USCC / 纳税人识别号", "formats": [
+    { "pattern": "^[0-9A-HJ-NP-RTUW-Y]{18}$", "description": "USCC — 18-char Unified Social Credit Code" }
+  ]},
+
+  "JP": { "label": "Corporate Number / Individual Number", "formats": [
+    { "pattern": "^\\d{13}$", "description": "Corporate Number — 13 digits" },
+    { "pattern": "^\\d{12}$", "description": "Individual Number (My Number) — 12 digits" }
+  ]},
+
+  "KR": { "label": "BRN / RRN", "formats": [
+    { "pattern": "^\\d{3}-?\\d{2}-?\\d{5}$", "description": "BRN — 10 digits, formatted XXX-XX-XXXXX" },
+    { "pattern": "^\\d{6}-?\\d{7}$", "description": "RRN — 13 digits, formatted XXXXXX-XXXXXXX" }
+  ]},
+
+  "SG": { "label": "UEN / NRIC / FIN", "formats": [
+    { "pattern": "^\\d{9}[A-Z]$", "description": "UEN (Business) — 9 digits + check letter" },
+    { "pattern": "^\\d{4}\\d{5}[A-Z]$", "description": "UEN (Local Co.) — YYYY + 5 digits + letter" },
+    { "pattern": "^[ST]\\d{2}[A-Z]{2}\\d{4}[A-Z]$", "description": "UEN (other entities) — T/S + 2 digits + 2 letters + 4 digits + letter" },
+    { "pattern": "^[STFG]\\d{7}[A-Z]$", "description": "NRIC / FIN — letter + 7 digits + letter" }
+  ]},
+
+  "ID": { "label": "NPWP", "formats": [
+    { "pattern": "^\\d{2}\\.?\\d{3}\\.?\\d{3}\\.?\\d-?\\d{3}\\.?\\d{3}$", "description": "NPWP — 15 digits, formatted XX.XXX.XXX.X-XXX.XXX" }
+  ]},
+
+  "MY": { "label": "Tax File No.", "formats": [
+    { "pattern": "^[A-Z]{1,3}\\d{8,11}$", "description": "Tax File Number — 1–3 letters + 8–11 digits (e.g. SG12345678901)" },
+    { "pattern": "^\\d{12}$", "description": "Old format — 12 digits" }
+  ]},
+
+  "TH": { "label": "Tax ID", "formats": [
+    { "pattern": "^\\d{13}$", "description": "Tax ID — 13 digits" }
+  ]},
+
+  "VN": { "label": "MST", "formats": [
+    { "pattern": "^\\d{10}$", "description": "MST — 10 digits" },
+    { "pattern": "^\\d{10}-\\d{3}$", "description": "MST (with branch) — 10 digits + 3-digit branch" }
+  ]},
+
+  "PH": { "label": "TIN", "formats": [
+    { "pattern": "^\\d{3}-?\\d{3}-?\\d{3}(-?\\d{3,5})?$", "description": "TIN — 9 digits + optional 3–5 branch digits" }
+  ]},
+
+  "PK": { "label": "NTN / CNIC", "formats": [
+    { "pattern": "^\\d{7}-?\\d$", "description": "NTN — 7 digits + 1 check digit" },
+    { "pattern": "^\\d{5}-?\\d{7}-?\\d$", "description": "CNIC — 13 digits, formatted XXXXX-XXXXXXX-X" }
+  ]},
+
+  "BD": { "label": "BIN / TIN", "formats": [
+    { "pattern": "^\\d{9}$", "description": "BIN — 9 digits" },
+    { "pattern": "^\\d{12}$", "description": "TIN — 12 digits" }
+  ]},
+
+  "LK": { "label": "VAT / TIN", "formats": [
+    { "pattern": "^\\d{9}V?$", "description": "TIN — 9 digits, optionally suffixed V" },
+    { "pattern": "^\\d{9}-?\\d{4}$", "description": "VAT — 13 digits" }
+  ]},
+
+  "NP": { "label": "PAN", "formats": [
+    { "pattern": "^\\d{9}$", "description": "PAN — 9 digits" }
+  ]},
+
+  "SA": { "label": "TIN / VAT", "formats": [
+    { "pattern": "^\\d{15}$", "description": "TIN — 15 digits" },
+    { "pattern": "^3\\d{14}$", "description": "VAT — 15 digits starting with 3" }
+  ]},
+
+  "AE": { "label": "TRN", "formats": [
+    { "pattern": "^\\d{15}$", "description": "TRN — 15 digits" }
+  ]},
+
+  "QA": { "label": "Tax ID", "formats": [
+    { "pattern": "^\\d{8,11}$", "description": "Tax ID — 8–11 digits" }
+  ]},
+
+  "KW": { "label": "Tax ID", "formats": [
+    { "pattern": "^\\d{6,11}$", "description": "Tax ID — 6–11 digits" }
+  ]},
+
+  "BH": { "label": "VAT / CR", "formats": [
+    { "pattern": "^\\d{15}$", "description": "VAT — 15 digits" },
+    { "pattern": "^\\d{1,8}(-\\d{1,2})?$", "description": "CR — up to 8 digits + optional branch" }
+  ]},
+
+  "OM": { "label": "Tax Card", "formats": [
+    { "pattern": "^\\d{8,10}$", "description": "Tax Card — 8–10 digits" }
+  ]},
+
+  "IL": { "label": "Tax ID / TZ / HP", "formats": [
+    { "pattern": "^\\d{9}$", "description": "Tax ID — 9 digits (Teudat Zehut or Mispar HP)" }
+  ]},
+
+  "JO": { "label": "Tax No.", "formats": [
+    { "pattern": "^\\d{9}$", "description": "Tax No. — 9 digits" }
+  ]},
+
+  "LB": { "label": "Tax ID", "formats": [
+    { "pattern": "^\\d{7,9}$", "description": "Tax ID — 7–9 digits" }
+  ]},
+
+  "EG": { "label": "Tax Card No.", "formats": [
+    { "pattern": "^\\d{9}$", "description": "Tax Card — 9 digits" }
+  ]},
+
+  "MA": { "label": "ICE / IF", "formats": [
+    { "pattern": "^\\d{15}$", "description": "ICE — 15 digits" },
+    { "pattern": "^\\d{7,8}$", "description": "IF (Identifiant Fiscal) — 7–8 digits" }
+  ]},
+
+  "TN": { "label": "Matricule Fiscal", "formats": [
+    { "pattern": "^\\d{7,8}\\s?[A-Z]\\s?[A-Z]\\s?[A-Z]\\s?\\d{3}$", "description": "Matricule Fiscal — 7–8 digits + 3 letters + 3 digits" },
+    { "pattern": "^\\d{7,8}$", "description": "Short form — 7–8 digits" }
+  ]},
+
+  "DZ": { "label": "NIF", "formats": [
+    { "pattern": "^\\d{15}$", "description": "NIF — 15 digits" }
+  ]},
+
+  "ZA": { "label": "Income Tax Ref. / VAT", "formats": [
+    { "pattern": "^\\d{10}$", "description": "Income Tax Reference — 10 digits" },
+    { "pattern": "^4\\d{9}$", "description": "VAT — 10 digits starting with 4" }
+  ]},
+
+  "NG": { "label": "TIN", "formats": [
+    { "pattern": "^\\d{8}-?\\d{4}$", "description": "TIN — 12 digits, formatted XXXXXXXX-XXXX" },
+    { "pattern": "^\\d{12}$", "description": "TIN — 12 digits" }
+  ]},
+
+  "KE": { "label": "PIN", "formats": [
+    { "pattern": "^[A]\\d{9}[A-Z]$", "description": "KRA PIN — A + 9 digits + letter (e.g. A123456789Z)" },
+    { "pattern": "^[P]\\d{9}[A-Z]$", "description": "KRA PIN (entity) — P + 9 digits + letter" }
+  ]},
+
+  "GH": { "label": "TIN", "formats": [
+    { "pattern": "^[A-Z]\\d{10}$", "description": "TIN — letter + 10 digits" },
+    { "pattern": "^\\d{11}$", "description": "TIN — 11 digits" }
+  ]},
+
+  "ET": { "label": "TIN", "formats": [
+    { "pattern": "^\\d{10}$", "description": "TIN — 10 digits" }
+  ]},
+
+  "AU": { "label": "ABN / ACN / TFN", "formats": [
+    { "pattern": "^\\d{2}\\s?\\d{3}\\s?\\d{3}\\s?\\d{3}$", "description": "ABN — 11 digits, often grouped XX XXX XXX XXX" },
+    { "pattern": "^\\d{3}\\s?\\d{3}\\s?\\d{3}$", "description": "ACN — 9 digits, grouped XXX XXX XXX" },
+    { "pattern": "^\\d{8,9}$", "description": "TFN — 8–9 digits" }
+  ]},
+
+  "NZ": { "label": "IRD", "formats": [
+    { "pattern": "^\\d{8,9}$", "description": "IRD — 8 or 9 digits" }
+  ]},
+
+  "HK": { "label": "BR No.", "formats": [
+    { "pattern": "^\\d{8}$", "description": "Business Registration — 8 digits" },
+    { "pattern": "^\\d{8}-\\d{3}-\\d{2}-\\d{2}-\\d$", "description": "BR with branch — 8-3-2-2-1 format" }
+  ]},
+
+  "TW": { "label": "Profit-Seeking Enterprise No.", "formats": [
+    { "pattern": "^\\d{8}$", "description": "Profit-Seeking Enterprise — 8 digits" },
+    { "pattern": "^[A-Z]\\d{9}$", "description": "Personal ID — letter + 9 digits" }
+  ]},
+
+  "MO": { "label": "Tax ID", "formats": [
+    { "pattern": "^[A-Z]\\d{6}$", "description": "Tax ID — letter + 6 digits" }
+  ]}
+}
