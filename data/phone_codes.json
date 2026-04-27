@@ -6,6 +6,12 @@
     "flag": "🇦🇫"
   },
   {
+    "name": "Aland Islands",
+    "iso2": "AX",
+    "dial": "+358-18",
+    "flag": "🇦🇽"
+  },
+  {
     "name": "Albania",
     "iso2": "AL",
     "dial": "+355",
@@ -20,7 +26,7 @@
   {
     "name": "American Samoa",
     "iso2": "AS",
-    "dial": "+1",
+    "dial": "+1-684",
     "flag": "🇦🇸"
   },
   {
@@ -38,13 +44,19 @@
   {
     "name": "Anguilla",
     "iso2": "AI",
-    "dial": "+1",
+    "dial": "+1-264",
     "flag": "🇦🇮"
   },
   {
-    "name": "Antigua and Barbuda",
+    "name": "Antarctica",
+    "iso2": "AQ",
+    "dial": "+672",
+    "flag": "🇦🇶"
+  },
+  {
+    "name": "Antigua And Barbuda",
     "iso2": "AG",
-    "dial": "+1",
+    "dial": "+1-268",
     "flag": "🇦🇬"
   },
   {
@@ -84,12 +96,6 @@
     "flag": "🇦🇿"
   },
   {
-    "name": "Bahamas",
-    "iso2": "BS",
-    "dial": "+1",
-    "flag": "🇧🇸"
-  },
-  {
     "name": "Bahrain",
     "iso2": "BH",
     "dial": "+973",
@@ -104,7 +110,7 @@
   {
     "name": "Barbados",
     "iso2": "BB",
-    "dial": "+1",
+    "dial": "+1-246",
     "flag": "🇧🇧"
   },
   {
@@ -134,7 +140,7 @@
   {
     "name": "Bermuda",
     "iso2": "BM",
-    "dial": "+1",
+    "dial": "+1-441",
     "flag": "🇧🇲"
   },
   {
@@ -150,6 +156,12 @@
     "flag": "🇧🇴"
   },
   {
+    "name": "Bonaire, Sint Eustatius and Saba",
+    "iso2": "BQ",
+    "dial": "+599",
+    "flag": "🇧🇶"
+  },
+  {
     "name": "Bosnia and Herzegovina",
     "iso2": "BA",
     "dial": "+387",
@@ -162,6 +174,12 @@
     "flag": "🇧🇼"
   },
   {
+    "name": "Bouvet Island",
+    "iso2": "BV",
+    "dial": "+0055",
+    "flag": "🇧🇻"
+  },
+  {
     "name": "Brazil",
     "iso2": "BR",
     "dial": "+55",
@@ -172,12 +190,6 @@
     "iso2": "IO",
     "dial": "+246",
     "flag": "🇮🇴"
-  },
-  {
-    "name": "British Virgin Islands",
-    "iso2": "VG",
-    "dial": "+1",
-    "flag": "🇻🇬"
   },
   {
     "name": "Brunei",
@@ -230,7 +242,7 @@
   {
     "name": "Cayman Islands",
     "iso2": "KY",
-    "dial": "+1",
+    "dial": "+1-345",
     "flag": "🇰🇾"
   },
   {
@@ -264,7 +276,7 @@
     "flag": "🇨🇽"
   },
   {
-    "name": "Cocos Islands",
+    "name": "Cocos (Keeling) Islands",
     "iso2": "CC",
     "dial": "+61",
     "flag": "🇨🇨"
@@ -282,6 +294,12 @@
     "flag": "🇰🇲"
   },
   {
+    "name": "Congo",
+    "iso2": "CG",
+    "dial": "+242",
+    "flag": "🇨🇬"
+  },
+  {
     "name": "Cook Islands",
     "iso2": "CK",
     "dial": "+682",
@@ -292,6 +310,12 @@
     "iso2": "CR",
     "dial": "+506",
     "flag": "🇨🇷"
+  },
+  {
+    "name": "Cote D'Ivoire (Ivory Coast)",
+    "iso2": "CI",
+    "dial": "+225",
+    "flag": "🇨🇮"
   },
   {
     "name": "Croatia",
@@ -344,13 +368,13 @@
   {
     "name": "Dominica",
     "iso2": "DM",
-    "dial": "+1",
+    "dial": "+1-767",
     "flag": "🇩🇲"
   },
   {
     "name": "Dominican Republic",
     "iso2": "DO",
-    "dial": "+1",
+    "dial": "+1-809 and 1-829",
     "flag": "🇩🇴"
   },
   {
@@ -396,12 +420,6 @@
     "flag": "🇪🇪"
   },
   {
-    "name": "Eswatini",
-    "iso2": "SZ",
-    "dial": "+268",
-    "flag": "🇸🇿"
-  },
-  {
     "name": "Ethiopia",
     "iso2": "ET",
     "dial": "+251",
@@ -420,7 +438,7 @@
     "flag": "🇫🇴"
   },
   {
-    "name": "Fiji",
+    "name": "Fiji Islands",
     "iso2": "FJ",
     "dial": "+679",
     "flag": "🇫🇯"
@@ -438,22 +456,28 @@
     "flag": "🇫🇷"
   },
   {
+    "name": "French Guiana",
+    "iso2": "GF",
+    "dial": "+594",
+    "flag": "🇬🇫"
+  },
+  {
     "name": "French Polynesia",
     "iso2": "PF",
     "dial": "+689",
     "flag": "🇵🇫"
   },
   {
+    "name": "French Southern Territories",
+    "iso2": "TF",
+    "dial": "+262",
+    "flag": "🇹🇫"
+  },
+  {
     "name": "Gabon",
     "iso2": "GA",
     "dial": "+241",
     "flag": "🇬🇦"
-  },
-  {
-    "name": "Gambia",
-    "iso2": "GM",
-    "dial": "+220",
-    "flag": "🇬🇲"
   },
   {
     "name": "Georgia",
@@ -494,13 +518,19 @@
   {
     "name": "Grenada",
     "iso2": "GD",
-    "dial": "+1",
+    "dial": "+1-473",
     "flag": "🇬🇩"
+  },
+  {
+    "name": "Guadeloupe",
+    "iso2": "GP",
+    "dial": "+590",
+    "flag": "🇬🇵"
   },
   {
     "name": "Guam",
     "iso2": "GU",
-    "dial": "+1",
+    "dial": "+1-671",
     "flag": "🇬🇺"
   },
   {
@@ -510,9 +540,9 @@
     "flag": "🇬🇹"
   },
   {
-    "name": "Guernsey",
+    "name": "Guernsey and Alderney",
     "iso2": "GG",
-    "dial": "+44",
+    "dial": "+44-1481",
     "flag": "🇬🇬"
   },
   {
@@ -540,13 +570,19 @@
     "flag": "🇭🇹"
   },
   {
+    "name": "Heard Island and McDonald Islands",
+    "iso2": "HM",
+    "dial": "+672",
+    "flag": "🇭🇲"
+  },
+  {
     "name": "Honduras",
     "iso2": "HN",
     "dial": "+504",
     "flag": "🇭🇳"
   },
   {
-    "name": "Hong Kong",
+    "name": "Hong Kong S.A.R.",
     "iso2": "HK",
     "dial": "+852",
     "flag": "🇭🇰"
@@ -594,12 +630,6 @@
     "flag": "🇮🇪"
   },
   {
-    "name": "Isle of Man",
-    "iso2": "IM",
-    "dial": "+44",
-    "flag": "🇮🇲"
-  },
-  {
     "name": "Israel",
     "iso2": "IL",
     "dial": "+972",
@@ -612,15 +642,9 @@
     "flag": "🇮🇹"
   },
   {
-    "name": "Ivory Coast",
-    "iso2": "CI",
-    "dial": "+225",
-    "flag": "🇨🇮"
-  },
-  {
     "name": "Jamaica",
     "iso2": "JM",
-    "dial": "+1",
+    "dial": "+1-876",
     "flag": "🇯🇲"
   },
   {
@@ -632,7 +656,7 @@
   {
     "name": "Jersey",
     "iso2": "JE",
-    "dial": "+44",
+    "dial": "+44-1534",
     "flag": "🇯🇪"
   },
   {
@@ -732,10 +756,16 @@
     "flag": "🇱🇺"
   },
   {
-    "name": "Macau",
+    "name": "Macau S.A.R.",
     "iso2": "MO",
     "dial": "+853",
     "flag": "🇲🇴"
+  },
+  {
+    "name": "Macedonia",
+    "iso2": "MK",
+    "dial": "+389",
+    "flag": "🇲🇰"
   },
   {
     "name": "Madagascar",
@@ -774,10 +804,22 @@
     "flag": "🇲🇹"
   },
   {
+    "name": "Man (Isle of)",
+    "iso2": "IM",
+    "dial": "+44-1624",
+    "flag": "🇮🇲"
+  },
+  {
     "name": "Marshall Islands",
     "iso2": "MH",
     "dial": "+692",
     "flag": "🇲🇭"
+  },
+  {
+    "name": "Martinique",
+    "iso2": "MQ",
+    "dial": "+596",
+    "flag": "🇲🇶"
   },
   {
     "name": "Mauritania",
@@ -836,7 +878,7 @@
   {
     "name": "Montserrat",
     "iso2": "MS",
-    "dial": "+1",
+    "dial": "+1-664",
     "flag": "🇲🇸"
   },
   {
@@ -918,21 +960,21 @@
     "flag": "🇳🇺"
   },
   {
+    "name": "Norfolk Island",
+    "iso2": "NF",
+    "dial": "+672",
+    "flag": "🇳🇫"
+  },
+  {
     "name": "North Korea",
     "iso2": "KP",
     "dial": "+850",
     "flag": "🇰🇵"
   },
   {
-    "name": "North Macedonia",
-    "iso2": "MK",
-    "dial": "+389",
-    "flag": "🇲🇰"
-  },
-  {
     "name": "Northern Mariana Islands",
     "iso2": "MP",
-    "dial": "+1",
+    "dial": "+1-670",
     "flag": "🇲🇵"
   },
   {
@@ -960,7 +1002,7 @@
     "flag": "🇵🇼"
   },
   {
-    "name": "Palestine",
+    "name": "Palestinian Territory Occupied",
     "iso2": "PS",
     "dial": "+970",
     "flag": "🇵🇸"
@@ -972,7 +1014,7 @@
     "flag": "🇵🇦"
   },
   {
-    "name": "Papua New Guinea",
+    "name": "Papua new Guinea",
     "iso2": "PG",
     "dial": "+675",
     "flag": "🇵🇬"
@@ -996,9 +1038,9 @@
     "flag": "🇵🇭"
   },
   {
-    "name": "Pitcairn Islands",
+    "name": "Pitcairn Island",
     "iso2": "PN",
-    "dial": "+64",
+    "dial": "+870",
     "flag": "🇵🇳"
   },
   {
@@ -1016,7 +1058,7 @@
   {
     "name": "Puerto Rico",
     "iso2": "PR",
-    "dial": "+1",
+    "dial": "+1-787 and 1-939",
     "flag": "🇵🇷"
   },
   {
@@ -1026,10 +1068,10 @@
     "flag": "🇶🇦"
   },
   {
-    "name": "Republic of the Congo",
-    "iso2": "CG",
-    "dial": "+242",
-    "flag": "🇨🇬"
+    "name": "Reunion",
+    "iso2": "RE",
+    "dial": "+262",
+    "flag": "🇷🇪"
   },
   {
     "name": "Romania",
@@ -1050,34 +1092,22 @@
     "flag": "🇷🇼"
   },
   {
-    "name": "Saint Barthelemy",
-    "iso2": "BL",
-    "dial": "+590",
-    "flag": "🇧🇱"
-  },
-  {
     "name": "Saint Helena",
     "iso2": "SH",
     "dial": "+290",
     "flag": "🇸🇭"
   },
   {
-    "name": "Saint Kitts and Nevis",
+    "name": "Saint Kitts And Nevis",
     "iso2": "KN",
-    "dial": "+1",
+    "dial": "+1-869",
     "flag": "🇰🇳"
   },
   {
     "name": "Saint Lucia",
     "iso2": "LC",
-    "dial": "+1",
+    "dial": "+1-758",
     "flag": "🇱🇨"
-  },
-  {
-    "name": "Saint Martin",
-    "iso2": "MF",
-    "dial": "+590",
-    "flag": "🇲🇫"
   },
   {
     "name": "Saint Pierre and Miquelon",
@@ -1086,10 +1116,22 @@
     "flag": "🇵🇲"
   },
   {
-    "name": "Saint Vincent and the Grenadines",
+    "name": "Saint Vincent And The Grenadines",
     "iso2": "VC",
-    "dial": "+1",
+    "dial": "+1-784",
     "flag": "🇻🇨"
+  },
+  {
+    "name": "Saint-Barthelemy",
+    "iso2": "BL",
+    "dial": "+590",
+    "flag": "🇧🇱"
+  },
+  {
+    "name": "Saint-Martin (French part)",
+    "iso2": "MF",
+    "dial": "+590",
+    "flag": "🇲🇫"
   },
   {
     "name": "Samoa",
@@ -1102,6 +1144,12 @@
     "iso2": "SM",
     "dial": "+378",
     "flag": "🇸🇲"
+  },
+  {
+    "name": "Sao Tome and Principe",
+    "iso2": "ST",
+    "dial": "+239",
+    "flag": "🇸🇹"
   },
   {
     "name": "Saudi Arabia",
@@ -1140,9 +1188,9 @@
     "flag": "🇸🇬"
   },
   {
-    "name": "Sint Maarten",
+    "name": "Sint Maarten (Dutch part)",
     "iso2": "SX",
-    "dial": "+1",
+    "dial": "+1721",
     "flag": "🇸🇽"
   },
   {
@@ -1174,6 +1222,12 @@
     "iso2": "ZA",
     "dial": "+27",
     "flag": "🇿🇦"
+  },
+  {
+    "name": "South Georgia",
+    "iso2": "GS",
+    "dial": "+500",
+    "flag": "🇬🇸"
   },
   {
     "name": "South Korea",
@@ -1212,10 +1266,16 @@
     "flag": "🇸🇷"
   },
   {
-    "name": "Svalbard and Jan Mayen",
+    "name": "Svalbard And Jan Mayen Islands",
     "iso2": "SJ",
     "dial": "+47",
     "flag": "🇸🇯"
+  },
+  {
+    "name": "Swaziland",
+    "iso2": "SZ",
+    "dial": "+268",
+    "flag": "🇸🇿"
   },
   {
     "name": "Sweden",
@@ -1234,12 +1294,6 @@
     "iso2": "SY",
     "dial": "+963",
     "flag": "🇸🇾"
-  },
-  {
-    "name": "São Tomé and Príncipe",
-    "iso2": "ST",
-    "dial": "+239",
-    "flag": "🇸🇹"
   },
   {
     "name": "Taiwan",
@@ -1266,6 +1320,18 @@
     "flag": "🇹🇭"
   },
   {
+    "name": "The Bahamas",
+    "iso2": "BS",
+    "dial": "+1-242",
+    "flag": "🇧🇸"
+  },
+  {
+    "name": "The Gambia",
+    "iso2": "GM",
+    "dial": "+220",
+    "flag": "🇬🇲"
+  },
+  {
     "name": "Togo",
     "iso2": "TG",
     "dial": "+228",
@@ -1284,9 +1350,9 @@
     "flag": "🇹🇴"
   },
   {
-    "name": "Trinidad and Tobago",
+    "name": "Trinidad And Tobago",
     "iso2": "TT",
-    "dial": "+1",
+    "dial": "+1-868",
     "flag": "🇹🇹"
   },
   {
@@ -1308,9 +1374,9 @@
     "flag": "🇹🇲"
   },
   {
-    "name": "Turks and Caicos Islands",
+    "name": "Turks And Caicos Islands",
     "iso2": "TC",
-    "dial": "+1",
+    "dial": "+1-649",
     "flag": "🇹🇨"
   },
   {
@@ -1350,6 +1416,12 @@
     "flag": "🇺🇸"
   },
   {
+    "name": "United States Minor Outlying Islands",
+    "iso2": "UM",
+    "dial": "+1",
+    "flag": "🇺🇲"
+  },
+  {
     "name": "Uruguay",
     "iso2": "UY",
     "dial": "+598",
@@ -1368,9 +1440,9 @@
     "flag": "🇻🇺"
   },
   {
-    "name": "Vatican City",
+    "name": "Vatican City State (Holy See)",
     "iso2": "VA",
-    "dial": "+39",
+    "dial": "+379",
     "flag": "🇻🇦"
   },
   {
@@ -1386,7 +1458,19 @@
     "flag": "🇻🇳"
   },
   {
-    "name": "Wallis and Futuna",
+    "name": "Virgin Islands (British)",
+    "iso2": "VG",
+    "dial": "+1-284",
+    "flag": "🇻🇬"
+  },
+  {
+    "name": "Virgin Islands (US)",
+    "iso2": "VI",
+    "dial": "+1-340",
+    "flag": "🇻🇮"
+  },
+  {
+    "name": "Wallis And Futuna Islands",
     "iso2": "WF",
     "dial": "+681",
     "flag": "🇼🇫"

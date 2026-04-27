@@ -374,18 +374,89 @@
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Supplier Contact Phone Area Code</label>
-              <select name="primary_contact_phone_area" required>
+              <select name="primary_contact_phone_area" required data-phone-area>
                 <option value="">-- Select country --</option>
                 <% lookups.PHONE_CODES.forEach(function (c) { %>
-                  <option value="<%= c.dial %>"><%= c.flag %>  <%= c.name %>  <%= c.dial %></option>
+                  <option value="<%= c.dial %>" data-iso2="<%= c.iso2 %>" data-country="<%= c.name %>"><%= c.flag %>  <%= c.name %>  <%= c.dial %></option>
                 <% }) %>
               </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Supplier Contact Phone</label>
-              <input type="tel" name="primary_contact_phone" required>
+              <input type="tel" name="primary_contact_phone" required data-phone-number>
+              <div id="phone-error" class="text-xs mt-1" style="min-height:1em;"></div>
             </div>
           </div>
+
+          <!-- Auto-fill area code from selected country, validate phone with libphonenumber. -->
+          <script src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.10.55/bundle/libphonenumber-min.js"></script>
+          <script id="phone-codes-by-country" type="application/json"><%- JSON.stringify(lookups.PHONE_CODES.reduce(function (m, c) { m[c.name] = { iso2: c.iso2, dial: c.dial }; return m; }, {})) %></script>
+          <script>
+          (function () {
+            var PHONE_BY_COUNTRY = JSON.parse(document.getElementById('phone-codes-by-country').textContent || '{}');
+            var countrySel  = document.querySelector('[data-country-name]');
+            var areaSel     = document.querySelector('[data-phone-area]');
+            var phoneInput  = document.querySelector('[data-phone-number]');
+            var errorEl     = document.getElementById('phone-error');
+            if (!countrySel || !areaSel || !phoneInput || !errorEl) return;
+
+            function setError(msg) {
+              if (msg) {
+                errorEl.textContent = msg;
+                errorEl.style.color = '#b91c1c';
+                phoneInput.style.borderColor = '#fca5a5';
+              } else {
+                errorEl.textContent = '';
+                phoneInput.style.borderColor = '';
+              }
+            }
+
+            // Match the selected option in the phone-area select by ISO2 (so
+            // multiple countries that share a dial code, e.g. +1, resolve to
+            // the right one).
+            function selectAreaForIso2(iso2) {
+              if (!iso2) { areaSel.value = ''; return; }
+              var opt = areaSel.querySelector('option[data-iso2="' + iso2 + '"]');
+              if (opt) areaSel.value = opt.value;
+            }
+
+            // Auto-populate area code when the user picks a country.
+            countrySel.addEventListener('change', function () {
+              var rec = PHONE_BY_COUNTRY[countrySel.value];
+              if (rec) selectAreaForIso2(rec.iso2);
+              validate();
+            });
+
+            function selectedIso2() {
+              var opt = areaSel.options[areaSel.selectedIndex];
+              return opt ? opt.dataset.iso2 || '' : '';
+            }
+
+            function validate() {
+              var iso2 = selectedIso2();
+              var raw  = phoneInput.value.trim();
+              if (!raw) { setError(''); return; }
+              if (!iso2) { setError('Pick a country / area code first.'); return; }
+              if (!window.libphonenumber) { setError(''); return; }   // CDN failed → silent
+              try {
+                var reason = window.libphonenumber.validatePhoneNumberLength(raw, iso2);
+                if (reason === 'TOO_SHORT')      return setError('Phone number is too short for ' + iso2 + '. Check the digit count.');
+                if (reason === 'TOO_LONG')       return setError('Phone number is too long for ' + iso2 + '.');
+                if (reason === 'INVALID_LENGTH') return setError('Phone number length is not valid for ' + iso2 + '.');
+                if (reason === 'INVALID_COUNTRY')return setError('Country code is not recognised.');
+                if (reason)                      return setError('Invalid phone number (' + reason + ').');
+                if (!window.libphonenumber.isValidPhoneNumber(raw, iso2)) {
+                  return setError('Phone number format does not match the expected pattern for ' + iso2 + '.');
+                }
+                setError('');
+              } catch (e) {
+                setError('');
+              }
+            }
+            phoneInput.addEventListener('input',  validate);
+            areaSel.addEventListener('change',    validate);
+          })();
+          </script>
 
           <div class="section-title">Online Validation</div>
           <p class="text-sm text-gray-500 mb-2">
