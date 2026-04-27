@@ -21,8 +21,6 @@
         "CONTROLLER AND ELECTRICAL",
         "DRIVE",
         "HANDRAIL DRIVE",
-        "HANDRAIL DRIVE - OTHER",
-        "MAIN DRIVE - OTHER",
         "MAIN DRIVE COMPLETE",
         "MAIN SWITCH"
       ],
@@ -58,7 +56,6 @@
         "STEP/CHAIN WHEEL BRAKE DEVICE",
         "TELEPHONE",
         "TIMER",
-        "TOP OF CAR EQUIPMENT - OTHER",
         "TRIP COUNTER",
         "WAITING PASSENGER DETECTOR"
       ],
@@ -121,9 +118,6 @@
         "LIGHT RAY DEVICE",
         "LIGHT TUBE/BULB"
       ],
-      "OTHER ELECTRICAL": [
-        "OTHER ELECTRICAL"
-      ],
       "PCB / PCBA": [
         "PRINTED CIRCUIT BOARD (PCB)",
         "PRINTED CIRCUIT BRD ASSY(PCBA)"
@@ -150,7 +144,6 @@
         "CAR LINING",
         "CARPET",
         "DECORATIVE CEILING",
-        "DECORATIVE MATERIAL - OTHER",
         "DESIGN",
         "FLOORING",
         "FRAME, LIGHT FIXTURE",
@@ -211,7 +204,6 @@
       ],
       "DOOR SYSTEMS": [
         "CAR DOOR",
-        "CAR DOOR - OTHER",
         "CAR DOOR DETECTOR",
         "CAR DOOR HANGER",
         "CAR DOOR HEADER TRACK",
@@ -238,7 +230,6 @@
         "ANTI-STATIC ROLLER",
         "AXLES",
         "BALUSTRADE",
-        "BALUSTRADE FIXINGS - OTHER",
         "BAR, ESCALATOR",
         "BEARING AND HOUSING",
         "BRAKE, ESCALATOR",
@@ -247,11 +238,9 @@
         "CLEAT/DEMARCATION",
         "COMB",
         "COMB AND FLOORPLATE",
-        "COMB AND FLOORPLATE - OTHER",
         "COMB PLATE",
         "DECKING",
         "DECKING - COMPLETE",
-        "DECKING - OTHER",
         "DIN PART/T-BOLT/SHIM",
         "DRIVE CHAIN SPROCKET",
         "DRIVE SPROCKET",
@@ -259,7 +248,6 @@
         "FAST.MATERIAL/INTERIOR PANEL",
         "FIELD",
         "FINAL ADJUSTMENT",
-        "FINAL ASSY (PACKING) - OTHER",
         "FRAME, ESCALATOR",
         "FRICTION WHEEL",
         "GEAR REDUCTION BOX",
@@ -269,19 +257,15 @@
         "GUIDE, ESCALATOR",
         "GUIDE, TRACK",
         "HANDLE ASSY",
-        "HANDRAIL - OTHER",
         "HANDRAIL ASSY",
         "HANDRAIL DRIVE CHAIN",
         "HANDRAIL DRIVE COMPONENT",
         "HANDRAIL DRIVE SPROCKET",
         "HANDRAIL ENTRANCE",
         "HANDRAIL ENTRY BOX",
-        "HANDRAIL ENTRY BOX - OTHER",
-        "HANDRAIL GUIDANCE - OTHER",
         "HOLDER",
         "IDLER SHAFT ASSY",
         "INNER DECKING",
-        "INTERIOR PANEL - OTHER",
         "LINK, PALLET CHAIN",
         "LINK, STEPCHAIN",
         "LUBRICATION",
@@ -294,7 +278,6 @@
         "OUTER DECKING",
         "PAINTING",
         "PALLET",
-        "PALLET CHAIN - OTHER",
         "PALLET CHAIN - PRE-ASSEMBLED",
         "PALLET MONITORING DEVICE",
         "PANEL, SKIRT/GUARD",
@@ -316,7 +299,6 @@
         "ROLLER, ESCALATOR",
         "SHELL",
         "SKIRT PANEL",
-        "SKIRT PANEL/GUARD - OTHER",
         "SKIRTING",
         "SPRING, ESCALATOR",
         "STEP",
@@ -325,26 +307,18 @@
         "STEP PROTECTION PLATE",
         "STEP ROLLER RETURN",
         "STEPCHAIN",
-        "STEPCHAIN - OTHER",
-        "STEPS - OTHER",
         "SUPPORT",
         "SWITCH, MACHINE",
         "TAILGATE",
         "TENSION CARRIAGE",
         "TENSION CARRIAGE - COMPLETE",
-        "TENSION CARRIAGE - OTHER",
         "TENSION DEVICE",
         "TEROSTAT 930",
         "TRACK",
-        "TRACK - OTHER",
         "TREAD",
         "TRUSS",
-        "TRUSS - OTHER",
         "TRUSS - PURCHASED",
         "TUBE, ESCALATOR"
-      ],
-      "FIELD SAFETY DEVICE": [
-        "SAFETY EQUIP & DEVICES - OTHER"
       ],
       "GENERAL PART": [
         "AXLE",
@@ -502,7 +476,6 @@
         "GEARED MACHINE ACCESSORY",
         "LAMINATION",
         "MACHINE",
-        "MACHINE - OTHER",
         "MACHINE ROOM MISC. EQUIPMENT",
         "MACHINE, ELEVATOR",
         "MACHINE, ESCALATOR",
@@ -521,33 +494,6 @@
       ],
       "MACHINES": [
         "MAGNET"
-      ],
-      "OTHER MECHANICAL": [
-        "AFTERMARKET COMPETITOR PARTS",
-        "ARRANGEMENT OF TRANSPORT.SUSP",
-        "CAM ASSY",
-        "CAPSTONE",
-        "CARBURETOR",
-        "GENERATOR",
-        "GUARD RAIL",
-        "HAND WHEEL",
-        "HOISTWAY MAT-MISC PIT EQUIPM",
-        "LOOSE PARTS - OTHER",
-        "MACHINE ROOM MONITORING EQUIPM",
-        "OTHER MECHANICAL",
-        "OUTER LINK",
-        "ROPE BREAK PROTECTION",
-        "ROPE SHUTTLE",
-        "SEALING",
-        "SELECTOR TAPE ARRANGEMENTS",
-        "SOCKET",
-        "SOFFIT",
-        "SUPPORT",
-        "TAPE HITCH",
-        "TEMPLATE"
-      ],
-      "OTHER THAN STRUCTURAL STEEL": [
-        "HANDRAIL"
       ],
       "PLASTIC/RUBBER/INSULATION (FINISHED/ SEMI-FINISHED)": [
         "HANDRAIL - BLACK RUBBER",
@@ -618,45 +564,6 @@
         "CONTROLLER LIFTING DEVICE"
       ]
     },
-    "OTHER": {
-      "CHEMICALS": [
-        "ADHESIVE/SEALANT",
-        "CHEMICAL MATERIAL",
-        "CLEANER/SOLVENT",
-        "LUBRICANT",
-        "LUBRICATION - OTHER",
-        "LUBRICATION SYSTEM ASSY",
-        "OIL",
-        "OIL/GREASE",
-        "PAINT"
-      ],
-      "MATERIALS / SUNDRIES": [
-        "RUBBING STRIP",
-        "STRIP"
-      ],
-      "STEEL FABRICATION": [
-        "FITTING, LUBRICATOR"
-      ],
-      "TOOLS": [
-        "CRANK",
-        "DETAIL",
-        "DOCUMENTATION",
-        "FIELD DATA",
-        "FIELD TOOLING AND DOCUMENTATIO",
-        "FIRE EXTINGUISHER",
-        "GAUGE",
-        "HAMMER",
-        "HARNESS",
-        "HOISTWAY TOOL",
-        "INSPECTION DEVICE",
-        "INSTALLATION TOOL",
-        "RELIABILITY TEST PROCEDURES",
-        "TOOL",
-        "TOOL BOX",
-        "WORKS INSPECTION&TEST RQRMNTS",
-        "WRENCH"
-      ]
-    },
     "PACKAGING DIRECT": {
       "PACKAGING DIRECT": [
         "PACKAGING DIRECT"
@@ -681,9 +588,6 @@
       ],
       "MAGNET": [
         "MAGNET"
-      ],
-      "OTHER RAW MATERIAL": [
-        "RAW MATERIAL - OTHER"
       ],
       "PLASTIC/RUBBER/INSULATION (RAW MATERIAL)": [
         "PLASTIC/RUBBER/INSULATION"
@@ -718,9 +622,6 @@
       ],
       "UTILITIES - OIL AND GAS": [
         "UTILITIES - OIL AND GAS"
-      ],
-      "UTILITIES - OTHER": [
-        "UTILITIES - OTHER"
       ],
       "UTILITIES - WATER": [
         "UTILITIES - WATER"
@@ -765,9 +666,6 @@
       "FLEET - MAINTENANCE AND REPAIR": [
         "FLEET - MAINTENANCE AND REPAIR"
       ],
-      "FLEET - OTHER": [
-        "FLEET - OTHER"
-      ],
       "FLEET - PURCHASED": [
         "FLEET - PURCHASED"
       ],
@@ -795,17 +693,12 @@
       "IT - CSC ONLY": [
         "IT - CSC ONLY"
       ],
-      "IT OTHER": [
-        "IT OTHER"
-      ],
       "IT SERVICES": [
         "IT: CSC SERVICE FEES",
         "IT: GLOBAL SERVICE TRANSFORMATION",
         "IT: SUPPORT E-LOGISTICS",
         "IT: SUPPORT ERP (NON JDE)",
         "IT: SUPPORT JDE",
-        "IT: SUPPORT: CONSULTING OTHER",
-        "IT: SUPPORT: PROFESSIONAL SERVICES OTHER",
         "MANAGED PRINT"
       ],
       "SOFTWARE": [
@@ -818,9 +711,6 @@
       ],
       "GENERAL GOODS STORAGE": [
         "GENERAL GOODS STORAGE"
-      ],
-      "LOGISTICS - OTHER": [
-        "LOGISTICS - OTHER"
       ],
       "POSTAL AND SMALL PARCEL AND COURIER SERVICES": [
         "POSTAL AND SMALL PARCEL AND COURIER SERVICES"
@@ -878,9 +768,6 @@
       "COLLECTIBLES AND AWARDS": [
         "COLLECTIBLES AND AWARDS"
       ],
-      "OFFICE EQUIPMENT AND ACCESSORIES AND SUPPLIES - OTHER": [
-        "OFFICE EQUIPMENT AND ACCESSORIES AND SUPPLIES - OTHER"
-      ],
       "OFFICE MACHINES AND THEIR SUPPLIES AND ACCESSORIES": [
         "OFFICE MACHINES AND THEIR SUPPLIES AND ACCESSORIES"
       ],
@@ -923,7 +810,6 @@
         "CONSULTING: LEGAL",
         "CONSULTING: MARKETING",
         "CONSULTING: OPERATIONS & MANUFACTURING",
-        "CONSULTING: OTHER DEPARTMENTS",
         "CONSULTING: QUALITY",
         "CONSULTING: SUPPLY CHAIN",
         "SERVICES OF AN INDIVIDUAL WHO IS A CURRENT OR FORMER GOVERNEMNT OFFICIAL (SEE CPM48C) (CPM17 HIGH RISK CATEGORY)"
@@ -934,8 +820,7 @@
       "ENGINEERING SERVICES": [
         "ENGINEERING CERTIFICATION",
         "ENGINEERING PROJECT WORK: GENERAL TECHNICAL SERVICES",
-        "ENGINEERING PROJECT WORK: TECHNOLOGY SPECIFIC SERVICES",
-        "ENGINEERING SERVICES: OTHER"
+        "ENGINEERING PROJECT WORK: TECHNOLOGY SPECIFIC SERVICES"
       ],
       "FINANCIAL SERVICES": [
         "BACKGROUND/CREDIT INVESTIGATIONS",
@@ -960,7 +845,6 @@
         "RETIREMENT / PENSION ADMINISTRATION SERVICES"
       ],
       "LEGAL SERVICES": [
-        "LEGAL: OUTSIDE COUNSEL & OTHER LEGAL SERVICES",
         "LEGAL: PATENT RELATED",
         "LEGAL: TRADEMARK RELATED"
       ],
@@ -975,9 +859,6 @@
         "OPERATIONS: QUALITY - SUPPLIER: PROFESSIONAL SERVICES",
         "OPERATIONS: SUPPLY CHAIN: DATA COLLECTION AND ANALYSIS",
         "OPERATIONS: SUPPLY CHAIN: EXECUTION"
-      ],
-      "PROFESSIONAL SERVICES - OTHER": [
-        "PROFESSIONAL SERVICES - OTHER"
       ],
       "TRANSLATION SERVICES": [
         "TRANSLATION SERVICES"
@@ -1000,9 +881,6 @@
       ],
       "MULTIMEDIA NETWORK EQUIPMENT OR PLATFORMS AND ACCESSORIES": [
         "MULTIMEDIA NETWORK EQUIPMENT OR PLATFORMS AND ACCESSORIES"
-      ],
-      "TELECOM OTHER": [
-        "TELECOM OTHER"
       ]
     },
     "TRAVEL": {
@@ -1024,44 +902,6 @@
     "INTERCOMPANY": {
       "INTERCOMPANY": [
         "INTERCOMPANY"
-      ]
-    }
-  },
-  "OUT OF SCOPE": {
-    "OUT OF SCOPE": {
-      "BANKING SERVICES": [
-        "BANKING SERVICES"
-      ],
-      "CHARITABLE DONATIONS": [
-        "CHARITABLE DONATIONS"
-      ],
-      "CUSTOMER PAYMENTS": [
-        "CUSTOMER PAYMENTS"
-      ],
-      "DISBURSEMENTS - OTHER": [
-        "DISBURSEMENTS - OTHER"
-      ],
-      "EMPLOYEE BENEFITS": [
-        "EMPLOYEE BENEFITS",
-        "EMPLOYEE INSURANCE"
-      ],
-      "EMPLOYEE PAYMENTS": [
-        "EMPLOYEE PAYMENTS"
-      ],
-      "GOVERNMENT FEES": [
-        "GOVERNMENT FEES"
-      ],
-      "PROFESSIONAL ASSOCIATIONS": [
-        "PROFESSIONAL ASSOCIATIONS"
-      ],
-      "SALES COMMISSIONS": [
-        "SALES COMMISSIONS"
-      ],
-      "TAXATION": [
-        "TAXATION"
-      ],
-      "TRADE UNIONS": [
-        "TRADE UNIONS"
       ]
     }
   },
@@ -1184,11 +1024,6 @@
     "NON-OTIS NE SUPPLY AND INSTALL": {
       "NON-OTIS NE SUPPLY AND INSTALL": [
         "NON-OTIS NE SUPPLY AND INSTALL"
-      ]
-    },
-    "OTHER": {
-      "OTHER": [
-        "OTHER"
       ]
     },
     "PAINTER": {
