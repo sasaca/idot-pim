@@ -4,6 +4,32 @@
 <%- include('../partials/topbar', { topTitle: 'Requests', topSub: 'All workflow cases across Vendor, Customer, and Product master' }) %>
 <main class="p-6">
 
+<% if (vendorWf && vendorWf.length) { %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="font-semibold">Vendor onboarding workflow — waiting on you</h3>
+      <span class="ml-auto text-xs text-slate-500"><%= vendorWf.length %> item<%= vendorWf.length === 1 ? '' : 's' %></span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="data">
+        <thead><tr>
+          <th>Vendor</th><th>Stage</th><th>Last updated</th><th></th>
+        </tr></thead>
+        <tbody>
+          <% vendorWf.forEach(v => { %>
+            <tr>
+              <td class="font-medium"><%= v.legal_name || '(no name)' %> <span class="text-xs text-slate-400 font-mono">#<%= v.id %></span></td>
+              <td><span class="chip bg-amber-100 text-amber-700"><%= v.state_label %></span></td>
+              <td class="text-xs text-slate-500"><%= v.workflow_updated_at || '—' %></td>
+              <td><a href="<%= v.open_url %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+
 <form method="get" class="flex flex-wrap gap-2 mb-4">
   <input type="text" name="q" placeholder="Search WF ID, title…" value="<%= query.q || '' %>" class="input max-w-xs">
   <select name="domain" class="input max-w-[160px]">

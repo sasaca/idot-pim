@@ -1,9 +1,13 @@
 const express = require('express');
 const db = require('../db/connection');
 const wf = require('../lib/workflow');
+const vendorWorkflow = require('../lib/vendor_workflow');
 const router = express.Router();
 
-// List all requests w/ filters
+// List all requests w/ filters. Also surfaces vendor onboarding workflow
+// items in the current user's queue (PENDING_SC_REVIEW for Supply Chain,
+// PENDING_SUPPLIER for the supplier, etc.) so role-holders find their
+// pending work where they expect it.
 router.get('/', (req, res) => {
   const { domain, status, mine, q } = req.query;
   const clauses = []; const args = [];
@@ -13,7 +17,39 @@ router.get('/', (req, res) => {
   if (q) { clauses.push(`(wf_id LIKE ? OR title LIKE ? OR short_description LIKE ?)`); args.push(`%${q}%`,`%${q}%`,`%${q}%`); }
   const where = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
   const rows = db.prepare(`SELECT * FROM requests ${where} ORDER BY id DESC LIMIT 200`).all(...args);
-  res.render('requests/list', { rows });
+
+  // Vendor workflow items relevant to this user.
+  const userRole = res.locals.currentUser.role;
+  const ownedStates = Object.entries(vendorWorkflow.STATE_OWNER)
+    .filter(([, owner]) => owner === userRole)
+    .map(([state]) => state);
+  let vendorWf = [];
+  if (userRole === 'MASTER_ADMIN') {
+    vendorWf = db.prepare(`
+      SELECT id, legal_name, workflow_state, workflow_updated_at, created_by
+        FROM vendors
+       WHERE workflow_state NOT IN ('CONFIRMED','REJECTED','DRAFT')
+       ORDER BY workflow_updated_at DESC, id DESC
+       LIMIT 200
+    `).all();
+  } else if (ownedStates.length) {
+    const placeholders = ownedStates.map(() => '?').join(',');
+    vendorWf = db.prepare(`
+      SELECT id, legal_name, workflow_state, workflow_updated_at, created_by
+        FROM vendors
+       WHERE workflow_state IN (${placeholders})
+       ORDER BY workflow_updated_at DESC, id DESC
+       LIMIT 200
+    `).all(...ownedStates);
+  }
+  // Decorate with the URL the role should land on for this stage.
+  vendorWf = vendorWf.map((v) => ({
+    ...v,
+    state_label: vendorWorkflow.stateLabel(v.workflow_state),
+    open_url:    vendorWorkflow.viewFor(v.workflow_state, v.id) || `/vendors/${v.id}`,
+  }));
+
+  res.render('requests/list', { rows, vendorWf });
 });
 
 // Request detail
