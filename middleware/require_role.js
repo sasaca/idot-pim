@@ -19,13 +19,22 @@ const { STATES, ROLES } = require('../lib/vendor_workflow');
 // ---- Tune this to match your auth schema ------------------------------------
 function getUserRoles(req) {
   if (!req || !req.user) return [];
+  let roles;
   // Case 1: req.user.role is a single string.
-  if (typeof req.user.role === 'string') return [req.user.role];
+  if (typeof req.user.role === 'string') roles = [req.user.role];
   // Case 2: req.user.roles is an array of strings.
-  if (Array.isArray(req.user.roles)) return req.user.roles.slice();
+  else if (Array.isArray(req.user.roles)) roles = req.user.roles.slice();
   // Case 3: req.user.role is an array.
-  if (Array.isArray(req.user.role)) return req.user.role.slice();
-  return [];
+  else if (Array.isArray(req.user.role)) roles = req.user.role.slice();
+  else return [];
+  // The vendor-onboarding state machine has its own ADMIN superuser role.
+  // This app uses MASTER_ADMIN as the equivalent, so alias the two so
+  // master admins automatically pass the workflow's role and transition
+  // checks (Supply Chain review, Legal decision, etc.).
+  if (roles.includes('MASTER_ADMIN') && !roles.includes('ADMIN')) {
+    roles.push('ADMIN');
+  }
+  return roles;
 }
 // -----------------------------------------------------------------------------
 

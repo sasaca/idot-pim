@@ -1,4 +1,7 @@
-<%- include('../partials/header', { title: 'Forbidden' }) %>
+<%- include('../partials/head', { pageTitle: 'Forbidden' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Forbidden' }) %>
 <main class="mx-auto max-w-2xl px-4 py-16 text-center">
   <h1 class="text-2xl font-semibold text-gray-900">403 — Not your role</h1>
   <p class="mt-2 text-gray-600">
@@ -9,4 +12,5 @@
     Back home
   </a>
 </main>
-<%- include('../partials/footer') %>
+</div>
+</body></html>
