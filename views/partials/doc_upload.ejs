@@ -419,22 +419,32 @@
     container.removeAttribute('data-autopopulated');
   }
 
-  // Arm a single delegated listener on the form that clears the badge the
-  // moment the user modifies an autopopulated field. Uses `Event.isTrusted`
-  // to distinguish between our own programmatic dispatch (above) and a real
-  // user interaction — JS-fired events have isTrusted=false and are ignored.
-  (function armAutopopClear() {
-    var form = pickMainForm();
-    ['input', 'change'].forEach(function (ev) {
-      form.addEventListener(ev, function (e) {
-        if (!e.isTrusted) return;
-        var target = e.target;
-        if (!target) return;
-        var container = target.closest('[data-autopopulated]');
-        if (container) clearAutopopulated(container);
-      }, true);
-    });
-  })();
+  // Arm a delegated listener on the document that clears the badge the moment
+  // the user modifies an autopopulated field. Uses `Event.isTrusted` to filter
+  // out our own programmatic dispatch (markAutopopulated does the dispatch
+  // *before* setting the data attribute, so even our trusted-looking events
+  // wouldn't match — but downstream cascade scripts also fire untrusted events
+  // and we never want those to clear the mark).
+  //
+  // Listens for input + change on every interactive element, plus click as a
+  // fallback for radios/checkboxes (some libraries stop change propagation but
+  // can't suppress the underlying click).
+  function clearOnUserEdit(e) {
+    if (!e.isTrusted) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    // Ignore clicks that aren't on a real form control.
+    if (e.type === 'click') {
+      var tag = t.tagName;
+      var isControl = (tag === 'INPUT' && (t.type === 'radio' || t.type === 'checkbox'));
+      if (!isControl) return;
+    }
+    var container = t.closest('[data-autopopulated]');
+    if (container) clearAutopopulated(container);
+  }
+  ['input', 'change', 'click'].forEach(function (ev) {
+    document.addEventListener(ev, clearOnUserEdit, true);
+  });
 
   function readAsBase64(f) {
     return new Promise(function(resolve, reject) {
