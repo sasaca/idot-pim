@@ -860,11 +860,10 @@
           <div class="vob-grid">
             <div class="vob-field">
               <label><span class="req">*</span>1099 Reportable</label>
-              <select name="f_1099" required>
-                <option value="">-- Select --</option>
-                <option>Yes</option>
-                <option>No</option>
-              </select>
+              <div class="radio-group">
+                <label><input type="radio" name="f_1099" value="Yes" required>Yes</label>
+                <label><input type="radio" name="f_1099" value="No">No</label>
+              </div>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Does This Supplier Present a Conflict of Interest?</label>
@@ -1022,7 +1021,13 @@
         if (v !== '') done++;
       });
       Object.keys(nameGroups).forEach(function (name) {
-        if (nameGroups[name].some(function (r) { return r.checked; })) done++;
+        // Only one radio in a group carries the `required` attribute, so
+        // checking the cached list misses the case where the user picks a
+        // sibling option (e.g. "No"). Re-query the whole pane by name.
+        var siblings = pane.querySelectorAll('[name="' + name.replace(/"/g, '\\"') + '"]');
+        for (var i = 0; i < siblings.length; i++) {
+          if (siblings[i].checked) { done++; break; }
+        }
       });
 
       if (total === 0) {
