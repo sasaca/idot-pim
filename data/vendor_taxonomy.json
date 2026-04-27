@@ -1,0 +1,1215 @@
+{
+  "DIRECT": {
+    "ELECTRICAL": {
+      "BOX / PANEL": [
+        "CABINET",
+        "CONTROL PANEL",
+        "ELECTR BOX&COVER-MOV.WALKWAY",
+        "ELECTRICAL BOX AND COVER",
+        "FACE PLATE",
+        "JUNCTION BOX",
+        "PANEL, CONTROLLER"
+      ],
+      "COMPUTER": [
+        "COMPUTERS",
+        "FLOPPY DISC",
+        "VIRTUAL STATION"
+      ],
+      "CONTROLLER / DRIVE": [
+        "COMPUTER",
+        "CONTROLLER",
+        "CONTROLLER AND ELECTRICAL",
+        "DRIVE",
+        "HANDRAIL DRIVE",
+        "HANDRAIL DRIVE - OTHER",
+        "MAIN DRIVE - OTHER",
+        "MAIN DRIVE COMPLETE",
+        "MAIN SWITCH"
+      ],
+      "ELECTRICAL HARDWARE": [
+        "ARC BARRIER",
+        "FIELD TERMINAL",
+        "FINGER",
+        "GRID",
+        "GROUNDING DEVICE",
+        "HEAT SINK",
+        "HEATER",
+        "HOLDER, ELECTRICAL",
+        "INSULATOR",
+        "JUMPER",
+        "SPLICER",
+        "STATIC CONTROL DEVICE",
+        "TUBE, ELECTRONIC",
+        "WIRE TIE"
+      ],
+      "ELECTROMECHANICAL": [
+        "ALARM",
+        "CONTROLLER - ESCALATOR",
+        "ICU (INTERCOM UNIT)",
+        "INSERT",
+        "INSPECTION BOX (TOCI)",
+        "INTERLOCK",
+        "LOADWEIGHING DEVICE",
+        "MACHINE ROOM SWITCH BOX",
+        "MACHINE ROOM TRANSFORMER BOX",
+        "MESB",
+        "PALLET/CHAIN WHEEL BRAKE DVC",
+        "RETROFIT KIT",
+        "STEP/CHAIN WHEEL BRAKE DEVICE",
+        "TELEPHONE",
+        "TIMER",
+        "TOP OF CAR EQUIPMENT - OTHER",
+        "TRIP COUNTER",
+        "WAITING PASSENGER DETECTOR"
+      ],
+      "ELECTRONIC COMPONENTS": [
+        "AMPLIFIER",
+        "CAPACITOR",
+        "CIRCUIT BREAKER",
+        "COIL / INDUCTOR / REACTOR",
+        "CONNECTOR",
+        "CONTACT",
+        "DIODE",
+        "ENCODER",
+        "FILTER, ELECTRICAL",
+        "FUSE",
+        "FUSEHOLDER",
+        "MAGNET",
+        "MICROCIRCUIT",
+        "OPTO DEVICE",
+        "OVERCURRENT PROTECTOR",
+        "PROGRAMMED LOGIC DEVICE",
+        "QUARTZ CRYSTAL",
+        "RECEPTACLE",
+        "RECTIFIER",
+        "RELAY",
+        "RELAY, CONTACTOR",
+        "RESISTOR",
+        "SOCKET, ELECTRICAL",
+        "SOLENOID",
+        "SUPPRESSOR",
+        "SWITCH",
+        "TERMINAL BLOCK",
+        "THERMOCOUPLE",
+        "THERMOSTAT",
+        "THYRISTOR",
+        "TRANSDUCER",
+        "TRANSFORMER",
+        "TRANSISTOR"
+      ],
+      "ENERGY SOURCE": [
+        "BATTERY",
+        "POWER SUPPLY"
+      ],
+      "ESCALATOR": [
+        "HANDRAIL DRIVE"
+      ],
+      "LIGHTING / DISPLAYS": [
+        "CAR LIGHTING",
+        "CAR OP.PANEL(COP)-COMPLETE",
+        "COP ASSEMBLY",
+        "COP BUTTON",
+        "EMERGENCY EXIT",
+        "FILTER/LENS",
+        "HALL & CAR DIR.IND. (HDI/CDI)",
+        "HALL BUTTON BOX (HBB)-COMPLETE",
+        "HALL LANTERN ASSY",
+        "HALL&CAR POSITION IND(HPI/CPI)",
+        "HAND LAMP",
+        "INDICATOR",
+        "LIGHT FIXTURE",
+        "LIGHT RAY DEVICE",
+        "LIGHT TUBE/BULB"
+      ],
+      "OTHER ELECTRICAL": [
+        "OTHER ELECTRICAL"
+      ],
+      "PCB / PCBA": [
+        "PRINTED CIRCUIT BOARD (PCB)",
+        "PRINTED CIRCUIT BRD ASSY(PCBA)"
+      ],
+      "SENSORS": [
+        "POSITION REFERENCE SYSTEM-CAR"
+      ],
+      "WIRING AND TRAVELING CABLE": [
+        "CAR PRE-WIRING",
+        "CONDUCTOR",
+        "CONDUIT",
+        "DOOR OPERATOR PREWIRING",
+        "ELECTRICAL CABLE",
+        "HOISTWAY WIRING",
+        "MACHINE PREWIRING",
+        "MACHINE ROOM WIRING KITS",
+        "PREWIRING",
+        "TRAVELING CABLE",
+        "TROUGH"
+      ]
+    },
+    "MECHANICAL": {
+      "ASTHETICS": [
+        "CAR LINING",
+        "CARPET",
+        "DECORATIVE CEILING",
+        "DECORATIVE MATERIAL - OTHER",
+        "DESIGN",
+        "FLOORING",
+        "FRAME, LIGHT FIXTURE",
+        "MEDALLION",
+        "MIRROR",
+        "MOLDING",
+        "ORNAMENT",
+        "PLATE, DATA LABEL"
+      ],
+      "BEARING": [
+        "BEARING"
+      ],
+      "CHEMICALS": [
+        "GREASE",
+        "OIL",
+        "SEALANT/TETRSTAT"
+      ],
+      "COMPLETE ELEVATOR OR ASSEMBLY": [
+        "CMPL.EL.SYST-CARGO/FRGHT/PLLTS",
+        "COMPL.ELEV.SYSTEM - STAIRLIFT",
+        "COMPL.ELEV.SYSTEM-AUTOMOBILE",
+        "COMPLETE DUMBWAITER/PLATEFORM",
+        "COMPLETE NEW ELEVATOR",
+        "FLD NONELEV NONESC-AUT BARRIER"
+      ],
+      "DESIGNED COMPONENTS": [
+        "BELT",
+        "BUMPER",
+        "CAR BUFFER",
+        "CAR MOUNTED GOVERNOR",
+        "CENTRIFUGAL MECHANISM ASSY",
+        "COUNTERWEIGHT BUFFER",
+        "COUNTERWEIGHT GUIDE ASSY",
+        "COUNTERWEIGHT SAFETIES ASSY",
+        "FLEXIBLE GUIDE CLAMP SAFETY",
+        "GOVERNOR",
+        "GUIDANCE DEVICE",
+        "GUIDE SHOE",
+        "LUBRICATOR/OILER",
+        "PROGRESSIVE SAFETY GEAR",
+        "ROLLER",
+        "ROLLER SAFETY GEAR",
+        "SAFETY BLOCK",
+        "SHEAVE",
+        "SLACK ROPE DETECTION DEVICE",
+        "SLIDE OR ROLLER GUIDE"
+      ],
+      "DOOR ASSEMBLY / SYSTEMS": [
+        "COMPLETE AUTOMATIC CAR DOOR",
+        "COMPLETE MANUAL CAR DOOR",
+        "COMPLETE MANUAL LANDING DOOR",
+        "COMPLETE SWING LANDING DOOR",
+        "FLD N.EL N.ES-IND/FRT/CARGODOR",
+        "FLD NONELEV NONESC-PEDESTRDOOR"
+      ],
+      "DOOR ASSEMBLY/ COMPONENTS": [
+        "COMPL. AUTOMATIC LANDING DOOR"
+      ],
+      "DOOR SYSTEMS": [
+        "CAR DOOR",
+        "CAR DOOR - OTHER",
+        "CAR DOOR DETECTOR",
+        "CAR DOOR HANGER",
+        "CAR DOOR HEADER TRACK",
+        "DECORATIVE DOOR FRAME",
+        "DOOR OPERATOR",
+        "DOOR OPERATOR FRAME",
+        "FACIA PLATE ASSEMBLY",
+        "HEADER",
+        "INTERLOCK AND UNLOCKING DEVICE",
+        "LANDING DOOR",
+        "LANDING DOOR CLOSER",
+        "LANDING DOOR HANGAR",
+        "LANDING DOOR HEADER TRACK",
+        "MECHANICAL SAFETY SHOE",
+        "MOVABLE VANE",
+        "PLATE, HOISTWAY ENTRANCE",
+        "SILL",
+        "SILL SUPPORT",
+        "SPREADER, DUMBWAITER ENTRANCE",
+        "STATIONARY VANE"
+      ],
+      "ESCALATOR": [
+        "ANGLE IRON",
+        "ANTI-STATIC ROLLER",
+        "AXLES",
+        "BALUSTRADE",
+        "BALUSTRADE FIXINGS - OTHER",
+        "BAR, ESCALATOR",
+        "BEARING AND HOUSING",
+        "BRAKE, ESCALATOR",
+        "BRUSH GUARD",
+        "CASCADE",
+        "CLEAT/DEMARCATION",
+        "COMB",
+        "COMB AND FLOORPLATE",
+        "COMB AND FLOORPLATE - OTHER",
+        "COMB PLATE",
+        "DECKING",
+        "DECKING - COMPLETE",
+        "DECKING - OTHER",
+        "DIN PART/T-BOLT/SHIM",
+        "DRIVE CHAIN SPROCKET",
+        "DRIVE SPROCKET",
+        "ENTRY STEP",
+        "FAST.MATERIAL/INTERIOR PANEL",
+        "FIELD",
+        "FINAL ADJUSTMENT",
+        "FINAL ASSY (PACKING) - OTHER",
+        "FRAME, ESCALATOR",
+        "FRICTION WHEEL",
+        "GEAR REDUCTION BOX",
+        "GLASS HOLDER PROFILE",
+        "GUIDANCE IN RETURN LINE",
+        "GUIDE SHAPE PASSENGER SIDE",
+        "GUIDE, ESCALATOR",
+        "GUIDE, TRACK",
+        "HANDLE ASSY",
+        "HANDRAIL - OTHER",
+        "HANDRAIL ASSY",
+        "HANDRAIL DRIVE CHAIN",
+        "HANDRAIL DRIVE COMPONENT",
+        "HANDRAIL DRIVE SPROCKET",
+        "HANDRAIL ENTRANCE",
+        "HANDRAIL ENTRY BOX",
+        "HANDRAIL ENTRY BOX - OTHER",
+        "HANDRAIL GUIDANCE - OTHER",
+        "HOLDER",
+        "IDLER SHAFT ASSY",
+        "INNER DECKING",
+        "INTERIOR PANEL - OTHER",
+        "LINK, PALLET CHAIN",
+        "LINK, STEPCHAIN",
+        "LUBRICATION",
+        "MAIN DRIVE CHAIN",
+        "MIDDLE PLATE",
+        "NEWEL",
+        "OFFSET LINK, PALLET CHAIN",
+        "OFFSET LINK, STEPCHAIN",
+        "OIL PAN",
+        "OUTER DECKING",
+        "PAINTING",
+        "PALLET",
+        "PALLET CHAIN - OTHER",
+        "PALLET CHAIN - PRE-ASSEMBLED",
+        "PALLET MONITORING DEVICE",
+        "PANEL, SKIRT/GUARD",
+        "PLASTIC PROFILE",
+        "PLATE, HANDRAIL",
+        "PLATE, TRUSS",
+        "POLYESTER PLATE",
+        "POWDER/SMALL PART",
+        "PRESSURE LINK",
+        "PRESSURE ROLLER",
+        "PROFILE",
+        "PVC/RUBBER PROFILE",
+        "RAIL SYSTEM",
+        "RECTANGULAR HOLLOW SECTION",
+        "REST ASSY",
+        "RISER",
+        "ROLLER BOW",
+        "ROLLER IN NEWEL",
+        "ROLLER, ESCALATOR",
+        "SHELL",
+        "SKIRT PANEL",
+        "SKIRT PANEL/GUARD - OTHER",
+        "SKIRTING",
+        "SPRING, ESCALATOR",
+        "STEP",
+        "STEP CHAIN - PRE-ASSEMBLED",
+        "STEP CHAIN SPROCKET",
+        "STEP PROTECTION PLATE",
+        "STEP ROLLER RETURN",
+        "STEPCHAIN",
+        "STEPCHAIN - OTHER",
+        "STEPS - OTHER",
+        "SUPPORT",
+        "SWITCH, MACHINE",
+        "TAILGATE",
+        "TENSION CARRIAGE",
+        "TENSION CARRIAGE - COMPLETE",
+        "TENSION CARRIAGE - OTHER",
+        "TENSION DEVICE",
+        "TEROSTAT 930",
+        "TRACK",
+        "TRACK - OTHER",
+        "TREAD",
+        "TRUSS",
+        "TRUSS - OTHER",
+        "TRUSS - PURCHASED",
+        "TUBE, ESCALATOR"
+      ],
+      "FIELD SAFETY DEVICE": [
+        "SAFETY EQUIP & DEVICES - OTHER"
+      ],
+      "GENERAL PART": [
+        "AXLE",
+        "BALL",
+        "BALL JOINT",
+        "BAND",
+        "BAR",
+        "BASE",
+        "BASE PLATE",
+        "BLADE",
+        "BLOCK",
+        "BONNET",
+        "BOX",
+        "BRUSH",
+        "BUSHING",
+        "CAGE",
+        "CAM",
+        "CAP",
+        "CATCH",
+        "CHAIN",
+        "COLLAR",
+        "COUPLING",
+        "CUP",
+        "CUSHION",
+        "CYLINDER",
+        "DEFLECTOR",
+        "DIAPHRAGM",
+        "DISK",
+        "DISTANCE PIECE",
+        "DOG",
+        "DRUM",
+        "FERRULE",
+        "FILTER",
+        "FRAME",
+        "FRIEZE",
+        "GEAR",
+        "GIB",
+        "GLAND",
+        "GRILLE",
+        "GROOVING",
+        "GUIDE",
+        "HANDLE",
+        "HEAD",
+        "HITCH",
+        "HOOK",
+        "HUB",
+        "JAW",
+        "JEWEL",
+        "KEEPER",
+        "KEY",
+        "KNUCKLE",
+        "LETTER",
+        "LEVER",
+        "LINING",
+        "LINK",
+        "LOCK",
+        "LOUVER",
+        "PAN",
+        "PANEL",
+        "PAPER",
+        "PAWL",
+        "POINTER",
+        "PRONG",
+        "RACK",
+        "RADIATOR COOLER",
+        "REDUCTION UNIT GEAR",
+        "RESERVOIR",
+        "RING",
+        "ROD",
+        "SEAL",
+        "SEGMENT",
+        "SEPARATOR",
+        "SHAPE",
+        "SHELF",
+        "SHIELD",
+        "SHOE",
+        "SLEEVE",
+        "SPACER",
+        "SPARK PLUG",
+        "SPIDER",
+        "SPRING",
+        "STAND",
+        "STEM",
+        "STOP",
+        "TARGET",
+        "TEE",
+        "TIRE",
+        "TRIPPER",
+        "TUBE",
+        "TURNBUCKLE",
+        "WEDGE",
+        "WHEEL",
+        "WICK",
+        "YOKE",
+        "Z SHAPE"
+      ],
+      "HARDWARE / FASTENERS": [
+        "ADAPTER",
+        "ANCHOR",
+        "BRACKET",
+        "CLAMP",
+        "CLEAT",
+        "CLEVIS",
+        "CLIP",
+        "EXPANSION SHELL",
+        "EYELET",
+        "FASTENER",
+        "FASTENING MAT/HANDRAIL GUIDANC",
+        "FASTENING MATERIAL/DECKING",
+        "FASTENING PART FOR TRUSS",
+        "GROMMET",
+        "LUG",
+        "PULLEY",
+        "SHIM",
+        "SPROCKET",
+        "TERMINAL"
+      ],
+      "HYDRAULIC COMPONENT": [
+        "COCK",
+        "FITTING",
+        "FOLLOWER",
+        "GASKET",
+        "HOSE",
+        "HYDRAULIC COMPONENT",
+        "MUFFLER",
+        "ONE/TWO/MLTI STAGE PLUNGER ARR",
+        "ONE/TWO/MULTI STAGE PLUNGERS",
+        "OVERFLOW",
+        "PACKING",
+        "PIPING",
+        "PISTON",
+        "PLUG",
+        "PUMP",
+        "TANK",
+        "VALVE"
+      ],
+      "MACHINE / MOTOR": [
+        "2:1 SHEAVE; DEAD END HITCH",
+        "ARMATURE",
+        "ASSEMBLED AGGREGATE",
+        "BAR, ROTOR",
+        "BRAKE FOR LIN ELEV-CNTERWEIGHT",
+        "BRAKE FOR LINEAR ELEVATOR-CAR",
+        "BRAKE LINING",
+        "BRAKE PULLEY",
+        "BRAKE SHOE",
+        "BRAKE, ELEVATOR",
+        "COMMUTATOR",
+        "CORE",
+        "DEFLECTION SHEAVE ASSY",
+        "DRIVE SHEAVE",
+        "DRUM, MACHINE",
+        "FRAME, MOTOR BEARING",
+        "FRAME, STATOR",
+        "GEARED MACHINE ACCESSORY",
+        "LAMINATION",
+        "MACHINE",
+        "MACHINE - OTHER",
+        "MACHINE ROOM MISC. EQUIPMENT",
+        "MACHINE, ELEVATOR",
+        "MACHINE, ESCALATOR",
+        "MACHINE/BRAKE TOOLS",
+        "MAIN DRIVE",
+        "MOTOR BEARING BRACKET",
+        "MOTOR COIL",
+        "MOTOR REWINDING",
+        "MOTOR SHIELD",
+        "MOTOR, ELEVATOR",
+        "MOTOR, ESCALATOR",
+        "MOTOR, HYDRAULIC",
+        "POLE PIECE",
+        "SEC OF FLAT OR DBLE FACELINMTR",
+        "SEC OF TUBULAR LINEAR MOTOR"
+      ],
+      "MACHINES": [
+        "MAGNET"
+      ],
+      "OTHER MECHANICAL": [
+        "AFTERMARKET COMPETITOR PARTS",
+        "ARRANGEMENT OF TRANSPORT.SUSP",
+        "CAM ASSY",
+        "CAPSTONE",
+        "CARBURETOR",
+        "GENERATOR",
+        "GUARD RAIL",
+        "HAND WHEEL",
+        "HOISTWAY MAT-MISC PIT EQUIPM",
+        "LOOSE PARTS - OTHER",
+        "MACHINE ROOM MONITORING EQUIPM",
+        "OTHER MECHANICAL",
+        "OUTER LINK",
+        "ROPE BREAK PROTECTION",
+        "ROPE SHUTTLE",
+        "SEALING",
+        "SELECTOR TAPE ARRANGEMENTS",
+        "SOCKET",
+        "SOFFIT",
+        "SUPPORT",
+        "TAPE HITCH",
+        "TEMPLATE"
+      ],
+      "OTHER THAN STRUCTURAL STEEL": [
+        "HANDRAIL"
+      ],
+      "PLASTIC/RUBBER/INSULATION (FINISHED/ SEMI-FINISHED)": [
+        "HANDRAIL - BLACK RUBBER",
+        "SOUND INSULATION"
+      ],
+      "ROPE": [
+        "GOVERNOR ROPE",
+        "HOISTING ROPE"
+      ],
+      "STEEL FABRICATION": [
+        "2:1 SHEAVE OR 1:1 HITCH PLATE",
+        "ANGLE",
+        "APRON",
+        "BALANCE WEIGHT",
+        "BRACE",
+        "CAB PANEL",
+        "CAR ENCLOSURE&CANOPY ASSEMBLY",
+        "CEILING",
+        "CHANNEL",
+        "COMPENSATION CHAIN",
+        "COMPENSATION ROPE",
+        "COVER",
+        "CUP, GREASE",
+        "FAN (VENTILATOR)",
+        "GUARD",
+        "KICKPLATE",
+        "METAL WORK",
+        "OIL DRIP FEEDER",
+        "PIPE",
+        "PLATE, ESCALATOR",
+        "PLATE, THRESHOLD",
+        "PLATFORM",
+        "RETRACTABLE SILL",
+        "SOUND ISOLATION",
+        "TOE GUARD",
+        "TRUNKING"
+      ],
+      "STRUCTURAL STEEL": [
+        "2:1 SHEAVE OR HITCH PLATE",
+        "BEAM",
+        "BEDPLATE",
+        "CAR FRAME",
+        "CNTERWGHT GUARD ARRANGEMENTS",
+        "COLUMN",
+        "COMPENSATION FRAME",
+        "COUNTERWEIGHT FRAME ASSY",
+        "COUNTERWEIGHT RAIL",
+        "CROSSHEAD",
+        "DEAD END HITCH/PLATE",
+        "FLOOR PLATE",
+        "GOVERNOR TENSION FRAME",
+        "HANDRAIL",
+        "HITCH ASSY",
+        "HOISTWAY STEEL TOWER",
+        "PEDESTAL",
+        "PIT TEMPLATE",
+        "PLATE",
+        "PLATFORM FRAME",
+        "RAIL BACKING",
+        "RAIL BRACKET",
+        "ROPE HOLDER",
+        "SEPARATOR BEAM",
+        "SUPPORT",
+        "TAPE TENSION FRAME ARRANGEMENT",
+        "UPRIGHT"
+      ],
+      "TOOLS": [
+        "CONTROLLER LIFTING DEVICE"
+      ]
+    },
+    "OTHER": {
+      "CHEMICALS": [
+        "ADHESIVE/SEALANT",
+        "CHEMICAL MATERIAL",
+        "CLEANER/SOLVENT",
+        "LUBRICANT",
+        "LUBRICATION - OTHER",
+        "LUBRICATION SYSTEM ASSY",
+        "OIL",
+        "OIL/GREASE",
+        "PAINT"
+      ],
+      "MATERIALS / SUNDRIES": [
+        "RUBBING STRIP",
+        "STRIP"
+      ],
+      "STEEL FABRICATION": [
+        "FITTING, LUBRICATOR"
+      ],
+      "TOOLS": [
+        "CRANK",
+        "DETAIL",
+        "DOCUMENTATION",
+        "FIELD DATA",
+        "FIELD TOOLING AND DOCUMENTATIO",
+        "FIRE EXTINGUISHER",
+        "GAUGE",
+        "HAMMER",
+        "HARNESS",
+        "HOISTWAY TOOL",
+        "INSPECTION DEVICE",
+        "INSTALLATION TOOL",
+        "RELIABILITY TEST PROCEDURES",
+        "TOOL",
+        "TOOL BOX",
+        "WORKS INSPECTION&TEST RQRMNTS",
+        "WRENCH"
+      ]
+    },
+    "PACKAGING DIRECT": {
+      "PACKAGING DIRECT": [
+        "PACKAGING DIRECT"
+      ]
+    },
+    "RAW MATERIAL": {
+      "ALUMINUM": [
+        "ALUMINUM"
+      ],
+      "BRASS": [
+        "BRASS"
+      ],
+      "CASTING": [
+        "CASE",
+        "HOUSING"
+      ],
+      "COPPER": [
+        "COPPER"
+      ],
+      "GLASS": [
+        "GLASS"
+      ],
+      "MAGNET": [
+        "MAGNET"
+      ],
+      "OTHER RAW MATERIAL": [
+        "RAW MATERIAL - OTHER"
+      ],
+      "PLASTIC/RUBBER/INSULATION (RAW MATERIAL)": [
+        "PLASTIC/RUBBER/INSULATION"
+      ],
+      "STEEL": [
+        "SHEET STEEL",
+        "STEEL"
+      ],
+      "STEEL FABRICATION": [
+        "COUNTERWEIGHT FILLER WEIGHT",
+        "SHAFT"
+      ],
+      "STRUCTURAL STEEL": [
+        "GUIDE RAIL"
+      ]
+    }
+  },
+  "INDIRECT": {
+    "CAPITAL": {
+      "CAPITALIZED EQUIPMENT USED IN MANUFACTURING": [
+        "CAPITALIZED EQUIPMENT USED IN MANUFACTURING"
+      ]
+    },
+    "CREDIT CARDS": {
+      "CREDIT CARDS - UNALLOCATED": [
+        "CREDIT CARDS - UNALLOCATED"
+      ]
+    },
+    "ENERGY & UTILITIES": {
+      "UTILITIES - ELECTRICITY": [
+        "UTILITIES - ELECTRICITY"
+      ],
+      "UTILITIES - OIL AND GAS": [
+        "UTILITIES - OIL AND GAS"
+      ],
+      "UTILITIES - OTHER": [
+        "UTILITIES - OTHER"
+      ],
+      "UTILITIES - WATER": [
+        "UTILITIES - WATER"
+      ]
+    },
+    "FACILITIES MANAGEMENT": {
+      "BUILDING AND FACILITY CONSTRUCTION AND MAINTENANCE SERVICES": [
+        "BUILDING AND FACILITY CONSTRUCTION AND MAINTENANCE SERVICES"
+      ],
+      "CAFETERIA SERVICES": [
+        "CAFETERIA SERVICES"
+      ],
+      "CLEANING EQUIPMENT AND SUPPLIES": [
+        "CLEANING EQUIPMENT AND SUPPLIES"
+      ],
+      "ENVIRONMENTAL SERVICES": [
+        "ENVIRONMENTAL SERVICES"
+      ],
+      "JANITORIAL SERVICES": [
+        "JANITORIAL SERVICES"
+      ],
+      "LANDSCAPING": [
+        "LANDSCAPING"
+      ],
+      "SECURITY SERVICES": [
+        "SECURITY SERVICES"
+      ]
+    },
+    "FLEET": {
+      "FLEET - BODIES AND TRAILERS": [
+        "FLEET - BODIES AND TRAILERS"
+      ],
+      "FLEET - FUELING": [
+        "FLEET - FUELING"
+      ],
+      "FLEET - INSURANCE": [
+        "FLEET - INSURANCE"
+      ],
+      "FLEET - LEASED": [
+        "FLEET - LEASED"
+      ],
+      "FLEET - MAINTENANCE AND REPAIR": [
+        "FLEET - MAINTENANCE AND REPAIR"
+      ],
+      "FLEET - OTHER": [
+        "FLEET - OTHER"
+      ],
+      "FLEET - PURCHASED": [
+        "FLEET - PURCHASED"
+      ],
+      "TRANSPORTATION COMPONENTS AND SYSTEMS": [
+        "TRANSPORTATION COMPONENTS AND SYSTEMS"
+      ]
+    },
+    "GAS & CHEMICAL": {
+      "ELEMENTS AND GASES": [
+        "ELEMENTS AND GASES"
+      ]
+    },
+    "INSURANCE (OPERATIONAL)": {
+      "INSURANCE (OPERATIONAL)": [
+        "INSURANCE (OPERATIONAL)"
+      ]
+    },
+    "IT": {
+      "COMPUTER EQUIPMENT AND ACCESSORIES": [
+        "COMPUTER EQUIPMENT AND ACCESSORIES"
+      ],
+      "ENTERPRISE INFRASTRUCTURE/ SERVERS": [
+        "ENTERPRISE INFRASTRUCTURE/ SERVERS"
+      ],
+      "IT - CSC ONLY": [
+        "IT - CSC ONLY"
+      ],
+      "IT OTHER": [
+        "IT OTHER"
+      ],
+      "IT SERVICES": [
+        "IT: CSC SERVICE FEES",
+        "IT: GLOBAL SERVICE TRANSFORMATION",
+        "IT: SUPPORT E-LOGISTICS",
+        "IT: SUPPORT ERP (NON JDE)",
+        "IT: SUPPORT JDE",
+        "IT: SUPPORT: CONSULTING OTHER",
+        "IT: SUPPORT: PROFESSIONAL SERVICES OTHER",
+        "MANAGED PRINT"
+      ],
+      "SOFTWARE": [
+        "SOFTWARE"
+      ]
+    },
+    "LOGISTICS": {
+      "CUSTOMS SERVICES": [
+        "CUSTOMS SERVICES (CPM17 HIGH RISK CATEGORY - SEE CPM 17 FOR DEFINITION)"
+      ],
+      "GENERAL GOODS STORAGE": [
+        "GENERAL GOODS STORAGE"
+      ],
+      "LOGISTICS - OTHER": [
+        "LOGISTICS - OTHER"
+      ],
+      "POSTAL AND SMALL PARCEL AND COURIER SERVICES": [
+        "POSTAL AND SMALL PARCEL AND COURIER SERVICES"
+      ],
+      "TRANSPORT - AIR CARGO": [
+        "TRANSPORT - AIR CARGO"
+      ],
+      "TRANSPORT - EXPEDITE": [
+        "TRANSPORT - EXPEDITE"
+      ],
+      "TRANSPORT - INTERMODAL CARGO": [
+        "TRANSPORT - INTERMODAL CARGO"
+      ],
+      "TRANSPORT - MARINE CARGO": [
+        "TRANSPORT - MARINE CARGO"
+      ],
+      "TRANSPORT - RAIL CARGO": [
+        "TRANSPORT - RAIL CARGO"
+      ],
+      "TRANSPORT - ROAD CARGO": [
+        "FTL",
+        "LTL"
+      ],
+      "TRANSPORT ARRANGEMENTS": [
+        "TRANSPORT ARRANGEMENTS"
+      ]
+    },
+    "MRO": {
+      "EH&S SUPPLIES INCLUDING PPE": [
+        "EH&S SUPPLIES INCLUDING PPE"
+      ],
+      "INDUSTRIAL EQUIPMENT MAINTENANCE SERVICES": [
+        "INDUSTRIAL EQUIPMENT MAINTENANCE SERVICES"
+      ],
+      "MATERIAL HANDLING AND CONDITIONING AND STORAGE MACHINERY AND THEIR ACCESSORIES AND SUPPLIES": [
+        "MATERIAL HANDLING AND CONDITIONING AND STORAGE MACHINERY AND THEIR ACCESSORIES AND SUPPLIES"
+      ],
+      "MRO & INDUSTRIAL SUPPLY INTEGRATOR/SUPPLIER (FIELD/FACTORY)": [
+        "MRO & INDUSTRIAL SUPPLY INTEGRATOR/SUPPLIER (FIELD/FACTORY)"
+      ],
+      "MRO INDUSTRIAL SUPPLIES: ELECTRICAL (NON-PRODUCT)": [
+        "MRO INDUSTRIAL SUPPLIES: ELECTRICAL (NON-PRODUCT)"
+      ],
+      "MRO INDUSTRIAL SUPPLIES: FASTENERS (NON-PRODUCT)": [
+        "MRO INDUSTRIAL SUPPLIES: FASTENERS (NON-PRODUCT)"
+      ],
+      "MRO INDUSTRIAL SUPPLIES: MECHANICAL (NON- PRODUCT)": [
+        "MRO INDUSTRIAL SUPPLIES: MECHANICAL (NON- PRODUCT)"
+      ],
+      "MRO INDUSTRIAL SUPPLIES: TOOLING INCLUDING HAND TOOLS": [
+        "MRO INDUSTRIAL SUPPLIES: TOOLING INCLUDING HAND TOOLS"
+      ]
+    },
+    "OFFICE PRODUCTS & SERVICES": {
+      "COLLECTIBLES AND AWARDS": [
+        "COLLECTIBLES AND AWARDS"
+      ],
+      "OFFICE EQUIPMENT AND ACCESSORIES AND SUPPLIES - OTHER": [
+        "OFFICE EQUIPMENT AND ACCESSORIES AND SUPPLIES - OTHER"
+      ],
+      "OFFICE MACHINES AND THEIR SUPPLIES AND ACCESSORIES": [
+        "OFFICE MACHINES AND THEIR SUPPLIES AND ACCESSORIES"
+      ],
+      "OFFICE SUPPLIES": [
+        "OFFICE SUPPLIES"
+      ],
+      "PRINTING AND PUBLISHING EQUIPMENT": [
+        "PRINTING AND PUBLISHING EQUIPMENT"
+      ]
+    },
+    "PACKAGING": {
+      "SPOOL": [
+        "SPOOL"
+      ]
+    },
+    "PACKAGING INDIRECT": {
+      "PACKAGING INDIRECT": [
+        "PACKAGING INDIRECT"
+      ]
+    },
+    "PROFESSIONAL SERVICES": {
+      "BUSINESS PROCESS OUTSOURCING": [
+        "BUSINESS PROCESS OUTSOURCING"
+      ],
+      "COMMUNICATIONS": [
+        "COMMUNICATIONS CONTRIBUTIONS",
+        "CORPORATE SOCIAL RESPONSIBILITY (CSR)",
+        "DIGITAL COMMUNICATION: VIDEO, SOCIAL MEDIA, .COM",
+        "EMPLOYEE COMMUNICATIONS",
+        "PUBLIC RELATIONS: PROACTIVE MEDIA, CRISIS TRAINING/SUPPORT"
+      ],
+      "CONSULTING SERVICES (non-DT)": [
+        "CONSULTING: COMMUNICATIONS",
+        "CONSULTING: EH&S",
+        "CONSULTING: ENERGY",
+        "CONSULTING: ENGINEERING",
+        "CONSULTING: FINANCIAL",
+        "CONSULTING: HIGHER EDUCATION",
+        "CONSULTING: HR",
+        "CONSULTING: LEGAL",
+        "CONSULTING: MARKETING",
+        "CONSULTING: OPERATIONS & MANUFACTURING",
+        "CONSULTING: OTHER DEPARTMENTS",
+        "CONSULTING: QUALITY",
+        "CONSULTING: SUPPLY CHAIN",
+        "SERVICES OF AN INDIVIDUAL WHO IS A CURRENT OR FORMER GOVERNEMNT OFFICIAL (SEE CPM48C) (CPM17 HIGH RISK CATEGORY)"
+      ],
+      "CONTINGENT LABOR": [
+        "CONTINGENT LABOR"
+      ],
+      "ENGINEERING SERVICES": [
+        "ENGINEERING CERTIFICATION",
+        "ENGINEERING PROJECT WORK: GENERAL TECHNICAL SERVICES",
+        "ENGINEERING PROJECT WORK: TECHNOLOGY SPECIFIC SERVICES",
+        "ENGINEERING SERVICES: OTHER"
+      ],
+      "FINANCIAL SERVICES": [
+        "BACKGROUND/CREDIT INVESTIGATIONS",
+        "COLLECTIONS (EXCL FROM ANY GOVERNMENT)",
+        "COLLECTIONS FROM OR DUE TO ANY GOVERNMENT (CPM17 HIGH RISK CATEGORY)",
+        "FINANCE TRANSFORMATION",
+        "FINANCIAL AUDITING",
+        "FINANCIAL DUE DILIGENCE",
+        "GOVERNMENT INCENTIVE (CPM17 HIGH RISK CATEGORY)",
+        "OUTSOURCED ACCOUNTING SERVICES",
+        "TAX ADVOCACY (ESPECIALLY WHEN ENGAGING AND/OR INTERACTING WITH A GOVERNMENT) (CPM17 HIGH RISK CATEGGORY)",
+        "TAX SERVICES"
+      ],
+      "HUMAN RESOURCES SERVICES": [
+        "BENEFITS ADMINISTRATION SERVICES",
+        "COMMUNICATIONS",
+        "HUMAN RESOURCES: PROFESSIONAL SERVICES",
+        "HUMAN RESOURCES: RECRUITMENT",
+        "IMMIGRATION SERVICES (CPM17 HIGH RISK CATEGORY)",
+        "LEARNING, TRAINING & DEVELOPMENT",
+        "PAYROLL ADMINSTRATIVE SERVICE",
+        "RETIREMENT / PENSION ADMINISTRATION SERVICES"
+      ],
+      "LEGAL SERVICES": [
+        "LEGAL: OUTSIDE COUNSEL & OTHER LEGAL SERVICES",
+        "LEGAL: PATENT RELATED",
+        "LEGAL: TRADEMARK RELATED"
+      ],
+      "MARKETING & PRODUCT MANAGEMENT": [
+        "MARKETING COLLATERAL, BRANDED SALES SUPPORT",
+        "MARKETING CONTRIBUTIONS",
+        "TRADESHOWS, SHOWROOMS, KEY CUSTOMER EVENTS, AND SPONSORSHIPS"
+      ],
+      "OPERATIONAL SERVICES": [
+        "OPERATIONS: MANUFACTURING EXECUTION",
+        "OPERATIONS: QUALITY - INTERNAL: PROFESSIONAL SERVICES",
+        "OPERATIONS: QUALITY - SUPPLIER: PROFESSIONAL SERVICES",
+        "OPERATIONS: SUPPLY CHAIN: DATA COLLECTION AND ANALYSIS",
+        "OPERATIONS: SUPPLY CHAIN: EXECUTION"
+      ],
+      "PROFESSIONAL SERVICES - OTHER": [
+        "PROFESSIONAL SERVICES - OTHER"
+      ],
+      "TRANSLATION SERVICES": [
+        "TRANSLATION SERVICES"
+      ]
+    },
+    "REAL ESTATE SERVICES": {
+      "REAL ESTATE SERVICES": [
+        "REAL ESTATE SERVICES"
+      ]
+    },
+    "TELECOM": {
+      "COMMUNICATIONS DEVICES AND ACCESSORIES": [
+        "COMMUNICATIONS DEVICES AND ACCESSORIES"
+      ],
+      "DATA OR VOICE - CELLULAR": [
+        "DATA OR VOICE - CELLULAR"
+      ],
+      "DATA OR VOICE - LAND LINES": [
+        "DATA OR VOICE - LAND LINES"
+      ],
+      "MULTIMEDIA NETWORK EQUIPMENT OR PLATFORMS AND ACCESSORIES": [
+        "MULTIMEDIA NETWORK EQUIPMENT OR PLATFORMS AND ACCESSORIES"
+      ],
+      "TELECOM OTHER": [
+        "TELECOM OTHER"
+      ]
+    },
+    "TRAVEL": {
+      "TRAVEL EXPENSE - UNALLOCATED": [
+        "TRAVEL EXPENSE - UNALLOCATED"
+      ],
+      "TRAVEL SERVICES": [
+        "AIR TRAVEL",
+        "GROUND TRANSPORTATION",
+        "HOTEL & LODGING",
+        "MEALS",
+        "MEETINGS & CONFERENCES",
+        "SPONSORED THIRD PARTY TRAVEL (CPM17 HIGH RISK CATEGORY)",
+        "TRAVEL AND FOOD AND LODGING AND ENTERTAINMENT SERVICES"
+      ]
+    }
+  },
+  "INTERCOMPANY": {
+    "INTERCOMPANY": {
+      "INTERCOMPANY": [
+        "INTERCOMPANY"
+      ]
+    }
+  },
+  "OUT OF SCOPE": {
+    "OUT OF SCOPE": {
+      "BANKING SERVICES": [
+        "BANKING SERVICES"
+      ],
+      "CHARITABLE DONATIONS": [
+        "CHARITABLE DONATIONS"
+      ],
+      "CUSTOMER PAYMENTS": [
+        "CUSTOMER PAYMENTS"
+      ],
+      "DISBURSEMENTS - OTHER": [
+        "DISBURSEMENTS - OTHER"
+      ],
+      "EMPLOYEE BENEFITS": [
+        "EMPLOYEE BENEFITS",
+        "EMPLOYEE INSURANCE"
+      ],
+      "EMPLOYEE PAYMENTS": [
+        "EMPLOYEE PAYMENTS"
+      ],
+      "GOVERNMENT FEES": [
+        "GOVERNMENT FEES"
+      ],
+      "PROFESSIONAL ASSOCIATIONS": [
+        "PROFESSIONAL ASSOCIATIONS"
+      ],
+      "SALES COMMISSIONS": [
+        "SALES COMMISSIONS"
+      ],
+      "TAXATION": [
+        "TAXATION"
+      ],
+      "TRADE UNIONS": [
+        "TRADE UNIONS"
+      ]
+    }
+  },
+  "SUBCON": {
+    "AESTHETICS/CAR DECORATION": {
+      "AESTHETICS/CAR DECORATION": [
+        "AESTHETICS/CAR DECORATION"
+      ]
+    },
+    "ANALYSIS/TESTING/CERTIFICATION": {
+      "ANALYSIS/TESTING/CERTIFICATION": [
+        "ANALYSIS/TESTING/CERTIFICATION"
+      ]
+    },
+    "ASBESTOS (ANALYSIS AND REMOVING)": {
+      "ASBESTOS (ANALYSIS AND REMOVING)": [
+        "ASBESTOS (ANALYSIS AND REMOVING)"
+      ]
+    },
+    "CARPENTER": {
+      "CARPENTER": [
+        "CARPENTER"
+      ]
+    },
+    "CLEANING (JOBSITE)": {
+      "CLEANING (JOBSITE)": [
+        "CLEANING (JOBSITE)"
+      ]
+    },
+    "CUSTOMER DIRECTED CONTRACT COST SHARING (PRO-RATED)": {
+      "CUSTOMER DIRECTED CONTRACT COST SHARING (PRO-RATED)": [
+        "CUSTOMER DIRECTED CONTRACT COST SHARING (PRO-RATED)"
+      ]
+    },
+    "DISASSEMBLY SCRAPPING AND TEARDOWN (LIFT/ESCALATOR)": {
+      "DISASSEMBLY SCRAPPING AND TEARDOWN (LIFT/ESCALATOR)": [
+        "DISASSEMBLY SCRAPPING AND TEARDOWN (LIFT/ESCALATOR)"
+      ]
+    },
+    "ELECTRICIAN": {
+      "ELECTRICIAN": [
+        "ELECTRICIAN"
+      ]
+    },
+    "ESCALATOR SPECIALIST (INSTALLATION/HANDLING/MAINTENANCE/VULCANIZATION)": {
+      "ESCALATOR SPECIALIST (INSTALLATION/HANDLING/MAINTENANCE/VULCANIZATION)": [
+        "ESCALATOR SPECIALIST (INSTALLATION/HANDLING/MAINTENANCE/VULCANIZATION)"
+      ]
+    },
+    "EXTRICATION/RESCUE": {
+      "EXTRICATION/RESCUE": [
+        "EXTRICATION/RESCUE"
+      ]
+    },
+    "GENERAL SUBCONTRACTOR": {
+      "GENERAL SUBCONTRACTOR": [
+        "GENERAL SUBCONTRACTOR"
+      ]
+    },
+    "GLAZIER (MIRROR, GLASS WALL)": {
+      "GLAZIER (MIRROR, GLASS WALL)": [
+        "GLAZIER (MIRROR, GLASS WALL)"
+      ]
+    },
+    "HOISTING, RIGGING": {
+      "HOISTING, RIGGING": [
+        "HOISTING, RIGGING"
+      ]
+    },
+    "HYDRAULIC (LIFT AND PLATEFORM INSTALLERS)": {
+      "HYDRAULIC (LIFT AND PLATEFORM INSTALLERS)": [
+        "HYDRAULIC (LIFT AND PLATEFORM INSTALLERS)"
+      ]
+    },
+    "JOBSITE SECURITY": {
+      "JOBSITE SECURITY": [
+        "JOBSITE SECURITY"
+      ]
+    },
+    "LIFT INSTALLER/INSTALLATION": {
+      "LIFT INSTALLER/INSTALLATION": [
+        "LIFT INSTALLER/INSTALLATION"
+      ]
+    },
+    "MAINTENANCE SERVICE (LIFT)": {
+      "MAINTENANCE SERVICE (LIFT)": [
+        "MAINTENANCE SERVICE (LIFT)"
+      ]
+    },
+    "MASONRY": {
+      "MASONRY": [
+        "MASONRY"
+      ]
+    },
+    "MATERIAL HANDLING": {
+      "MATERIAL HANDLING": [
+        "MATERIAL HANDLING"
+      ]
+    },
+    "MEASUREMENT ON JOBSITE": {
+      "MEASUREMENT ON JOBSITE": [
+        "MEASUREMENT ON JOBSITE"
+      ]
+    },
+    "METAL WORK": {
+      "METAL WORK": [
+        "METAL WORK"
+      ]
+    },
+    "MODERNIZATION (LIFT MODERNIZER)": {
+      "MODERNIZATION (LIFT MODERNIZER)": [
+        "MODERNIZATION (LIFT MODERNIZER)"
+      ]
+    },
+    "MOTOR REWINDINGS": {
+      "MOTOR REWINDINGS": [
+        "MOTOR REWINDINGS"
+      ]
+    },
+    "NON-OTIS NE SUPPLY AND INSTALL": {
+      "NON-OTIS NE SUPPLY AND INSTALL": [
+        "NON-OTIS NE SUPPLY AND INSTALL"
+      ]
+    },
+    "OTHER": {
+      "OTHER": [
+        "OTHER"
+      ]
+    },
+    "PAINTER": {
+      "PAINTER": [
+        "PAINTER"
+      ]
+    },
+    "PEDESTRIAN GATE/DOORS": {
+      "PEDESTRIAN GATE/DOORS": [
+        "PEDESTRIAN GATE/DOORS"
+      ]
+    },
+    "SCAFFOLDER": {
+      "SCAFFOLDER": [
+        "SCAFFOLDER"
+      ]
+    },
+    "TILER": {
+      "TILER": [
+        "TILER"
+      ]
+    }
+  }
+}
