@@ -318,9 +318,8 @@
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>State Code</label>
-              <select name="addr_state" required>
-                <option value="">-- Select --</option>
-                <% (lookups.tableByNum(39) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
+              <select name="addr_state" required data-state-for="addr_country">
+                <option value="">-- Select country first --</option>
               </select>
             </div>
             <div class="vob-field">
@@ -329,10 +328,37 @@
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Country</label>
-              <select name="addr_country" required>
+              <select name="addr_country" required data-country-name>
                 <option value="">-- Select --</option>
-                <% (lookups.tableByNum(38) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
+                <% lookups.COUNTRIES_FULL.forEach(function (c) { %>
+                  <option value="<%= c.name %>"><%= c.flag %>  <%= c.name %></option>
+                <% }) %>
               </select>
+              <script id="country-states-data" type="application/json"><%- JSON.stringify(lookups.COUNTRY_STATES) %></script>
+              <script>
+              (function () {
+                var states = JSON.parse(document.getElementById('country-states-data').textContent || '{}');
+                var countrySel = document.querySelector('[data-country-name]');
+                var stateSel   = document.querySelector('[data-state-for="addr_country"]');
+                if (!countrySel || !stateSel) return;
+                function fill(sel, opts, placeholder) {
+                  sel.innerHTML =
+                    '<option value="">' + placeholder + '</option>' +
+                    opts.map(function (o) { return '<option>' + o.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</option>'; }).join('');
+                }
+                function refresh() {
+                  var country = countrySel.value;
+                  var list = states[country] || [];
+                  if (list.length) {
+                    fill(stateSel, list, '-- Select state / region --');
+                  } else {
+                    fill(stateSel, [], country ? '(No subdivisions for this country)' : '-- Select country first --');
+                  }
+                }
+                countrySel.addEventListener('change', refresh);
+                if (countrySel.value) refresh();
+              })();
+              </script>
             </div>
             <div class="vob-field">
               <label>County Code</label>
