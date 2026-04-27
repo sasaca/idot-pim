@@ -550,7 +550,8 @@
             </div>
             <div class="vob-field">
               <label>DUNS #</label>
-              <input type="text" name="duns" placeholder="9-digit DUNS">
+              <input type="text" name="duns" data-duns inputmode="numeric" maxlength="11" placeholder="9-digit DUNS">
+              <div class="duns-error" style="font-size:12px;margin-top:4px;color:#6b7280;"></div>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>ERP Instance</label>
@@ -629,6 +630,39 @@
             taxInput.addEventListener('blur', validate);
             // Initialize label from default rule on first render.
             setLabel(rulesForCountry());
+          })();
+          </script>
+
+          <!-- DUNS # validation. D&B issues 9-digit numeric identifiers; we
+               accept hyphens / spaces in input but require exactly 9 digits
+               after stripping. Applies to both DUNS and Parent DUNS fields. -->
+          <script>
+          (function () {
+            document.querySelectorAll('[data-duns]').forEach(function (input) {
+              var errorEl = input.parentElement.querySelector('.duns-error');
+              function validate() {
+                var raw = (input.value || '').trim();
+                var digits = raw.replace(/[\s-]/g, '');
+                if (!raw) {
+                  input.style.borderColor = '';
+                  if (errorEl) { errorEl.textContent = ''; errorEl.style.color = '#6b7280'; }
+                  return;
+                }
+                var ok = /^\d{9}$/.test(digits);
+                if (ok) {
+                  input.style.borderColor = '';
+                  if (errorEl) { errorEl.textContent = ''; errorEl.style.color = '#6b7280'; }
+                } else {
+                  input.style.borderColor = '#fca5a5';
+                  if (errorEl) {
+                    errorEl.textContent = 'DUNS # must be exactly 9 digits (got ' + digits.length + ').';
+                    errorEl.style.color = '#b91c1c';
+                  }
+                }
+              }
+              input.addEventListener('input', validate);
+              input.addEventListener('blur', validate);
+            });
           })();
           </script>
 
@@ -798,7 +832,11 @@
           <div class="section-title">Parent / customer references</div>
           <div class="vob-grid">
             <div class="vob-field"><label>Parent Number</label><input type="text" name="parent_number"></div>
-            <div class="vob-field"><label>Parent DUNS #</label><input type="text" name="parent_duns"></div>
+            <div class="vob-field">
+              <label>Parent DUNS #</label>
+              <input type="text" name="parent_duns" data-duns inputmode="numeric" maxlength="11" placeholder="9-digit DUNS">
+              <div class="duns-error" style="font-size:12px;margin-top:4px;color:#6b7280;"></div>
+            </div>
             <div class="vob-field"><label>Customer Account Number</label><input type="text" name="customer_account_number"></div>
             <div class="vob-field"><label>E Invoice Vendor Onboarding Date</label><input type="date" name="e_invoice_onboarding_date"></div>
           </div>
