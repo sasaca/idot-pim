@@ -1,0 +1,8 @@
+{
+  "North America":  ["North America", "Caribbean"],
+  "South America":  ["Latin America"],
+  "Africa":         ["Northern Africa", "Sub-Saharan Africa"],
+  "Europe":         ["Western Europe", "Southern Europe", "Northern Europe", "Eastern Europe"],
+  "Asia":           ["Central Asia", "Eastern Asia", "South Eastern Asia", "Southern Asia", "Western Asia"],
+  "Oceania":        ["Australia & New Zealand"]
+}

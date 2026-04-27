@@ -541,17 +541,41 @@
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Requestor's Legal Entity Region</label>
-              <select name="requestor_legal_entity_region" required>
+              <select name="requestor_legal_entity_region" required data-region>
                 <option value="">-- Select --</option>
                 <% (lookups.tableByNum(91) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Requestor's Subregion</label>
-              <select name="requestor_subregion" required>
-                <option value="">-- Select --</option>
-                <% (lookups.tableByNum(92) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
+              <select name="requestor_subregion" required data-subregion-for="region">
+                <option value="">-- Select region first --</option>
               </select>
+              <script id="region-subregions-data" type="application/json"><%- JSON.stringify(lookups.REGION_SUBREGIONS) %></script>
+              <script>
+              (function () {
+                var map = JSON.parse(document.getElementById('region-subregions-data').textContent || '{}');
+                var regionSel = document.querySelector('[data-region]');
+                var subSel    = document.querySelector('[data-subregion-for="region"]');
+                if (!regionSel || !subSel) return;
+                function fill(sel, opts, placeholder) {
+                  sel.innerHTML =
+                    '<option value="">' + placeholder + '</option>' +
+                    opts.map(function (o) { return '<option>' + o.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</option>'; }).join('');
+                }
+                function refresh() {
+                  var region = regionSel.value;
+                  var list = map[region] || [];
+                  if (list.length) {
+                    fill(subSel, list, '-- Select subregion --');
+                  } else {
+                    fill(subSel, [], region ? '(No subregions defined)' : '-- Select region first --');
+                  }
+                }
+                regionSel.addEventListener('change', refresh);
+                if (regionSel.value) refresh();
+              })();
+              </script>
             </div>
           </div>
         </div>
