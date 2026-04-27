@@ -1,0 +1,1976 @@
+{
+  "fields": [
+    {
+      "label": "iDOT WF ID",
+      "form": "Business Requestor - Workflow Details",
+      "data_type": "String",
+      "length": "Pending",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Request Type",
+      "form": "Business Requestor - Workflow Details",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 88",
+      "table_num": 88
+    },
+    {
+      "label": "Legacy Address ID",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Drop Down",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "hide"
+      },
+      "ref_table_raw": "Table 55",
+      "table_num": 55
+    },
+    {
+      "label": "Supplier Legal Name",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "ERP Instance",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "Pending",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 94",
+      "table_num": 94
+    },
+    {
+      "label": "DUNS #",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "9",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Supplier Tax ID",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Category Level 1",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "12",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Refer to Taxonomy Tab",
+      "table_num": null
+    },
+    {
+      "label": "Category Level 2",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "7",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Refer to Taxonomy Tab",
+      "table_num": null
+    },
+    {
+      "label": "Category Level 3",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "91",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Refer to Taxonomy Tab",
+      "table_num": null
+    },
+    {
+      "label": "Category Level 4",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "91",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Refer to Taxonomy Tab",
+      "table_num": null
+    },
+    {
+      "label": "Commodity Code",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 28",
+      "table_num": 28
+    },
+    {
+      "label": "Address Line Details (Line 1)",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Address Line Details (Line 2)",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Address Line Details (Line 3)",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Address Line Details (Line 4)",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "City Code",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "25",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "State Code",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 39",
+      "table_num": 39
+    },
+    {
+      "label": "ZIP Code",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "12",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "County Code",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "25",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 4",
+      "table_num": 4
+    },
+    {
+      "label": "Country Code",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 38",
+      "table_num": 38
+    },
+    {
+      "label": "Effective date - address creation date",
+      "form": "Business Requestor - Basic Supplier Information",
+      "data_type": "Date",
+      "length": "8",
+      "field_type": "Autopopulated",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Requestor's Name",
+      "form": "Business Requestor - Requestor Information",
+      "data_type": "String",
+      "length": "8",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Requestor's Email",
+      "form": "Business Requestor - Requestor Information",
+      "data_type": "String",
+      "length": "256",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Requestor's Department",
+      "form": "Business Requestor - Requestor Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 34",
+      "table_num": 34
+    },
+    {
+      "label": "Requestor's Legal Entity",
+      "form": "Business Requestor - Requestor Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Requestor's Legal Entity Region",
+      "form": "Business Requestor - Requestor Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 91",
+      "table_num": 91
+    },
+    {
+      "label": "Requestor's Sub Region",
+      "form": "Business Requestor - Requestor Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 92",
+      "table_num": 92
+    },
+    {
+      "label": "Line of Business",
+      "form": "Supplier Primary Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 27",
+      "table_num": 27
+    },
+    {
+      "label": "Country where work will be performed",
+      "form": "Business Requestor - Requestor Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 38",
+      "table_num": 38
+    },
+    {
+      "label": "Secondary Alpha Name",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Parent Number",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Search type",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 2",
+      "table_num": 2
+    },
+    {
+      "label": "Business Unit",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "12",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Company Code",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "5",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Customer Account Number",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "Pending",
+      "field_type": "Pending",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Account Number with Supplier",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "20",
+      "field_type": "Free Text",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Old Account Number with Supplier",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "20",
+      "field_type": "Free Text",
+      "mandatory": "Conditionally Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Obj / Subject Account",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "20",
+      "field_type": "Drop Down",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 90",
+      "table_num": 90
+    },
+    {
+      "label": "Factory or Field",
+      "form": "Business Requestor - Supplier Information",
+      "data_type": "String",
+      "length": "7",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "\"factory\" / \" Field\"",
+      "table_num": null
+    },
+    {
+      "label": "Currency Code",
+      "form": "Business Requestor - Payment Details",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 43",
+      "table_num": 43
+    },
+    {
+      "label": "Parent Duns #",
+      "form": "Business Requestor - Payment Details",
+      "data_type": "Numeric",
+      "length": "9",
+      "field_type": "Autopopulated",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "Hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "AP Payment Terms",
+      "form": "Business Requestor - Payment Details",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 44\n(Table To be updated-  Prox 9 & Other Terms [User Free Text])",
+      "table_num": 44
+    },
+    {
+      "label": "High level classifcation - (PO/NONPO/Mixed)",
+      "form": "Business Requestor - Payment Details",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "(PO/NONPO/Mixed)",
+      "table_num": null
+    },
+    {
+      "label": "E Invoice vendor onboarding date",
+      "form": "Business Requestor - Payment Details",
+      "data_type": "Date",
+      "length": "15",
+      "field_type": "Autopopulated",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "E Invoice Flag",
+      "form": "Business Requestor - Payment Details",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes / No",
+      "table_num": null
+    },
+    {
+      "label": "Supplier Primary Contact Name",
+      "form": "Business Requestor - Supplier Contact Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Supplier Primary Contact Email Address",
+      "form": "Business Requestor - Supplier Contact Information",
+      "data_type": "String",
+      "length": "256",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Supplier Primary Contact Phone Number",
+      "form": "Business Requestor - Supplier Contact Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "Display Only",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "1099 Reportable",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "Does this Supplier present a conflict of interest?",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "Diverse/Small Business Classification",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "ASN / ERS supplier",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "1",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "ASN / ERS",
+      "table_num": null
+    },
+    {
+      "label": "Will employees or representatives of the supplier perform work at an Otis site (Factory, office, warehouse, etc.)(It does not matter if the Otis site is owned, leased, rented, etc.)?",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "If yes, will the employee or representatives of the supplier perform physical work?  (Some examples of physical work include:  climbing a ladder, installing equipment, hoisting, lifting, etc.)",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "91",
+      "field_type": "Free Text",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Free Text",
+      "table_num": null
+    },
+    {
+      "label": "Terms for International/Canadian/Foreign Shipments (INCOTERMS)",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "8",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 89",
+      "table_num": 89
+    },
+    {
+      "label": "Is Otis Importer of Record (handling customs documentation)",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "Is supplier C-TPAT certified, or a member of an equivalent country cargo security program (ex. PIP, AEO)?",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "Verify Independent VMF is complete",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "Will this be a one-time activity (job specific)?",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "DO YOU ALREADY HAVE A VENDOR WHICH PROVIDES THIS SAME SERVICE / PRODUCT?",
+      "form": "Business Requestor- Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Editable",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "Payment Instrument",
+      "form": "Vendor- Payment Information",
+      "data_type": "String",
+      "length": "1",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 45",
+      "table_num": 45
+    },
+    {
+      "label": "Additional Tax ID",
+      "form": "Vendor- Payment Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Bank Transit No.",
+      "form": "Vendor -Banking Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Bank Account No.",
+      "form": "Vendor -Banking Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Refer to Banking  Validation Tab",
+      "table_num": null
+    },
+    {
+      "label": "IBAN",
+      "form": "Vendor -Banking Information",
+      "data_type": "String",
+      "length": "34",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Refer to Banking  Validation Tab",
+      "table_num": null
+    },
+    {
+      "label": "Bank Name",
+      "form": "Vendor -Banking Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "SWIFT Code",
+      "form": "Vendor -Banking Information",
+      "data_type": "String",
+      "length": "15",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Refer to Banking  Validation Tab",
+      "table_num": null
+    },
+    {
+      "label": "Bank Country Code",
+      "form": "Vendor -Banking Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 38",
+      "table_num": 38
+    },
+    {
+      "label": "Supplier Attribute",
+      "form": "Supplier Primary Information",
+      "data_type": "String",
+      "length": "15",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "WHQ, Country HQ, Business Unit, Intercompany, Local Vendor or Regional HQ",
+      "table_num": null
+    },
+    {
+      "label": "Remit to Country",
+      "form": "Vendor - Remit to Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 38",
+      "table_num": 38
+    },
+    {
+      "label": "Remit to State",
+      "form": "Vendor - Remit to Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 39",
+      "table_num": 39
+    },
+    {
+      "label": "Remit to Address",
+      "form": "Vendor - Remit to Information",
+      "data_type": "String",
+      "length": "8",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Remit to Postal code",
+      "form": "Vendor - Remit to Information",
+      "data_type": "Numeric",
+      "length": "12",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Remit to Supplier Email",
+      "form": "Vendor - Remit to Information",
+      "data_type": "String",
+      "length": "256",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Supplier email to receive OTIS PO",
+      "form": "Vendor - Remit to Information",
+      "data_type": "String",
+      "length": "256",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "manufacturing  Address",
+      "form": "Vendor - Manufacturing Address",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "manufacturing  City",
+      "form": "Vendor - Manufacturing Address",
+      "data_type": "String",
+      "length": "25",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "manufacturing  State",
+      "form": "Vendor - Manufacturing Address",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 39",
+      "table_num": 39
+    },
+    {
+      "label": "manufacturing  Postal code",
+      "form": "Vendor - Manufacturing Address",
+      "data_type": "String",
+      "length": "12",
+      "field_type": "Free Text",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "manufacturing  Country",
+      "form": "Vendor - Manufacturing Address",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Editable",
+        "SC": "Display Only",
+        "VA": "Display Only"
+      },
+      "ref_table_raw": "Table 38",
+      "table_num": 38
+    },
+    {
+      "label": "AP G/L Class",
+      "form": "Vendor Admin- Payment Information",
+      "data_type": "String",
+      "length": "4",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 42",
+      "table_num": 42
+    },
+    {
+      "label": "Factor/Special Payee",
+      "form": "Vendor Admin- Payment Information",
+      "data_type": "Numeric",
+      "length": "8",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Tax Rate Area",
+      "form": "Vendor Admin- Payment Information",
+      "data_type": "String",
+      "length": "1",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 46",
+      "table_num": 46
+    },
+    {
+      "label": "Tax Explanation Code",
+      "form": "Vendor Admin- Payment Information",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 47",
+      "table_num": 47
+    },
+    {
+      "label": "Tax Authority for A/P Withholding",
+      "form": "Vendor Admin- Payment Information",
+      "data_type": "Numeric",
+      "length": "8",
+      "field_type": "Free Text",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Withholding Percent",
+      "form": "Tax & Payment Information",
+      "data_type": "Numeric",
+      "length": "5",
+      "field_type": "Free Text",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "0-100%",
+      "table_num": null
+    },
+    {
+      "label": "Address Type - Payables",
+      "form": "Vendor Admin- Payment Information",
+      "data_type": "String",
+      "length": "1",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 6",
+      "table_num": 6
+    },
+    {
+      "label": "Reporting Code\n(Otis France & North America)",
+      "form": "Tax & Payment Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 85",
+      "table_num": 85
+    },
+    {
+      "label": "Financial Soundness Verified",
+      "form": "Vendor Admin - Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "MK Denial Verified",
+      "form": "Vendor Admin - Compliance Information",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Yes/No",
+      "table_num": null
+    },
+    {
+      "label": "Record Type",
+      "form": "Vendor Admin- Banking Information",
+      "data_type": "String",
+      "length": "1",
+      "field_type": "Autopopulated",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Send Method (Customer & Supplier)",
+      "form": "Vendor Admin- Banking Information",
+      "data_type": "String",
+      "length": "1",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 75",
+      "table_num": 75
+    },
+    {
+      "label": "Person / Corporation Code",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "1",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 3",
+      "table_num": 3
+    },
+    {
+      "label": "Sampling%",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table  3",
+      "table_num": 3
+    },
+    {
+      "label": "IMS Integration - Prefix code",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 8",
+      "table_num": 8
+    },
+    {
+      "label": "IMS Integration - Site Code",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Conditionally Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 81",
+      "table_num": 81
+    },
+    {
+      "label": "Hold Payment Code",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Mandatory",
+      "jde_critical": "Critical",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 86",
+      "table_num": 86
+    },
+    {
+      "label": "Hold Order Code",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Table 87",
+      "table_num": 87
+    },
+    {
+      "label": "Default Expense Type",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Evaluated Reciepts",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "",
+      "length": "",
+      "field_type": "",
+      "mandatory": "",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Address Book Category Codes 14",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Address Book Category Codes 15",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Address Book Category Codes 16 / Same as above",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Address Book Category Codes 17",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Address Book Category Codes 21 - AP commodity code",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Address Book Category Codes 22 - Supplier Rating",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Address Book Category Codes 24 - Minority owned",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "3",
+      "field_type": "Drop Down",
+      "mandatory": "Optional",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "Pending",
+      "table_num": null
+    },
+    {
+      "label": "Source Type",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Autopopulated"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Program ID",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "50",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Autopopulated"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "Date & TIme",
+      "form": "Vendor Admin-Additional ERP Fields",
+      "data_type": "String",
+      "length": "50",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "hide",
+        "VA": "Autopopulated"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "ERP Update Status",
+      "form": "Vendor Admin- ERP Response",
+      "data_type": "String",
+      "length": "2",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Display Only",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "ERP Update Status Description",
+      "form": "Vendor Admin- ERP Response",
+      "data_type": "String",
+      "length": "256",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Display Only",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "ERP Supplier  ID for new supplier",
+      "form": "Vendor Admin- ERP Response",
+      "data_type": "String",
+      "length": "8",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Display Only",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "ERP Supplier Creation Date",
+      "form": "Vendor Admin- ERP Response",
+      "data_type": "Date",
+      "length": "8",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "Hide",
+        "SC": "Hide",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    },
+    {
+      "label": "K2 Date",
+      "form": "Vendor Admin- ERP Response",
+      "data_type": "Date",
+      "length": "8",
+      "field_type": "Autopopulated",
+      "mandatory": "Mandatory",
+      "jde_critical": "No",
+      "perms": {
+        "R": "Hide",
+        "V": "hide",
+        "SC": "Display Only",
+        "VA": "Editable"
+      },
+      "ref_table_raw": "",
+      "table_num": null
+    }
+  ]
+}

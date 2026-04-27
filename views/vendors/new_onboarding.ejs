@@ -320,8 +320,7 @@
               <label><span class="req">*</span>State Code</label>
               <select name="addr_state" required>
                 <option value="">-- Select --</option>
-                <option value="00">00 - Blank</option>
-                <!-- TODO: populate state list -->
+                <% (lookups.tableByNum(39) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
@@ -332,17 +331,7 @@
               <label><span class="req">*</span>Country</label>
               <select name="addr_country" required>
                 <option value="">-- Select --</option>
-                <option>United States</option>
-                <option>Canada</option>
-                <option>Mexico</option>
-                <option>United Kingdom</option>
-                <option>Germany</option>
-                <option>France</option>
-                <option>India</option>
-                <option>China</option>
-                <option>Japan</option>
-                <option>Brazil</option>
-                <option>Other</option>
+                <% (lookups.tableByNum(38) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
@@ -409,7 +398,10 @@
             </div>
             <div class="vob-field">
               <label>Supplier Nature</label>
-              <select name="supplier_nature"><option value="">-- Select --</option></select>
+              <select name="supplier_nature">
+                <option value="">-- Select --</option>
+                <% (lookups.madeUp('supplier_attribute') || []).forEach(function (o) { %><option><%= o %></option><% }) %>
+              </select>
             </div>
           </div>
 
@@ -427,11 +419,7 @@
               <label><span class="req">*</span>ERP Instance</label>
               <select name="erp_instance" required>
                 <option value="">-- Select --</option>
-                <option>JDE:EUR</option>
-                <option>JDE:NA</option>
-                <option>SAP:EMEA</option>
-                <option>SAP:APAC</option>
-                <option>SAP:NA</option>
+                <% (lookups.tableByNum(94) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
           </div>
@@ -491,22 +479,14 @@
               <label><span class="req">*</span>Requestor's Legal Entity Region</label>
               <select name="requestor_legal_entity_region" required>
                 <option value="">-- Select --</option>
-                <option>North America</option>
-                <option>EMEA</option>
-                <option>APAC</option>
-                <option>LATAM</option>
+                <% (lookups.tableByNum(91) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Requestor's Subregion</label>
               <select name="requestor_subregion" required>
                 <option value="">-- Select --</option>
-                <option>North America</option>
-                <option>South America</option>
-                <option>Western Europe</option>
-                <option>Eastern Europe</option>
-                <option>MEA</option>
-                <option>APAC</option>
+                <% (lookups.tableByNum(92) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
           </div>
@@ -525,16 +505,22 @@
               <label><span class="req">*</span>Line of Business</label>
               <select name="line_of_business" required>
                 <option value="">-- Select --</option>
-                <option>Global</option><option>Regional</option><option>Local</option>
+                <% (lookups.tableByNum(27) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Company Code</label>
-              <select name="company_code" required><option value="">-- Select --</option></select>
+              <select name="company_code" required>
+                <option value="">-- Select --</option>
+                <% (lookups.madeUp('company_code') || []).forEach(function (o) { %><option><%= o %></option><% }) %>
+              </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Business Unit</label>
-              <select name="business_unit" required><option value="">-- Select --</option></select>
+              <select name="business_unit" required>
+                <option value="">-- Select --</option>
+                <% (lookups.madeUp('business_unit') || []).forEach(function (o) { %><option><%= o %></option><% }) %>
+              </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>Search Type</label>
@@ -547,25 +533,21 @@
               <label><span class="req">*</span>Currency Code</label>
               <select name="currency_code" required>
                 <option value="">-- Select --</option>
-                <option>USD</option><option>EUR</option><option>GBP</option>
-                <option>INR</option><option>CNY</option><option>JPY</option>
+                <% (lookups.tableByNum(43) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>AP Payment Terms</label>
               <select name="ap_payment_terms" required>
                 <option value="">-- Select --</option>
-                <option>Net 30 Days</option><option>Net 45 Days</option>
-                <option>Net 60 Days</option><option>Due on Receipt</option>
+                <% (lookups.tableByNum(44) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
               <label><span class="req">*</span>High Level Classification</label>
               <select name="high_level_classification" required>
                 <option value="">-- Select --</option>
-                <option>1 - INDIVIDUAL</option><option>2 - CORPORATION</option>
-                <option>3 - PARTNERSHIP</option><option>4 - LLC</option>
-                <option>5 - GOVERNMENT</option>
+                <% (lookups.madeUp('high_level_classification') || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">
@@ -606,8 +588,8 @@
               <label><span class="req">*</span>1099 Reportable</label>
               <select name="f_1099" required>
                 <option value="">-- Select --</option>
-                <option>A1 - Rents</option><option>A2 - Services</option>
-                <option>A3 - Other Income</option><option>N/A</option>
+                <option>Yes</option>
+                <option>No</option>
               </select>
             </div>
             <div class="vob-field">
@@ -655,12 +637,7 @@
               <label><span class="req">*</span>Terms for International/Canadian/Foreign Shipments (INCOTERMS)</label>
               <select name="incoterms" required>
                 <option value="">-- Select --</option>
-                <option>EXW - Ex Works</option><option>FCA - Free Carrier</option>
-                <option>CPT - Carriage Paid To</option><option>CIP - Carriage and Insurance Paid To</option>
-                <option>DAP - Delivered at Place</option><option>DPU - Delivered at Place Unloaded</option>
-                <option>DDP - Delivered Duty Paid</option><option>FAS - Free Alongside Ship</option>
-                <option>FOB - Free On Board</option><option>CFR - Cost and Freight</option>
-                <option>CIF - Cost, Insurance and Freight (Named Destination)</option>
+                <% (lookups.tableByNum(89) || []).forEach(function (o) { %><option><%= o %></option><% }) %>
               </select>
             </div>
             <div class="vob-field">

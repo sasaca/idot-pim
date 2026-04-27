@@ -6,6 +6,7 @@ const wf = require('../lib/workflow');
 const { dupCheckVendor, mkDenialCheck, dnbValidate } = require('../lib/duplicate');
 const { similarity, digitsOnly } = require('../lib/fuzzy');
 const workflowConfig = require('../lib/workflow_config');
+const lookups = require('../lib/vendor_lookups');
 const router = express.Router();
 
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads_store');
@@ -57,7 +58,7 @@ router.get('/:id', (req, res) => {
 
 // ---------- NEW (onboarding) ----------
 router.get('/new/onboarding', (req, res) => {
-  res.render('vendors/new_onboarding', { ref: loadRef() });
+  res.render('vendors/new_onboarding', { ref: loadRef(), lookups });
 });
 
 router.post('/new/onboarding', uploadOnboarding.any(), (req, res) => {

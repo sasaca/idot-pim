@@ -1,0 +1,98 @@
+{
+  "business_unit": [
+    "BU-EAS",
+    "BU-EMEA",
+    "BU-NA",
+    "BU-LATAM",
+    "BU-APAC"
+  ],
+  "company_code": [
+    "CC1000 — North America",
+    "CC2000 — EMEA",
+    "CC3000 — APAC",
+    "CC4000 — LATAM"
+  ],
+  "requestors_legal_entity": [
+    "Otis Elevator Company",
+    "Otis Worldwide Corporation",
+    "Otis Service Solutions",
+    "Other"
+  ],
+  "city_code": [],
+  "default_expense_type": [
+    "Operating",
+    "Capital",
+    "Travel",
+    "Services",
+    "Materials"
+  ],
+  "evaluated_receipts": [
+    "Yes",
+    "No"
+  ],
+  "address_book_category_codes_14_through_24": [
+    "CAT-A",
+    "CAT-B",
+    "CAT-C",
+    "CAT-D",
+    "CAT-E"
+  ],
+  "address_book_22_supplier_rating": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "N/A"
+  ],
+  "address_book_24_minority_owned": [
+    "Y - Yes",
+    "N - No",
+    "U - Unknown"
+  ],
+  "request_type": [
+    "New Vendor",
+    "Address change",
+    "Payment Terms Update",
+    "Change to other supplier data",
+    "Add new related / child",
+    "Bank changes only",
+    "Block / Unblock",
+    "Reactivate",
+    "Deactivate"
+  ],
+  "factory_or_field": [
+    "Factory",
+    "Field/Parts/Service Centers"
+  ],
+  "high_level_classification": [
+    "PO",
+    "NONPO",
+    "Mixed"
+  ],
+  "asn_ers": [
+    "ASN",
+    "ERS",
+    "Neither"
+  ],
+  "incoterms": [
+    "Cost/Freight (Named Destination) - CFR",
+    "Carriage Paid To (Named Destination) - CPT",
+    "Delivered at Place (Named Destination) - DAP",
+    "Delivered at Terminal (Named Port) - DAT",
+    "Free Carrier (Sellers Premises) 2010 Incoterm - FC1",
+    "Free Carrier ( Other Named Delivery) 2010 Incoterm -FC1",
+    "No International Shipments"
+  ],
+  "yesno": [
+    "Yes",
+    "No"
+  ],
+  "supplier_attribute": [
+    "WHQ",
+    "Country HQ",
+    "Business Unit",
+    "Intercompany",
+    "Local Vendor",
+    "Regional HQ"
+  ]
+}
