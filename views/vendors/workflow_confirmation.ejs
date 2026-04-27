@@ -53,13 +53,59 @@
       </div>
     </section>
   <% } else { %>
-    <section class="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-      <h2 class="text-lg font-semibold text-gray-900">Workflow in progress</h2>
-      <p class="mt-2 text-sm text-gray-600">
-        This vendor is currently at stage <strong><%= stateLabel %></strong>.
-        Come back once it reaches Confirmation.
-      </p>
-    </section>
+    <%
+      // If the user got here right after submitting, render a "Submitted"
+      // banner explaining where the work goes next. Map the action they just
+      // performed → friendly description.
+      var submittedFrom = (typeof query !== 'undefined' && query && query.from) ? String(query.from) : '';
+      var actionLabel = {
+        submit:               'Submitted for Supply Chain review',
+        sc_approve:           'Supply Chain approval recorded',
+        sc_reject:            'Supply Chain rejection recorded',
+        sc_request_info:      'Sent back to the requestor for more information',
+        resubmit:             'Resubmitted for Supply Chain review',
+        supplier_submit:      'Supplier form submitted',
+        vendor_admin_submit:  'Vendor Admin form submitted',
+        legal_approve:        'Legal approval recorded — onboarding complete',
+        legal_reject:         'Legal rejection recorded',
+      }[submittedFrom];
+    %>
+    <% if (submittedFrom && actionLabel) { %>
+      <section class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+        <div class="flex items-start gap-3">
+          <span class="text-emerald-600 text-2xl">✓</span>
+          <div class="flex-1">
+            <h2 class="text-lg font-semibold text-emerald-900"><%= actionLabel %></h2>
+            <p class="mt-1 text-sm text-emerald-800">
+              <strong><%= vendor.legal_name || ('Vendor #' + vendor.id) %></strong>
+              is now at stage
+              <span class="ml-1 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                <%= stateLabel %>
+              </span>.
+            </p>
+          </div>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <a href="/requests" class="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+            Back to Requests
+          </a>
+          <a href="/vendors/queue" class="rounded border border-emerald-200 bg-white px-4 py-2 text-sm text-emerald-800 hover:bg-emerald-100">
+            My queue
+          </a>
+          <a href="/vendors/<%= vendor.id %>" class="rounded border border-emerald-200 bg-white px-4 py-2 text-sm text-emerald-800 hover:bg-emerald-100">
+            View vendor record
+          </a>
+        </div>
+      </section>
+    <% } else { %>
+      <section class="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900">Workflow in progress</h2>
+        <p class="mt-2 text-sm text-gray-600">
+          This vendor is currently at stage <strong><%= stateLabel %></strong>.
+          Come back once it reaches Confirmation.
+        </p>
+      </section>
+    <% } %>
   <% } %>
 </main>
 

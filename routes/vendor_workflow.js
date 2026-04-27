@@ -127,9 +127,13 @@ module.exports = function makeRouter(db) {
     const note = String(req.body.comment || req.body.note || '').slice(0, 4000);
     applyTransition(vendor.id, result, req.user && req.user.id, result.role || primaryRole, note);
 
-    // Redirect to the next logical view.
-    const nextUrl = workflow.viewFor(result.nextState, vendor.id);
-    return res.redirect(nextUrl || `/vendors/${vendor.id}/workflow/confirmation`);
+    // Redirect to the workflow status page. Sending the user to the *next*
+    // stage's form (workflow.viewFor) used to bounce them onto a page their
+    // role can't open (e.g. the SC reviewer landing on /supplier → 403).
+    // The /confirmation page is unguarded by role and shows the current
+    // status to whoever just submitted — it tells them their action was
+    // recorded and which stage now owns the work.
+    return res.redirect(`/vendors/${vendor.id}/workflow/confirmation?from=${encodeURIComponent(result.action)}`);
   }
 
   function renderForm(view, req, res) {
