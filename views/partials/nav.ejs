@@ -23,7 +23,7 @@
       <% navItem('/vendors/forms', 'Vendor Forms', '📋', path === '/vendors/forms' || path.startsWith('/vendors/forms/')); %>
     <% } %>
     <% navItem('/customers', 'Customers', '☰', path.startsWith('/customers')); %>
-    <% navItem('/products', 'Product Requests', '◫', path === '/products' || path.startsWith('/products/workflow')); %>
+    <% navItem('/products', 'Product', '◫', path === '/products' || path.startsWith('/products/workflow') || path.startsWith('/products/dashboard')); %>
     <div class="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-slate-500">Insights</div>
     <% navItem('/reports', 'Reports', '▦', path.startsWith('/reports')); %>
     <% navItem('/forms',   'Forms',   '📝', path === '/forms' || path.startsWith('/forms/')); %>
