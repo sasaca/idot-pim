@@ -7,24 +7,47 @@
 
 <%- include('_product_tabs', { activeTab: 'dashboard' }) %>
 
-<!-- KPI Cards -->
-<section class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-  <%
-    var k = [
-      { label: 'Open requests',         v: kpi.open,         color: 'text-blue-600'    },
-      { label: 'Confirmed',             v: kpi.confirmed,    color: 'text-emerald-600' },
-      { label: 'Awaiting director',     v: kpi.awaiting_dir, color: 'text-amber-600'   },
-      { label: 'In R&D',                v: kpi.in_rnd,       color: 'text-violet-600'  },
-      { label: 'In Legal / MDM',        v: kpi.in_legal_mdm, color: 'text-indigo-600'  },
-      { label: 'Avg cycle (days)',      v: kpi.avg_cycle_days, color: 'text-slate-700' },
-    ];
-  %>
-  <% k.forEach(function (x) { %>
-    <div class="card card-body">
-      <div class="text-xs uppercase tracking-wider text-slate-500 mb-1"><%= x.label %></div>
-      <div class="text-3xl font-bold <%= x.color %>"><%= x.v %></div>
-    </div>
-  <% }); %>
+<!-- Top-level pipeline KPIs (process-flow first) -->
+<section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Open requests</div>
+    <div class="text-3xl font-bold text-blue-600"><%= kpi.open %></div>
+    <div class="text-xs text-slate-500 mt-1">Total in system: <%= kpi.total %></div>
+  </div>
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Confirmed (last 7 days)</div>
+    <div class="text-3xl font-bold text-emerald-600"><%= kpi.confirmed_7d %></div>
+    <div class="text-xs text-slate-500 mt-1">All-time confirmed: <%= kpi.confirmed %></div>
+  </div>
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Avg cycle time</div>
+    <div class="text-3xl font-bold text-slate-700"><%= kpi.avg_cycle_days %><span class="text-base font-normal text-slate-500"> days</span></div>
+    <div class="text-xs text-slate-500 mt-1">Confirmed requests, last 90d</div>
+  </div>
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Rejection rate</div>
+    <div class="text-3xl font-bold text-red-600"><%= kpi.rejection_rate %>%</div>
+    <div class="text-xs text-slate-500 mt-1">Rejected of all closed: <%= kpi.rejected %> / <%= kpi.confirmed + kpi.rejected %></div>
+  </div>
+</section>
+
+<!-- Bottleneck spotlight + work-in-progress breakdown -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+  <div class="card lg:col-span-1 card-body" style="background:linear-gradient(135deg,#eff6ff 0%,#fef3c7 100%);">
+    <div class="text-xs uppercase tracking-wider text-amber-700 mb-1">Current bottleneck</div>
+    <div class="text-xl font-bold text-amber-900 leading-tight"><%= kpi.bottleneck_label %></div>
+    <div class="text-3xl font-bold text-amber-700 mt-1"><%= kpi.bottleneck_count %><span class="text-base font-normal text-amber-700"> waiting</span></div>
+  </div>
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">In R&D</div>
+    <div class="text-3xl font-bold text-violet-600"><%= kpi.in_rnd %></div>
+    <div class="text-xs text-slate-500 mt-1">Production / Packaging / Design / BOM</div>
+  </div>
+  <div class="card card-body">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">In Legal / MDM</div>
+    <div class="text-3xl font-bold text-indigo-600"><%= kpi.in_legal_mdm %></div>
+    <div class="text-xs text-slate-500 mt-1">Awaiting Director: <%= kpi.awaiting_dir %></div>
+  </div>
 </section>
 
 <!-- My tasks + Quick actions -->
@@ -73,7 +96,24 @@
   </div>
 </section>
 
-<!-- Charts row -->
+<!-- Process-flow charts -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="font-semibold">Pipeline funnel</h3>
+      <span class="ml-auto text-xs text-slate-400">Distinct requests that have passed through each stage</span>
+    </div>
+    <div class="card-body"><canvas id="chartFunnel"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <h3 class="font-semibold">Avg dwell time per stage</h3>
+      <span class="ml-auto text-xs text-slate-400">Days a request waits before moving on</span>
+    </div>
+    <div class="card-body"><canvas id="chartDwell"></canvas></div>
+  </div>
+</section>
+
 <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
   <div class="card">
     <div class="card-header"><h3 class="font-semibold">Open requests by stage</h3></div>
@@ -84,8 +124,11 @@
     <div class="card-body"><canvas id="chartType"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-header"><h3 class="font-semibold">Submissions — last 30 days</h3></div>
-    <div class="card-body"><canvas id="chartVelocity"></canvas></div>
+    <div class="card-header">
+      <h3 class="font-semibold">Throughput — last 30 days</h3>
+      <span class="ml-auto text-xs text-slate-400">Submissions vs confirmations</span>
+    </div>
+    <div class="card-body"><canvas id="chartThroughput"></canvas></div>
   </div>
 </section>
 
@@ -154,12 +197,56 @@
 </main></div>
 
 <script>
-  // Pulled in from the server-side queries.
-  const byStage  = <%- JSON.stringify(byStage) %>;
-  const byType   = <%- JSON.stringify(byType) %>;
-  const velocity = <%- JSON.stringify(velocity) %>;
+  // Server-side query results.
+  const byStage       = <%- JSON.stringify(byStage) %>;
+  const byType        = <%- JSON.stringify(byType) %>;
+  const velocity      = <%- JSON.stringify(velocity) %>;
+  const confirmations = <%- JSON.stringify(confirmations) %>;
+  const dwell         = <%- JSON.stringify(dwell) %>;
+  const funnel        = <%- JSON.stringify(funnel) %>;
 
-  // 1) Open requests by stage — horizontal bar.
+  // 1) Pipeline funnel — distinct requests that have entered each stage.
+  new Chart(document.getElementById('chartFunnel'), {
+    type: 'bar',
+    data: {
+      labels: funnel.map(function (x) { return x.label; }),
+      datasets: [{
+        data: funnel.map(function (x) { return x.n; }),
+        backgroundColor: ['#1e40af','#3b82f6','#0ea5e9','#06b6d4','#14b8a6','#10b981','#84cc16','#22c55e'],
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (ctx) { return ctx.parsed.x + ' requests'; } } } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+    },
+  });
+
+  // 2) Avg dwell time per stage.
+  new Chart(document.getElementById('chartDwell'), {
+    type: 'bar',
+    data: {
+      labels: dwell.map(function (x) { return x.label; }),
+      datasets: [{
+        data: dwell.map(function (x) { return x.avg_days; }),
+        backgroundColor: '#f59e0b',
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) { var d = dwell[ctx.dataIndex]; return d.avg_days + ' days  (n=' + d.samples + ')'; },
+          },
+        },
+      },
+      scales: { x: { beginAtZero: true, title: { display: true, text: 'Days' } } },
+    },
+  });
+
+  // 3) Open requests by stage — current snapshot.
   new Chart(document.getElementById('chartStage'), {
     type: 'bar',
     data: {
@@ -173,7 +260,7 @@
     },
   });
 
-  // 2) Requests by type — doughnut.
+  // 4) Requests by type — doughnut.
   new Chart(document.getElementById('chartType'), {
     type: 'doughnut',
     data: {
@@ -186,20 +273,28 @@
     options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%' },
   });
 
-  // 3) Submission velocity — line over the last 30 days.
-  new Chart(document.getElementById('chartVelocity'), {
+  // 5) Throughput — submissions and confirmations side-by-side, last 30 days.
+  new Chart(document.getElementById('chartThroughput'), {
     type: 'line',
     data: {
       labels: velocity.map(function (x) { return x.day.slice(5); }),
-      datasets: [{
-        data: velocity.map(function (x) { return x.n; }),
-        borderColor: '#1e3a8a',
-        backgroundColor: 'rgba(30,58,138,0.1)',
-        tension: 0.3, fill: true, pointRadius: 2,
-      }],
+      datasets: [
+        {
+          label: 'Submitted',
+          data:  velocity.map(function (x) { return x.n; }),
+          borderColor: '#1e3a8a', backgroundColor: 'rgba(30,58,138,0.10)',
+          tension: 0.3, fill: true, pointRadius: 2,
+        },
+        {
+          label: 'Confirmed',
+          data:  confirmations.map(function (x) { return x.n; }),
+          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.10)',
+          tension: 0.3, fill: true, pointRadius: 2,
+        },
+      ],
     },
     options: {
-      plugins: { legend: { display: false } },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
       scales:  { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 10 } } } },
     },
   });

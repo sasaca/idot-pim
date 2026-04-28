@@ -1280,6 +1280,20 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       mine_open:    userId ? cnt(`requestor_user_id = ? AND ${open}`, userId) : 0,
     };
 
+    // Confirmations and rejections in the last 7 days — proxy for throughput.
+    kpi.confirmed_7d = db.prepare(`
+      SELECT COUNT(*) c FROM product_requests
+       WHERE workflow_state='CONFIRMED' AND workflow_updated_at > datetime('now','-7 days')
+    `).get().c;
+    kpi.rejected_7d = db.prepare(`
+      SELECT COUNT(*) c FROM product_requests
+       WHERE workflow_state='REJECTED' AND workflow_updated_at > datetime('now','-7 days')
+    `).get().c;
+
+    // Rejection rate over closed requests (CONFIRMED + REJECTED).
+    const closedTotal = kpi.confirmed + kpi.rejected;
+    kpi.rejection_rate = closedTotal > 0 ? Math.round((kpi.rejected / closedTotal) * 1000) / 10 : 0;
+
     // Average cycle time (days) for confirmed requests in the last 90 days.
     const cycleRows = db.prepare(`
       SELECT julianday(workflow_updated_at) - julianday(created_at) AS days
@@ -1304,6 +1318,11 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       n:     r.n,
     }));
 
+    // Bottleneck = the open state with the most requests stacked up.
+    const bottleneck = byStage.reduce((m, r) => (r.n > (m ? m.n : 0) ? r : m), null);
+    kpi.bottleneck_label = bottleneck ? bottleneck.label : 'None';
+    kpi.bottleneck_count = bottleneck ? bottleneck.n     : 0;
+
     const byType = db.prepare(`
       SELECT request_type AS type, COUNT(*) n
         FROM product_requests
@@ -1318,9 +1337,16 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
        GROUP BY date(created_at)
        ORDER BY day ASC
     `).all();
-    // Backfill missing days so the chart renders a continuous x-axis.
-    const fullVelocity = (function () {
-      const m = velocity.reduce((acc, r) => { acc[r.day] = r.n; return acc; }, {});
+    // Confirmation throughput per day for the last 30 days.
+    const confirmThroughput = db.prepare(`
+      SELECT date(workflow_updated_at) AS day, COUNT(*) n
+        FROM product_requests
+       WHERE workflow_state='CONFIRMED' AND workflow_updated_at > datetime('now','-30 days')
+       GROUP BY date(workflow_updated_at)
+       ORDER BY day ASC
+    `).all();
+    function backfill(rows) {
+      const m = rows.reduce((acc, r) => { acc[r.day] = r.n; return acc; }, {});
       const out = [];
       const today = new Date();
       for (let i = 29; i >= 0; i--) {
@@ -1329,6 +1355,64 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
         out.push({ day: key, n: m[key] || 0 });
       }
       return out;
+    }
+    const fullVelocity      = backfill(velocity);
+    const fullConfirmations = backfill(confirmThroughput);
+
+    // Avg dwell time per stage. Uses LAG() over each request's history with
+    // product_requests.created_at as the entry timestamp for the FIRST stage.
+    const dwellRows = db.prepare(`
+      WITH ordered AS (
+        SELECT h.id, h.product_req_id, h.from_state,
+               h.created_at AS exit_at,
+               COALESCE(
+                 LAG(h.created_at) OVER (PARTITION BY h.product_req_id ORDER BY h.id),
+                 pr.created_at
+               ) AS enter_at
+          FROM product_workflow_history h
+          JOIN product_requests pr ON pr.id = h.product_req_id
+      )
+      SELECT from_state AS state,
+             AVG(julianday(exit_at) - julianday(enter_at)) AS avg_days,
+             COUNT(*) AS samples
+        FROM ordered
+       GROUP BY from_state
+    `).all().map((r) => ({
+      state:    r.state,
+      label:    productWorkflow.STATE_LABELS[r.state] || r.state,
+      avg_days: Math.round((r.avg_days || 0) * 100) / 100,
+      samples:  r.samples,
+    }));
+
+    // Funnel — how many requests have ever PASSED THROUGH each state. We
+    // count distinct requests per from_state across the history, plus the
+    // CONFIRMED count for the final bar.
+    const funnelRows = db.prepare(`
+      SELECT from_state AS state, COUNT(DISTINCT product_req_id) n
+        FROM product_workflow_history
+       GROUP BY from_state
+    `).all();
+    const funnel = (function () {
+      // Display these stages in the canonical workflow order.
+      const order = [
+        'DRAFT',
+        'PENDING_MKTG_DIRECTOR',
+        'PENDING_SC_DIRECTOR',
+        'PENDING_PRODUCTION_AND_ANALYSIS',
+        'PENDING_BOM',
+        'PENDING_RND_AND_QUALITY_DIRECTORS',
+        'PENDING_LEGAL_AND_MDM',
+      ];
+      const m = funnelRows.reduce((acc, r) => { acc[r.state] = r.n; return acc; }, {});
+      return order.map((s) => ({
+        state: s,
+        label: productWorkflow.STATE_LABELS[s] || s,
+        n:     m[s] || 0,
+      })).concat([{
+        state: 'CONFIRMED',
+        label: productWorkflow.STATE_LABELS.CONFIRMED,
+        n:     kpi.confirmed,
+      }]);
     })();
 
     // Tasks the viewer's role can act on right now.
@@ -1392,7 +1476,10 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       kpi,
       byStage,
       byType,
-      velocity: fullVelocity,
+      velocity:        fullVelocity,
+      confirmations:   fullConfirmations,
+      dwell:           dwellRows,
+      funnel,
       myTasks,
       mySubmitted,
       recent,
