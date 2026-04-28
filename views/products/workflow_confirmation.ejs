@@ -18,11 +18,12 @@
       sc_request_info:              'Sent back to the requestor for more information',
       submit_production:            'Production submitted by R&D — Packaging Materials and Design are now open',
       submit_packaging_partial:     'Packaging Materials submitted by R&D — other tracks still pending',
-      submit_packaging_final:       'Packaging Materials submitted by R&D — request confirmed',
+      submit_packaging_final:       'Packaging Materials submitted — BOM selection now opens for R&D',
       submit_design_partial:        'Design submitted by R&D — other tracks still pending',
-      submit_design_final:          'Design submitted by R&D — request confirmed',
+      submit_design_final:          'Design submitted — BOM selection now opens for R&D',
       submit_competitor_partial:    'Competitor analysis submitted — other tracks still pending',
-      submit_competitor_final:      'Competitor analysis submitted — request confirmed',
+      submit_competitor_final:      'Competitor analysis submitted — BOM selection now opens for R&D',
+      submit_bom:                   'BOM submitted by R&D — request confirmed',
     }[fromAction];
   %>
 
@@ -108,7 +109,20 @@
     </section>
   <% } %>
 
-  <% if (['PENDING_PRODUCTION_AND_ANALYSIS','CONFIRMED','REJECTED'].includes(productRequest.workflow_state)) { %>
+  <% if (productRequest.workflow_state === 'PENDING_BOM') { %>
+    <section class="rounded-lg border border-blue-200 bg-blue-50 p-6 mt-4 shadow-sm">
+      <h2 class="text-lg font-semibold text-blue-900">Awaiting BOM selection</h2>
+      <p class="mt-2 text-sm text-blue-800">
+        All preliminary tracks are complete. R&amp;D needs to finalize the
+        Packaging and Formula BOMs before the request can be confirmed.
+      </p>
+      <% if (currentUser && (currentUser.role === 'RND_TEAM' || currentUser.role === 'MASTER_ADMIN')) { %>
+        <a href="/products/workflow/<%= productRequest.id %>/bom" class="mt-3 inline-block rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Open BOM tab →</a>
+      <% } %>
+    </section>
+  <% } %>
+
+  <% if (['PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM','CONFIRMED','REJECTED'].includes(productRequest.workflow_state)) { %>
     <div class="mt-6">
       <%- include('_readonly_view', { productRequest: productRequest, ref: ref, attachments: (typeof attachments !== 'undefined' ? attachments : []), designAttachments: (typeof designAttachments !== 'undefined' ? designAttachments : []) }) %>
     </div>

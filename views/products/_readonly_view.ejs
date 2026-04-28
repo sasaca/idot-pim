@@ -31,6 +31,8 @@ var pkmComp  = pkm.comparisons    || [];
 var dsn      = pr.design || {};
 var dsnAtts  = (typeof designAttachments !== 'undefined' && designAttachments) ? designAttachments : [];
 var dsnByCat = dsnAtts.reduce(function (m, a) { (m[a.category] = m[a.category] || []).push(a); return m; }, {});
+var bomPkgRO = pr.bomPackaging || [];
+var bomFrmRO = pr.bomFormula   || [];
 
 function show(v, fallback) {
   if (v === null || v === undefined || v === '' ) return fallback || '—';
@@ -515,5 +517,76 @@ function fmt(n) {
       <h3>Market trends</h3>
       <div class="ro-row full" style="border-bottom:none;"><span class="ro-value"><%= cmp.market_trends %></span></div>
     <% } %>
+  </div>
+<% } %>
+
+<% if (pr.bom_completed_at || bomPkgRO.length || bomFrmRO.length) { %>
+  <!-- 7) BOM Selection -->
+  <div class="ro-card">
+    <h2>7 · BOM Selection (R&amp;D)
+      <% if (pr.bom_completed_at) { %>
+        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.bom_completed_at %></span>
+      <% } else { %>
+        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
+      <% } %>
+    </h2>
+
+    <% function bomRoTable(label, rows) { %>
+      <h3><%= label %> (<%= rows.length %>)</h3>
+      <% if (!rows.length) { %>
+        <div style="padding:8px 0;color:#6b7280;font-size:12px;">No components.</div>
+      <% } else { %>
+        <table class="ro-fc-table">
+          <thead><tr>
+            <th style="text-align:left;">Source</th>
+            <th style="text-align:left;">Material #</th>
+            <th style="text-align:left;">Description</th>
+            <th style="text-align:left;">Category</th>
+            <th style="text-align:left;">Brand</th>
+            <th style="text-align:left;">Mat. Group</th>
+            <th>Type</th><th>UoM</th><th>Div.</th><th>Volume</th><th>Quantity</th>
+          </tr></thead>
+          <tbody>
+            <% rows.forEach(function (r) { %>
+              <tr>
+                <td style="text-align:left;">
+                  <span class="ro-pill" style="background:<%= r.source === 'NEW' ? '#fde68a' : (r.source === 'MASTER' ? '#dbeafe' : '#bbf7d0') %>; color:<%= r.source === 'NEW' ? '#92400e' : (r.source === 'MASTER' ? '#1e40af' : '#166534') %>;">
+                    <%= r.source %>
+                  </span>
+                </td>
+                <td style="text-align:left;font-family:ui-monospace,monospace;"><%= show(r.material_number) %></td>
+                <td style="text-align:left;"><%= show(r.material_description) %></td>
+                <td style="text-align:left;"><%= show(r.category_name) %></td>
+                <td style="text-align:left;"><%= show(r.brand) %></td>
+                <td style="text-align:left;"><%= show(r.material_group) %></td>
+                <td><%= show(r.material_type) %></td>
+                <td><%= show(r.base_uom) %></td>
+                <td><%= show(r.division) %></td>
+                <td><%= fmt(r.volume) %></td>
+                <td><%= fmt(r.quantity) %></td>
+              </tr>
+              <% if (r.source === 'NEW' && r.vendor) { %>
+                <tr>
+                  <td colspan="11" style="text-align:left;background:#fffbeb;font-size:11px;color:#92400e;padding:4px 10px;">
+                    Vendor: <strong><%= r.vendor.type %></strong>
+                    <% if (r.vendor.type === 'EXISTING') { %>
+                      · code <%= show(r.vendor.vendor_code) %>
+                    <% } else { %>
+                      · <%= show(r.vendor.name) %>
+                      <% if (r.vendor.contact) { %> · <%= r.vendor.contact %><% } %>
+                      <% if (r.vendor.email)   { %> · <%= r.vendor.email %><% } %>
+                      <% if (r.vendor.phone)   { %> · <%= r.vendor.phone %><% } %>
+                    <% } %>
+                  </td>
+                </tr>
+              <% } %>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    <% } %>
+
+    <%- bomRoTable('Packaging BOM', bomPkgRO) %>
+    <%- bomRoTable('Formula BOM',   bomFrmRO) %>
   </div>
 <% } %>

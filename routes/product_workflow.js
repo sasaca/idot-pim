@@ -56,8 +56,15 @@ const PACKAGING_MATERIALS    = loadJson('packaging_materials.json');
 const PACKAGING_COMPONENTS   = loadJson('packaging_components.json');
 const INCOTERMS              = loadJson('incoterms.json');
 const LANGUAGES              = loadJson('languages.json');
+const COMPONENT_MASTER       = loadJson('component_master.json');
 
 const labelExtract = require('../lib/label_extract');
+
+// Build a name → master-row index for fast prefill from a reference product.
+const COMPONENT_MASTER_BY_NAME = COMPONENT_MASTER.reduce((m, c) => {
+  m[c.material_description.toLowerCase()] = c;
+  return m;
+}, {});
 
 // Bundle reference data for views.
 function refData() {
@@ -77,6 +84,7 @@ function refData() {
     PACKAGING_COMPONENTS,
     INCOTERMS,
     LANGUAGES,
+    COMPONENT_MASTER,
     REJECT_REASONS: productWorkflow.REJECT_REASONS,
     INFO_REASONS:   productWorkflow.INFO_REASONS,
     STATE_LABELS:   productWorkflow.STATE_LABELS,
@@ -96,7 +104,14 @@ function decode(req) {
     packaging:        safeJson(req.packaging_json),
     design:           safeJson(req.design_json),
     competitor:       safeJson(req.competitor_json),
+    bomPackaging:     safeJsonArr(req.bom_packaging_json),
+    bomFormula:       safeJsonArr(req.bom_formula_json),
   });
+}
+
+function safeJsonArr(s) {
+  if (!s) return [];
+  try { const v = JSON.parse(s); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
 function safeJson(s) {
@@ -699,6 +714,140 @@ module.exports = function makeRouter(db) {
   }
 
   // -------------------------------------------------------------------------
+  // Stage 7 — BOM selection (R&D, after the four parallel flags fire).
+  // -------------------------------------------------------------------------
+  // Search the component master + every previously-submitted BOM row across
+  // all CONFIRMED requests. Used by the BOM tabs' typeahead.
+  router.get('/api/component-search', (req, res) => {
+    const q = String(req.query.q || '').toLowerCase().trim();
+    const cat = String(req.query.cat || '').toUpperCase();          // PACKAGING | FORMULA | (empty)
+    if (!q) return res.json({ results: [] });
+    const masterMatches = COMPONENT_MASTER
+      .filter((c) => (cat === '' || c.bom_category === cat) &&
+                     (c.material_description.toLowerCase().includes(q) ||
+                      c.material_number.toLowerCase().includes(q) ||
+                      c.brand.toLowerCase().includes(q) ||
+                      c.category_name.toLowerCase().includes(q)))
+      .slice(0, 12)
+      .map((c) => Object.assign({ source: 'MASTER' }, c));
+
+    // Also scrape components used on previously-submitted BOMs of OTHER
+    // requests, so newly-introduced components are reachable. Keeps the
+    // "use a component from another product" promise even if the master is
+    // never updated.
+    const colName = cat === 'PACKAGING' ? 'bom_packaging_json'
+                  : cat === 'FORMULA'   ? 'bom_formula_json'
+                  : null;
+    let crossMatches = [];
+    if (colName) {
+      const rows = db.prepare(`
+        SELECT id AS req_id, product_name, ${colName} AS bom_json
+          FROM product_requests
+         WHERE bom_completed_at IS NOT NULL AND ${colName} IS NOT NULL
+      `).all();
+      const seen = new Set(masterMatches.map((m) => m.material_number));
+      rows.forEach((r) => {
+        let arr; try { arr = JSON.parse(r.bom_json); } catch { return; }
+        if (!Array.isArray(arr)) return;
+        arr.forEach((c) => {
+          if (!c || !c.material_description) return;
+          if (seen.has(c.material_number)) return;
+          if (!c.material_description.toLowerCase().includes(q)) return;
+          seen.add(c.material_number);
+          crossMatches.push(Object.assign({ source: 'CROSS', from_request: r.req_id, from_product: r.product_name }, c));
+        });
+      });
+      crossMatches = crossMatches.slice(0, 8);
+    }
+    res.json({ results: masterMatches.concat(crossMatches) });
+  });
+
+  router.get('/:id/bom',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_BOM, productWorkflow.STATES.CONFIRMED),
+    (req, res) => {
+      const decoded = decode(res.locals.productRequest);
+      // First open: prefill from the reference product's BOM, split by category
+      // and resolved against the master so the SAP fields land already filled.
+      let pkgRows = decoded.bomPackaging;
+      let frmRows = decoded.bomFormula;
+      const ref = decoded.referenceProduct || {};
+      const hasRefBom = Array.isArray(ref.bom) && ref.bom.length > 0;
+      if (pkgRows.length === 0 && frmRows.length === 0 && hasRefBom) {
+        ref.bom.forEach((line) => {
+          const m = COMPONENT_MASTER_BY_NAME[String(line.component || '').toLowerCase()] || null;
+          const row = {
+            source:               'REFERENCE',
+            material_number:      m ? m.material_number      : '',
+            material_description: line.component || '',
+            category_name:        m ? m.category_name        : '',
+            brand:                m ? m.brand                : '',
+            material_group:       m ? m.material_group       : '',
+            material_type:        m ? m.material_type        : '',
+            base_uom:             line.uom || (m ? m.base_uom : ''),
+            division:             m ? m.division             : '',
+            volume:               null,
+            quantity:             line.qty != null ? line.qty : null,
+            vendor: { type: 'EXISTING', vendor_code: m ? m.default_vendor_code : '', name: '', contact: '', email: '', phone: '' },
+          };
+          if ((m && m.bom_category === 'PACKAGING') ||
+              /(can|bottle|bag|cap|label|box|wrap|wrapper|carton|jar|cup|lid|pack|tray|seal|liner|pouch|sleeve|pallet)/i.test(row.material_description)) {
+            pkgRows.push(row);
+          } else {
+            frmRows.push(row);
+          }
+        });
+      }
+
+      res.render('products/workflow_bom', {
+        ref: refData(),
+        productRequest: decoded,
+        bomPackaging:   pkgRows,
+        bomFormula:     frmRows,
+        history:        loadHistory(decoded.id),
+        comments:       loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/bom',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_BOM),
+    (req, res) => {
+      const b = req.body || {};
+      const u = res.locals.currentUser || {};
+      const reqId = res.locals.productRequest.id;
+      const action = String(b.action || 'save_draft');
+      const pkgRows = pickBomRows(b, 'pkg');
+      const frmRows = pickBomRows(b, 'frm');
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE product_requests
+           SET bom_packaging_json = ?, bom_formula_json = ?, updated_at = ?
+         WHERE id = ?
+      `).run(JSON.stringify(pkgRows), JSON.stringify(frmRows), now, reqId);
+
+      if (action === 'submit') {
+        const cur = res.locals.productRequest.workflow_state;
+        const result = productWorkflow.transition(cur, 'submit_bom');
+        const tx = db.transaction(() => {
+          db.prepare(`
+            UPDATE product_requests
+               SET bom_completed_at = ?, bom_completed_by = ?
+             WHERE id = ?
+          `).run(now, u.id || null, reqId);
+          applyTransition(reqId, result, u.id, u.role || 'RND_TEAM', null, b.note || null);
+        });
+        tx();
+        return res.redirect(`/products/workflow/${reqId}/confirmation?from=submit_bom`);
+      }
+
+      res.redirect(`/products/workflow/${reqId}/bom`);
+    });
+
+  // -------------------------------------------------------------------------
   // Confirmation page (any authenticated user can view)
   // -------------------------------------------------------------------------
   router.get('/:id/confirmation', loadProductRequest(db), (req, res) => {
@@ -755,18 +904,22 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
     if (isAdmin) {
       states = [
         'DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR',
-        'PENDING_PRODUCTION_AND_ANALYSIS','NEEDS_INFO','REJECTED','CONFIRMED',
+        'PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM',
+        'NEEDS_INFO','REJECTED','CONFIRMED',
       ];
     } else if (roles.includes('MKTG_DIRECTOR')) {
       states = ['PENDING_MKTG_DIRECTOR'];
     } else if (roles.includes('SC_DIRECTOR')) {
       states = ['PENDING_SC_DIRECTOR'];
     } else if (roles.includes('RND_TEAM')) {
-      states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
-      // R&D's track has THREE forms — production (sequential first), then
-      // packaging + design in parallel. Show anything where any of them
-      // are still incomplete.
-      extraWhere = ' AND (production_completed_at IS NULL OR packaging_completed_at IS NULL OR design_completed_at IS NULL)';
+      // R&D owns three earlier forms (production / packaging / design) inside
+      // PENDING_PRODUCTION_AND_ANALYSIS, plus the BOM stage. Show both states
+      // when the team's work is still open.
+      states = ['PENDING_PRODUCTION_AND_ANALYSIS', 'PENDING_BOM'];
+      extraWhere = ' AND (workflow_state = \'PENDING_BOM\''
+                 + ' OR production_completed_at IS NULL'
+                 + ' OR packaging_completed_at IS NULL'
+                 + ' OR design_completed_at IS NULL)';
     } else if (roles.includes('MARKETING_TEAM')) {
       states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
       extraWhere = ' AND competitor_completed_at IS NULL';
@@ -1003,6 +1156,63 @@ function pickPackaging(b) {
     inventory_agreement: b.pkm_inventory_agreement || '',
     comparisons,
   };
+}
+
+// ---------- Stage 7 — BOM rows (Packaging + Formula) -----------------------
+
+// Each tab posts arrays of fields with the same indexing convention used by
+// other repeating-row forms. The prefix is 'pkg' for the packaging tab and
+// 'frm' for the formula tab. Empty rows (no description AND no material #)
+// are dropped server-side.
+function pickBomRows(b, prefix) {
+  const arr = (k) => [].concat(b[`${prefix}_${k}`] || []);
+  const sources = arr('source');
+  const matNums = arr('material_number');
+  const descs   = arr('material_description');
+  const cats    = arr('category_name');
+  const brands  = arr('brand');
+  const groups  = arr('material_group');
+  const types   = arr('material_type');
+  const uoms    = arr('base_uom');
+  const divs    = arr('division');
+  const vols    = arr('volume');
+  const qtys    = arr('quantity');
+  const vTypes  = arr('vendor_type');
+  const vCodes  = arr('vendor_code');
+  const vNames  = arr('vendor_name');
+  const vContacts = arr('vendor_contact');
+  const vEmails = arr('vendor_email');
+  const vPhones = arr('vendor_phone');
+
+  const len = Math.max(matNums.length, descs.length);
+  const out = [];
+  for (let i = 0; i < len; i++) {
+    const desc = (descs[i] || '').trim();
+    const mat  = (matNums[i] || '').trim();
+    if (!desc && !mat) continue;
+    out.push({
+      source:               (sources[i] || 'NEW').toUpperCase(),
+      material_number:      mat,
+      material_description: desc,
+      category_name:        cats[i]   || '',
+      brand:                brands[i] || '',
+      material_group:       groups[i] || '',
+      material_type:        types[i]  || '',
+      base_uom:             uoms[i]   || '',
+      division:             divs[i]   || '',
+      volume:               num(vols[i]),
+      quantity:             num(qtys[i]),
+      vendor: {
+        type:        (vTypes[i]  || 'EXISTING').toUpperCase(),
+        vendor_code: vCodes[i]   || '',
+        name:        vNames[i]   || '',
+        contact:     vContacts[i]|| '',
+        email:       vEmails[i]  || '',
+        phone:       vPhones[i]  || '',
+      },
+    });
+  }
+  return out;
 }
 
 // ---------- Stage 5c — Design (R&D) ----------------------------------------
