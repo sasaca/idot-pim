@@ -279,7 +279,7 @@
             </div>
           </div>
 
-          <div class="section-title">Product dimensions</div>
+          <div class="section-title">Dimensions</div>
           <div class="vob-grid cols-4">
             <div class="vob-field">
               <label>Length</label>
@@ -303,6 +303,10 @@
                 <% }); %>
               </select>
             </div>
+          </div>
+
+          <div class="section-title">Weight</div>
+          <div class="vob-grid cols-3">
             <div class="vob-field">
               <label>Net Weight</label>
               <input type="number" name="rnd_net_weight" step="0.01" min="0" value="<%= v(rnd,'net_weight', rp.net_weight) %>">
@@ -321,6 +325,10 @@
                 <% }); %>
               </select>
             </div>
+          </div>
+
+          <div class="section-title">Volume</div>
+          <div class="vob-grid">
             <div class="vob-field">
               <label>Volume</label>
               <input type="number" name="rnd_volume" step="0.01" min="0" value="<%= v(rnd,'volume', rp.volume) %>">
