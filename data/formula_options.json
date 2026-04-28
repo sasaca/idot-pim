@@ -1,0 +1,13 @@
+{
+  "_comment": "Lookup options for the R&D Formula tab. Generic F&B values — replace with real R&D taxonomy when available.",
+
+  "category":      ["Beverage", "Snack", "Cereal", "Dairy", "Sauce / Condiment", "Bakery", "Confectionery", "Frozen"],
+  "class":         ["Carbonated", "Still", "Chilled", "Ambient", "Frozen", "Powdered", "Concentrate", "Ready-to-Eat"],
+  "brand_tier":    ["Mainstream", "Premium", "Value", "Specialty / Artisan"],
+  "formula_type":  ["Original", "Reformulation", "Line Extension", "Limited Edition", "Reduced Sugar", "Reduced Fat", "Plant-Based", "High Protein", "Organic"],
+  "flavor":        ["Original", "Vanilla", "Chocolate", "Strawberry", "Lemon", "Lime", "Orange", "Mango", "Apple", "Mixed Berry", "Cinnamon", "Honey", "BBQ", "Cheddar", "Salted Caramel"],
+  "color":         ["Natural", "Caramel", "Red", "Yellow", "Green", "Blue", "Brown", "Beige", "White", "Clear / Transparent"],
+  "appearance":    ["Liquid", "Powder", "Granular", "Crystalline", "Paste", "Gel", "Solid Bar", "Flake", "Pellet", "Filled / Layered"],
+  "cold_storage":  ["Yes", "No"],
+  "carbonated":    ["Yes", "No"]
+}

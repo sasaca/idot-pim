@@ -38,9 +38,15 @@
           <% requests.forEach(function (r) { %>
             <%
               var deepLink = '/products/workflow/' + r.id + '/confirmation';
+              var roles = (typeof viewerRoles !== 'undefined' && viewerRoles) ? viewerRoles : [];
               if      (r.workflow_state === 'DRAFT' || r.workflow_state === 'NEEDS_INFO') deepLink = '/products/workflow/' + r.id + '/details';
               else if (r.workflow_state === 'PENDING_MKTG_DIRECTOR') deepLink = '/products/workflow/' + r.id + '/mktg-director';
               else if (r.workflow_state === 'PENDING_SC_DIRECTOR')   deepLink = '/products/workflow/' + r.id + '/sc-director';
+              else if (r.workflow_state === 'PENDING_PRODUCTION_AND_ANALYSIS') {
+                if      (roles.indexOf('RND_TEAM')       >= 0) deepLink = '/products/workflow/' + r.id + '/production';
+                else if (roles.indexOf('MARKETING_TEAM') >= 0) deepLink = '/products/workflow/' + r.id + '/competitor';
+                else deepLink = '/products/workflow/' + r.id + '/confirmation';
+              }
             %>
             <tr class="hover:bg-gray-50">
               <td class="px-4 py-2 font-mono text-xs text-gray-500"><%= r.id %></td>

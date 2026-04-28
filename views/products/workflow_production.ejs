@@ -1,0 +1,399 @@
+<%
+/*
+  views/products/workflow_production.ejs
+  ---------------------------------------------------------------------------
+  Stage 5 — R&D Production (parallel with Stage 6 Competitor Analysis).
+  Tabs:
+    1. Production Plan  — launch start date, target date, auto lead time.
+    2. Packaging        — origin, region → country → site cascade, launch type.
+    3. Formula          — origin, category, class, brand tier, formula type,
+                          flavor, color, appearance, cold storage, carbonated,
+                          legal certificates (multi-select + per-cert comment
+                          + file upload).
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'Product Request — Production (R&D)' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Production (R&D)', topSub: 'Provide production plan, packaging, formula and legal certificates.' }) %>
+
+<style>
+  .vob-nav { display:flex; flex-wrap:nowrap; gap:2px; padding:0 6px; margin:0 0 -1px 0; position:relative; z-index:2; overflow-x:auto; }
+  .vob-nav button { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; margin:0; border:1px solid #e5e7eb; border-radius:8px 8px 0 0; background:#f3f4f6; color:#4b5563; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .vob-nav button:hover { background:#e5e7eb; }
+  .vob-nav button.active { background:#fff; color:#111827; font-weight:600; border-bottom-color:#fff; z-index:3; }
+  .vob-nav .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:#e5e7eb; color:#374151; font-size:12px; font-weight:600; }
+  .vob-nav button.active .num { background:#1e3a8a; color:#fff; }
+  .vob-nav .vob-count { display:inline-block; padding:1px 7px; font-size:11px; border-radius:9999px; background:#d1d5db; color:#374151; font-weight:600; }
+  .vob-nav button.active .vob-count { background:#e5e7eb; color:#111827; }
+  .vob-nav button.done { background:#10b981; color:#fff; border-color:#10b981; }
+  .vob-nav button.done .num, .vob-nav button.done .vob-count { background:rgba(255,255,255,.35); color:#fff; }
+  .vob-nav button.done.active { border-bottom-color:#10b981; }
+
+  .vob-card { background:#fff; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; padding:24px; box-shadow:0 1px 2px rgba(0,0,0,.04); position:relative; z-index:1; }
+  .vob-card h2 { font-size:18px; font-weight:600; color:#111827; margin:0 0 4px; }
+  .vob-card .indicates-required { color:#dc2626; font-size:12px; margin-bottom:14px; }
+  .vob-card .section-title { font-size:15px; font-weight:600; color:#111827; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:18px 0 12px; }
+
+  .vob-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  .vob-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+  @media (max-width:700px) { .vob-grid, .vob-grid.cols-3 { grid-template-columns:1fr; } }
+
+  .vob-field label { display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:4px; }
+  .vob-field label .req { color:#dc2626; margin-right:3px; }
+  .vob-field input[type=text], .vob-field input[type=number], .vob-field input[type=date], .vob-field select, .vob-field textarea { width:100%; padding:8px 10px; font-size:14px; border:1px solid #d1d5db; border-radius:6px; background:#fff; box-sizing:border-box; }
+  .vob-field textarea { min-height:90px; resize:vertical; }
+  .vob-field.full { grid-column:1 / -1; }
+  .vob-field input[readonly] { background:#f3f4f6; color:#374151; }
+
+  .radio-group { display:flex; flex-wrap:wrap; gap:10px 16px; padding:6px 0 2px; }
+  .radio-group label { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:14px; color:#374151; border:1px solid #d1d5db; border-radius:999px; background:#fff; cursor:pointer; user-select:none; }
+  .radio-group label:has(input:checked) { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+
+  .vob-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; }
+  .vob-footer .right { display:flex; gap:8px; }
+  .btn { padding:8px 16px; font-size:14px; font-weight:500; border-radius:6px; border:none; cursor:pointer; }
+  .btn-default { background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .btn-primary { background:#1e3a8a; color:#fff; }
+
+  .vob-pane { display:none; }
+  .vob-pane.active { display:block; }
+
+  .cert-row { border:1px solid #e5e7eb; border-radius:6px; padding:10px 14px; margin-bottom:8px; background:#fafafa; }
+  .cert-row label.cert-pick { display:flex; align-items:center; gap:8px; font-weight:500; cursor:pointer; }
+  .cert-row .cert-detail { display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e5e7eb; gap:8px; }
+  .cert-row.open .cert-detail { display:flex; flex-wrap:wrap; }
+  .cert-row .cert-detail textarea { flex:2 1 320px; padding:6px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; min-height:48px; resize:vertical; }
+  .cert-row .cert-detail input[type=file] { flex:1 1 220px; font-size:12px; }
+  .submitted-banner { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<%
+  var pr  = productRequest;
+  var prd = (pr.production && pr.production.plan)      || {};
+  var pkg = (pr.production && pr.production.packaging) || {};
+  var frm = (pr.production && pr.production.formula)   || {};
+  var picked = (frm.certificates || []).reduce(function (m, c) { m[c.code] = c.comment || ''; return m; }, {});
+  var alreadySubmitted = !!pr.production_completed_at;
+  var SITES = ref.PACKAGING_SITES;
+%>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Production — R&amp;D</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        <strong><%= pr.product_name %></strong> · Request #<%= pr.id %>
+      </p>
+    </div>
+    <a href="/products/workflow/queue" class="text-sm text-blue-600 hover:underline">← Back to queue</a>
+  </div>
+
+  <%- include('_workflow_shared', { productRequest: pr, stateLabel: ref.STATE_LABELS[pr.workflow_state] || pr.workflow_state, history: history, comments: comments }) %>
+
+  <% if (alreadySubmitted) { %>
+    <div class="submitted-banner">
+      ✓ Production was submitted on <strong><%= pr.production_completed_at %></strong>.
+      The form below is read-only. Marketing's Competitor Analysis is
+      <% if (pr.competitor_completed_at) { %>complete and the request is now
+        <strong>CONFIRMED</strong>.<% } else { %>still pending.<% } %>
+    </div>
+  <% } %>
+
+  <div class="vob-shell">
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="plan"><span class="num">1</span><span>Production Plan</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="packaging"><span class="num">2</span><span>Packaging</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="formula"><span class="num">3</span><span>Formula</span><span class="vob-count"></span></button>
+    </nav>
+
+    <form id="prd-form" method="post" enctype="multipart/form-data" action="/products/workflow/<%= pr.id %>/production">
+      <fieldset <%= alreadySubmitted ? 'disabled' : '' %> style="border:none; padding:0; margin:0;">
+
+      <!-- ===== 1) Production Plan ===== -->
+      <section class="vob-pane active" data-pane="plan">
+        <div class="vob-card">
+          <h2>Production Plan</h2>
+          <div class="indicates-required">* Indicates required</div>
+          <div class="vob-grid cols-3">
+            <div class="vob-field">
+              <label><span class="req">*</span>Product Launch Start Date</label>
+              <input type="date" name="prd_launch_start_date" required value="<%= prd.launch_start_date || '' %>" data-launch-start>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Product Launch Target Date</label>
+              <input type="date" name="prd_launch_target_date" required value="<%= prd.launch_target_date || '' %>" data-launch-target>
+            </div>
+            <div class="vob-field">
+              <label>Lead Time (weeks)</label>
+              <input type="number" id="prd-lead-weeks" readonly value="<%= prd.lead_time_weeks != null ? prd.lead_time_weeks : '' %>">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 2) Packaging ===== -->
+      <section class="vob-pane" data-pane="packaging">
+        <div class="vob-card">
+          <h2>Packaging</h2>
+          <div class="indicates-required">* Indicates required</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Origin</label>
+              <div class="radio-group">
+                <label><input type="radio" name="pkg_origin" value="NATIONAL" required <%= pkg.origin === 'NATIONAL' ? 'checked' : '' %>>National</label>
+                <label><input type="radio" name="pkg_origin" value="IMPORTED" <%= pkg.origin === 'IMPORTED' ? 'checked' : '' %>>Imported</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Launch Type</label>
+              <div class="radio-group">
+                <label><input type="radio" name="pkg_launch_type" value="LONG_TERM" required <%= pkg.launch_type === 'LONG_TERM' ? 'checked' : '' %>>Long Term</label>
+                <label><input type="radio" name="pkg_launch_type" value="LIMITED_TIME" <%= pkg.launch_type === 'LIMITED_TIME' ? 'checked' : '' %>>Limited Time</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="vob-grid cols-3" style="margin-top:14px;">
+            <div class="vob-field">
+              <label><span class="req">*</span>Region</label>
+              <select name="pkg_region" required data-pkg-region>
+                <option value="">-- Select --</option>
+                <% Object.keys(SITES).filter(function (k) { return k.charAt(0) !== '_'; }).forEach(function (region) { %>
+                  <option value="<%= region %>" <%= pkg.region === region ? 'selected' : '' %>><%= region %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Country</label>
+              <select name="pkg_country" required data-pkg-country disabled>
+                <option value="">-- Select region first --</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Site</label>
+              <select name="pkg_site" required data-pkg-site disabled>
+                <option value="">-- Select country first --</option>
+              </select>
+            </div>
+          </div>
+
+          <script id="pkg-sites-data" type="application/json"><%- JSON.stringify(SITES) %></script>
+          <script id="pkg-initial" type="application/json"><%- JSON.stringify({ region: pkg.region || '', country: pkg.country || '', site: pkg.site || '' }) %></script>
+        </div>
+      </section>
+
+      <!-- ===== 3) Formula ===== -->
+      <section class="vob-pane" data-pane="formula">
+        <div class="vob-card">
+          <h2>Formula</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Origin of Formula</label>
+              <div class="radio-group">
+                <label><input type="radio" name="frm_origin" value="NATIONAL" required <%= frm.origin === 'NATIONAL' ? 'checked' : '' %>>National</label>
+                <label><input type="radio" name="frm_origin" value="IMPORTED" <%= frm.origin === 'IMPORTED' ? 'checked' : '' %>>Imported</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="vob-grid cols-3" style="margin-top:14px;">
+            <% var FO = ref.FORMULA_OPTIONS; %>
+            <% [
+              { name:'frm_category',     label:'Category',      list:FO.category,      val:frm.category },
+              { name:'frm_class',        label:'Class',         list:FO.class,         val:frm.class },
+              { name:'frm_brand_tier',   label:'Brand',         list:FO.brand_tier,    val:frm.brand_tier },
+              { name:'frm_formula_type', label:'Formula Type',  list:FO.formula_type,  val:frm.formula_type },
+              { name:'frm_flavor',       label:'Flavor',        list:FO.flavor,        val:frm.flavor },
+              { name:'frm_color',        label:'Color',         list:FO.color,         val:frm.color },
+              { name:'frm_appearance',   label:'Appearance',    list:FO.appearance,    val:frm.appearance }
+            ].forEach(function (f) { %>
+              <div class="vob-field">
+                <label><span class="req">*</span><%= f.label %></label>
+                <select name="<%= f.name %>" required>
+                  <option value="">-- Select --</option>
+                  <% (f.list || []).forEach(function (o) { %>
+                    <option value="<%= o %>" <%= f.val === o ? 'selected' : '' %>><%= o %></option>
+                  <% }); %>
+                </select>
+              </div>
+            <% }); %>
+
+            <div class="vob-field">
+              <label><span class="req">*</span>Cold Storage</label>
+              <div class="radio-group">
+                <label><input type="radio" name="frm_cold_storage" value="YES" required <%= frm.cold_storage === 'YES' ? 'checked' : '' %>>Yes</label>
+                <label><input type="radio" name="frm_cold_storage" value="NO" <%= frm.cold_storage === 'NO' ? 'checked' : '' %>>No</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Carbonated</label>
+              <div class="radio-group">
+                <label><input type="radio" name="frm_carbonated" value="YES" required <%= frm.carbonated === 'YES' ? 'checked' : '' %>>Yes</label>
+                <label><input type="radio" name="frm_carbonated" value="NO" <%= frm.carbonated === 'NO' ? 'checked' : '' %>>No</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Legal Certificates</div>
+          <p class="text-sm text-gray-600" style="margin-bottom:10px;">
+            Tick each certificate that applies. Use the comment box for notes
+            and attach the certificate file (PDF or image, max 15 MB).
+          </p>
+          <% ref.LEGAL_CERTIFICATES.forEach(function (c) { %>
+            <% var checked = (picked[c.code] !== undefined); %>
+            <div class="cert-row <%= checked ? 'open' : '' %>" data-cert-row data-code="<%= c.code %>">
+              <label class="cert-pick">
+                <input type="checkbox" name="cert_selected" value="<%= c.code %>" <%= checked ? 'checked' : '' %> data-cert-toggle>
+                <span><%= c.label %></span>
+                <span style="margin-left:auto; font-family:monospace; font-size:11px; color:#6b7280;"><%= c.code %></span>
+              </label>
+              <div class="cert-detail">
+                <textarea name="cert_comment_<%= c.code %>" placeholder="Notes (optional)"><%= picked[c.code] || '' %></textarea>
+                <input type="file" name="cert_file_<%= c.code %>" accept=".pdf,image/*">
+              </div>
+            </div>
+          <% }); %>
+
+          <% if (attachments && attachments.length) { %>
+            <div class="section-title">Already attached</div>
+            <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
+              <% attachments.forEach(function (a) { %>
+                <li>
+                  <%= a.certificate_type %> —
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= a.id %>" class="text-blue-600 hover:underline" target="_blank">
+                    <%= a.original_name %>
+                  </a>
+                  <% if (a.comment) { %><em style="color:#6b7280;"> — <%= a.comment %></em><% } %>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
+        </div>
+      </section>
+
+      <div class="vob-footer">
+        <button type="button" id="prd-prev" class="btn btn-default">← Previous</button>
+        <div class="right">
+          <% if (!alreadySubmitted) { %>
+            <button type="submit" name="action" value="save_draft" class="btn btn-default">💾 Save as Draft</button>
+            <button type="button" id="prd-next" class="btn btn-default">Next →</button>
+            <button type="submit" name="action" value="submit" class="btn btn-primary">Submit Production</button>
+          <% } else { %>
+            <a href="/products/workflow/<%= pr.id %>/confirmation" class="btn btn-primary">View confirmation →</a>
+          <% } %>
+        </div>
+      </div>
+      </fieldset>
+    </form>
+  </div>
+</main>
+
+<script>
+(function () {
+  // ---- tabs + counter ----
+  var TABS = ['plan','packaging','formula'];
+  var current = 0;
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) {
+      p.classList.toggle('active', p.dataset.pane === TABS[current]);
+    });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === TABS[current]);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { show(TABS.indexOf(btn.dataset.tab)); });
+  });
+  document.getElementById('prd-prev').addEventListener('click', function () { show(current - 1); });
+  if (document.getElementById('prd-next')) document.getElementById('prd-next').addEventListener('click', function () { show(current + 1); });
+
+  function updateCompletion() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var countEl = btn.querySelector('.vob-count');
+      var required = Array.prototype.slice.call(pane.querySelectorAll('[required]'));
+      var nameGroups = {}, nonGroup = [];
+      required.forEach(function (el) {
+        if ((el.type === 'radio' || el.type === 'checkbox') && el.name) (nameGroups[el.name] = nameGroups[el.name] || []).push(el);
+        else nonGroup.push(el);
+      });
+      var total = nonGroup.length + Object.keys(nameGroups).length;
+      var done = 0;
+      nonGroup.forEach(function (el) { if ((el.value || '').trim() !== '') done++; });
+      Object.keys(nameGroups).forEach(function (name) {
+        var siblings = pane.querySelectorAll('[name="' + name.replace(/"/g, '\\"') + '"]');
+        for (var i = 0; i < siblings.length; i++) if (siblings[i].checked) { done++; break; }
+      });
+      if (total === 0) { countEl.style.display='none'; btn.classList.remove('done'); }
+      else { countEl.style.display=''; countEl.textContent = done + '/' + total; btn.classList.toggle('done', done === total); }
+    });
+  }
+  var form = document.getElementById('prd-form');
+  form.addEventListener('input', updateCompletion);
+  form.addEventListener('change', updateCompletion);
+
+  // ---- lead-time computation ----
+  (function () {
+    var startEl = document.querySelector('[data-launch-start]');
+    var targEl  = document.querySelector('[data-launch-target]');
+    var leadEl  = document.getElementById('prd-lead-weeks');
+    function recompute() {
+      var s = startEl.value, t = targEl.value;
+      if (!s || !t) { leadEl.value = ''; return; }
+      var sd = new Date(s + 'T00:00:00Z'), td = new Date(t + 'T00:00:00Z');
+      if (isNaN(sd) || isNaN(td) || td <= sd) { leadEl.value = ''; return; }
+      leadEl.value = Math.round((td - sd) / (7 * 24 * 3600 * 1000));
+    }
+    startEl.addEventListener('change', recompute);
+    targEl.addEventListener('change', recompute);
+    recompute();
+  })();
+
+  // ---- packaging cascade ----
+  (function () {
+    var SITES   = JSON.parse(document.getElementById('pkg-sites-data').textContent || '{}');
+    var INITIAL = JSON.parse(document.getElementById('pkg-initial').textContent || '{}');
+    var R = document.querySelector('[data-pkg-region]');
+    var C = document.querySelector('[data-pkg-country]');
+    var S = document.querySelector('[data-pkg-site]');
+    function fill(sel, options, placeholder) {
+      sel.innerHTML = '';
+      var opt = document.createElement('option'); opt.value=''; opt.textContent=placeholder; sel.appendChild(opt);
+      options.forEach(function (o) { var x=document.createElement('option'); x.value=o; x.textContent=o; sel.appendChild(x); });
+      sel.disabled = options.length === 0;
+    }
+    function onR() {
+      var node = SITES[R.value] || {};
+      fill(C, Object.keys(node).filter(function (k) { return k.charAt(0) !== '_'; }), '-- Select --');
+      C.value = INITIAL.country || '';
+      fill(S, [], '-- Select country first --');
+      if (C.value) onC();
+    }
+    function onC() {
+      var arr = (SITES[R.value] || {})[C.value] || [];
+      fill(S, arr, '-- Select --');
+      S.value = INITIAL.site || '';
+    }
+    R.addEventListener('change', function () { INITIAL.country=''; INITIAL.site=''; onR(); updateCompletion(); });
+    C.addEventListener('change', function () { INITIAL.site=''; onC(); updateCompletion(); });
+    if (R.value) onR();
+  })();
+
+  // ---- legal certificate row open/close on tick ----
+  document.querySelectorAll('[data-cert-row]').forEach(function (row) {
+    var cb = row.querySelector('[data-cert-toggle]');
+    cb.addEventListener('change', function () { row.classList.toggle('open', cb.checked); });
+  });
+
+  updateCompletion();
+})();
+</script>
+</div>
+</body></html>

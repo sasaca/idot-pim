@@ -1,0 +1,12 @@
+[
+  { "code": "SELF_SERVICE",  "label": "Self-Service / Supermarket" },
+  { "code": "WHOLESALE",     "label": "Wholesale / Cash & Carry" },
+  { "code": "DUTY_FREE",     "label": "Duty Free" },
+  { "code": "ON_PREMISE",    "label": "On-Premise (HoReCa — Hotels, Restaurants, Cafés)" },
+  { "code": "CONVENIENCE",   "label": "Convenience Stores / Gas Stations" },
+  { "code": "ECOMMERCE",     "label": "E-Commerce / Online" },
+  { "code": "DIRECT",        "label": "Direct-to-Consumer" },
+  { "code": "VENDING",       "label": "Vending Machines" },
+  { "code": "INSTITUTIONAL", "label": "Institutional (schools, hospitals, government)" },
+  { "code": "EXPORT",        "label": "Export / Distributor" }
+]

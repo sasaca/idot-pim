@@ -8,7 +8,9 @@
 //      detail form (requestor)
 //   3. /products/workflow/:id/mktg-director — Marketing Director approval
 //   4. /products/workflow/:id/sc-director   — Supply Chain Director approval
-//   5. /products/workflow/:id/confirmation  — terminal view
+//   5. /products/workflow/:id/production    — R&D production (parallel with 6)
+//   6. /products/workflow/:id/competitor    — Marketing competitor analysis
+//   7. /products/workflow/:id/confirmation  — terminal view
 //
 // Plus:
 //   - /products/workflow/queue       — role-aware queue
@@ -18,6 +20,7 @@
 const express = require('express');
 const fs      = require('fs');
 const path    = require('path');
+const multer  = require('multer');
 
 const productWorkflow = require('../lib/product_workflow');
 const fxLookup        = require('../lib/fx_lookup');
@@ -28,17 +31,27 @@ const {
   getUserRoles,
 } = require('../middleware/require_product_role');
 
-const dataDir = path.join(__dirname, '..', 'data');
+const dataDir   = path.join(__dirname, '..', 'data');
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads_store');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const uploadCert = multer({ dest: uploadDir, limits: { fileSize: 15 * 1024 * 1024 } });
+
 function loadJson(name) {
   return JSON.parse(fs.readFileSync(path.join(dataDir, name), 'utf-8'));
 }
 
 // Reference data — loaded once at boot (these files don't change at runtime).
-const BRAND_HIERARCHY     = loadJson('product_brand_hierarchy.json');
-const PRODUCT_MARKETS     = loadJson('product_markets.json');
-const SAP_MATERIAL_TYPES  = loadJson('sap_material_types.json');
-const UOM                 = loadJson('uom.json');
-const REFERENCE_PRODUCTS  = loadJson('reference_products.json');
+const BRAND_HIERARCHY        = loadJson('product_brand_hierarchy.json');
+const PRODUCT_MARKETS        = loadJson('product_markets.json');
+const SAP_MATERIAL_TYPES     = loadJson('sap_material_types.json');
+const UOM                    = loadJson('uom.json');
+const REFERENCE_PRODUCTS     = loadJson('reference_products.json');
+const PACKAGING_SITES        = loadJson('packaging_sites.json');
+const FORMULA_OPTIONS        = loadJson('formula_options.json');
+const LEGAL_CERTIFICATES     = loadJson('legal_certificates.json');
+const DISTRIBUTION_CHANNELS  = loadJson('distribution_channels.json');
+const TARGET_AGE_GROUPS      = loadJson('target_age_groups.json');
+const POSITIONING_TIERS      = loadJson('positioning_tiers.json');
 
 // Bundle reference data for views.
 function refData() {
@@ -48,6 +61,12 @@ function refData() {
     SAP_MATERIAL_TYPES,
     UOM,
     REFERENCE_PRODUCTS,
+    PACKAGING_SITES,
+    FORMULA_OPTIONS,
+    LEGAL_CERTIFICATES,
+    DISTRIBUTION_CHANNELS,
+    TARGET_AGE_GROUPS,
+    POSITIONING_TIERS,
     REJECT_REASONS: productWorkflow.REJECT_REASONS,
     INFO_REASONS:   productWorkflow.INFO_REASONS,
     STATE_LABELS:   productWorkflow.STATE_LABELS,
@@ -63,6 +82,8 @@ function decode(req) {
     rnd:              safeJson(req.rnd_json),
     forecast:         safeJson(req.forecast_json),
     referenceProduct: safeJson(req.reference_product_json),
+    production:       safeJson(req.production_json),
+    competitor:       safeJson(req.competitor_json),
   });
 }
 
@@ -315,6 +336,137 @@ module.exports = function makeRouter(db) {
   }
 
   // -------------------------------------------------------------------------
+  // Stage 5 — Production (R&D team). Runs in parallel with Stage 6.
+  // -------------------------------------------------------------------------
+  router.get('/:id/production',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS, productWorkflow.STATES.CONFIRMED),
+    (req, res) => {
+      const decoded = decode(res.locals.productRequest);
+      res.render('products/workflow_production', {
+        ref: refData(),
+        productRequest: decoded,
+        attachments: loadAttachments(decoded.id, 'production'),
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  // multer.any() so we can ship multiple legal-cert files (one per certificate type).
+  router.post('/:id/production',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    uploadCert.any(),
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS),
+    (req, res) => {
+      const b = req.body || {};
+      const u = res.locals.currentUser || {};
+      const reqId = res.locals.productRequest.id;
+      const action = String(b.action || 'save_draft');
+      const production = pickProduction(b);
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE product_requests SET production_json = ?, updated_at = ? WHERE id = ?
+      `).run(JSON.stringify(production), now, reqId);
+
+      // Persist any uploaded legal certificates. The form ships them with
+      // fieldnames "cert_file_<code>" so we can recover which certificate
+      // type a file is attached to. Comments come in as "cert_comment_<code>".
+      if (Array.isArray(req.files) && req.files.length) {
+        const ins = db.prepare(`
+          INSERT INTO product_request_attachments
+            (product_req_id, stage, category, certificate_type,
+             filename, original_name, mime_type, size_bytes, comment, uploaded_by)
+          VALUES (?, 'production', 'legal_certificate', ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const tx = db.transaction(() => {
+          req.files.forEach((f) => {
+            const m = /^cert_file_(.+)$/.exec(f.fieldname);
+            if (!m) return;
+            const code = m[1];
+            const comment = (b['cert_comment_' + code] || '').toString().trim();
+            ins.run(reqId, code, f.filename, f.originalname, f.mimetype, f.size, comment || null, u.id || null);
+          });
+        });
+        tx();
+      }
+
+      if (action === 'submit') {
+        const competitorDone = !!res.locals.productRequest.competitor_completed_at;
+        const transitionAction = competitorDone ? 'submit_production_final' : 'submit_production_partial';
+        const cur = res.locals.productRequest.workflow_state;
+        const result = productWorkflow.transition(cur, transitionAction);
+        const tx = db.transaction(() => {
+          db.prepare(`
+            UPDATE product_requests
+               SET production_completed_at = ?, production_completed_by = ?
+             WHERE id = ?
+          `).run(now, u.id || null, reqId);
+          applyTransition(reqId, result, u.id, u.role || 'RND_TEAM', null, b.note || null);
+        });
+        tx();
+        return res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+      }
+
+      res.redirect(`/products/workflow/${reqId}/production`);
+    });
+
+  // -------------------------------------------------------------------------
+  // Stage 6 — Competitor Analysis (Marketing team). Runs in parallel with 5.
+  // -------------------------------------------------------------------------
+  router.get('/:id/competitor',
+    requireRole(productWorkflow.ROLES.MARKETING_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS, productWorkflow.STATES.CONFIRMED),
+    (req, res) => {
+      const decoded = decode(res.locals.productRequest);
+      res.render('products/workflow_competitor', {
+        ref: refData(),
+        productRequest: decoded,
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/competitor',
+    requireRole(productWorkflow.ROLES.MARKETING_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS),
+    (req, res) => {
+      const b = req.body || {};
+      const u = res.locals.currentUser || {};
+      const reqId = res.locals.productRequest.id;
+      const action = String(b.action || 'save_draft');
+      const competitor = pickCompetitor(b);
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE product_requests SET competitor_json = ?, updated_at = ? WHERE id = ?
+      `).run(JSON.stringify(competitor), now, reqId);
+
+      if (action === 'submit') {
+        const productionDone = !!res.locals.productRequest.production_completed_at;
+        const transitionAction = productionDone ? 'submit_competitor_final' : 'submit_competitor_partial';
+        const cur = res.locals.productRequest.workflow_state;
+        const result = productWorkflow.transition(cur, transitionAction);
+        const tx = db.transaction(() => {
+          db.prepare(`
+            UPDATE product_requests
+               SET competitor_completed_at = ?, competitor_completed_by = ?
+             WHERE id = ?
+          `).run(now, u.id || null, reqId);
+          applyTransition(reqId, result, u.id, u.role || 'MARKETING_TEAM', null, b.note || null);
+        });
+        tx();
+        return res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+      }
+
+      res.redirect(`/products/workflow/${reqId}/competitor`);
+    });
+
+  // -------------------------------------------------------------------------
   // Confirmation page (any authenticated user can view)
   // -------------------------------------------------------------------------
   router.get('/:id/confirmation', loadProductRequest(db), (req, res) => {
@@ -322,11 +474,34 @@ module.exports = function makeRouter(db) {
     res.render('products/workflow_confirmation', {
       ref: refData(),
       productRequest: decoded,
+      attachments: loadAttachments(decoded.id, 'production'),
       history: loadHistory(decoded.id),
       comments: loadComments(decoded.id),
       stateLabel: productWorkflow.STATE_LABELS[decoded.workflow_state] || decoded.workflow_state,
     });
   });
+
+  // Download an uploaded legal-certificate file.
+  router.get('/:id/attachments/:attId',
+    loadProductRequest(db),
+    (req, res) => {
+      const att = db.prepare(`SELECT * FROM product_request_attachments WHERE id=? AND product_req_id=?`)
+        .get(Number(req.params.attId), res.locals.productRequest.id);
+      if (!att) return res.status(404).send('Attachment not found');
+      const filePath = path.join(uploadDir, att.filename);
+      if (!fs.existsSync(filePath)) return res.status(404).send('File missing on disk');
+      res.download(filePath, att.original_name || att.filename);
+    });
+
+  function loadAttachments(reqId, stage) {
+    return db.prepare(`
+      SELECT a.*, u.name AS uploader_name
+        FROM product_request_attachments a
+        LEFT JOIN users u ON u.id = a.uploaded_by
+       WHERE a.product_req_id = ? AND a.stage = ?
+       ORDER BY a.id ASC
+    `).all(reqId, stage);
+  }
 
   return router;
 };
@@ -340,13 +515,25 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
     const isAdmin = roles.includes('ADMIN');
 
     // Each role sees the queue relevant to them. Admin sees all.
+    // For RND_TEAM / MARKETING_TEAM we add an extra filter so the team only
+    // sees rows where THEIR side is still incomplete.
     let states = [];
+    let extraWhere = '';
     if (isAdmin) {
-      states = ['DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','NEEDS_INFO','REJECTED','CONFIRMED'];
+      states = [
+        'DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR',
+        'PENDING_PRODUCTION_AND_ANALYSIS','NEEDS_INFO','REJECTED','CONFIRMED',
+      ];
     } else if (roles.includes('MKTG_DIRECTOR')) {
       states = ['PENDING_MKTG_DIRECTOR'];
     } else if (roles.includes('SC_DIRECTOR')) {
       states = ['PENDING_SC_DIRECTOR'];
+    } else if (roles.includes('RND_TEAM')) {
+      states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
+      extraWhere = ' AND production_completed_at IS NULL';
+    } else if (roles.includes('MARKETING_TEAM')) {
+      states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
+      extraWhere = ' AND competitor_completed_at IS NULL';
     } else {
       states = ['DRAFT', 'NEEDS_INFO'];
     }
@@ -355,7 +542,7 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       SELECT pr.*, u.name AS requestor_full_name
         FROM product_requests pr
         LEFT JOIN users u ON u.id = pr.requestor_user_id
-       WHERE pr.workflow_state IN (${placeholders})
+       WHERE pr.workflow_state IN (${placeholders})${extraWhere}
        ORDER BY pr.updated_at DESC
        LIMIT 200
     `).all(...states);
@@ -364,6 +551,7 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       requests: rows,
       states,
       stateLabels: productWorkflow.STATE_LABELS,
+      viewerRoles: roles,
     });
   });
 
@@ -437,4 +625,93 @@ function num(v) {
   if (v === null || v === undefined || v === '') return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+// ---------- Stage 5 — Production (R&D) -------------------------------------
+
+function pickProduction(b) {
+  // Lead time auto-derived server-side from the two dates so it can't drift
+  // away from the form values even if the user edits HTML.
+  const startStr  = b.prd_launch_start_date || '';
+  const targetStr = b.prd_launch_target_date || '';
+  let leadWeeks = null;
+  if (startStr && targetStr) {
+    const start = new Date(startStr + 'T00:00:00Z');
+    const targ  = new Date(targetStr + 'T00:00:00Z');
+    if (!isNaN(start) && !isNaN(targ) && targ > start) {
+      leadWeeks = Math.round((targ - start) / (7 * 24 * 3600 * 1000));
+    }
+  }
+  return {
+    plan: {
+      launch_start_date:  startStr,
+      launch_target_date: targetStr,
+      lead_time_weeks:    leadWeeks,
+    },
+    packaging: {
+      origin:      b.pkg_origin      || '',   // NATIONAL | IMPORTED
+      region:      b.pkg_region      || '',
+      country:     b.pkg_country     || '',
+      site:        b.pkg_site        || '',
+      launch_type: b.pkg_launch_type || '',   // LONG_TERM | LIMITED_TIME
+    },
+    formula: {
+      origin:        b.frm_origin        || '',  // NATIONAL | IMPORTED
+      category:      b.frm_category      || '',
+      class:         b.frm_class         || '',
+      brand_tier:    b.frm_brand_tier    || '',
+      formula_type:  b.frm_formula_type  || '',
+      flavor:        b.frm_flavor        || '',
+      color:         b.frm_color         || '',
+      appearance:    b.frm_appearance    || '',
+      cold_storage:  b.frm_cold_storage  || '',  // YES | NO
+      carbonated:    b.frm_carbonated    || '',  // YES | NO
+      certificates:  pickCertificateMeta(b),
+    },
+  };
+}
+
+// Capture certificate dropdown selections + comments without the file (files
+// are persisted in the attachments table). Returns an array so multiple
+// certificates can be associated with one request.
+function pickCertificateMeta(b) {
+  const codes = [].concat(b.cert_selected || []);
+  return codes
+    .map((code) => ({
+      code,
+      comment: (b['cert_comment_' + code] || '').toString().trim(),
+    }))
+    .filter((c) => !!c.code);
+}
+
+// ---------- Stage 6 — Competitor Analysis (Marketing) ----------------------
+
+function pickCompetitor(b) {
+  const competitors = [];
+  // Competitor rows ship as competitor_name[], competitor_product[],
+  // competitor_price_local[], competitor_price_usd[]. Index by position.
+  const names    = [].concat(b.competitor_name    || []);
+  const products = [].concat(b.competitor_product || []);
+  const local    = [].concat(b.competitor_price_local || []);
+  const usd      = [].concat(b.competitor_price_usd   || []);
+  const ccyArr   = [].concat(b.competitor_price_local_ccy || []);
+  for (let i = 0; i < Math.max(names.length, products.length); i++) {
+    if (!names[i] && !products[i]) continue;
+    competitors.push({
+      name:        names[i]    || '',
+      product:     products[i] || '',
+      price_local: num(local[i]),
+      price_local_ccy: ccyArr[i] || '',
+      price_usd:   num(usd[i]),
+    });
+  }
+  return {
+    market_type:     b.cmp_market_type   || '',   // EXISTING | NEW
+    countries:       [].concat(b.cmp_countries || []),
+    channels:        [].concat(b.cmp_channels  || []),
+    target_ages:     [].concat(b.cmp_target_ages || []),
+    positioning:     b.cmp_positioning  || '',
+    market_trends:   b.cmp_market_trends || '',
+    competitors,
+  };
 }

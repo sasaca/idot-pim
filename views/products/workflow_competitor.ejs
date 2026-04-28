@@ -1,0 +1,311 @@
+<%
+/*
+  views/products/workflow_competitor.ejs
+  ---------------------------------------------------------------------------
+  Stage 6 — Marketing Competitor Analysis (parallel with Stage 5).
+  Tabs:
+    1. Market & Channels — market type (existing/new), destination countries
+       (multi), distribution channels (multi), target ages (multi), positioning.
+    2. Competitors — repeating rows (name / product / price local / price USD)
+       plus a market trends comment box.
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'Product Request — Competitor Analysis' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Competitor Analysis (Marketing)', topSub: 'Capture market positioning and competitor pricing.' }) %>
+
+<style>
+  .vob-nav { display:flex; flex-wrap:nowrap; gap:2px; padding:0 6px; margin:0 0 -1px 0; position:relative; z-index:2; overflow-x:auto; }
+  .vob-nav button { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; margin:0; border:1px solid #e5e7eb; border-radius:8px 8px 0 0; background:#f3f4f6; color:#4b5563; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .vob-nav button:hover { background:#e5e7eb; }
+  .vob-nav button.active { background:#fff; color:#111827; font-weight:600; border-bottom-color:#fff; z-index:3; }
+  .vob-nav .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:#e5e7eb; color:#374151; font-size:12px; font-weight:600; }
+  .vob-nav button.active .num { background:#1e3a8a; color:#fff; }
+  .vob-nav .vob-count { display:inline-block; padding:1px 7px; font-size:11px; border-radius:9999px; background:#d1d5db; color:#374151; font-weight:600; }
+  .vob-nav button.active .vob-count { background:#e5e7eb; color:#111827; }
+  .vob-nav button.done { background:#10b981; color:#fff; border-color:#10b981; }
+  .vob-nav button.done .num, .vob-nav button.done .vob-count { background:rgba(255,255,255,.35); color:#fff; }
+  .vob-nav button.done.active { border-bottom-color:#10b981; }
+
+  .vob-card { background:#fff; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; padding:24px; box-shadow:0 1px 2px rgba(0,0,0,.04); position:relative; z-index:1; }
+  .vob-card h2 { font-size:18px; font-weight:600; color:#111827; margin:0 0 4px; }
+  .vob-card .indicates-required { color:#dc2626; font-size:12px; margin-bottom:14px; }
+  .vob-card .section-title { font-size:15px; font-weight:600; color:#111827; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:18px 0 12px; }
+
+  .vob-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  @media (max-width:700px) { .vob-grid { grid-template-columns:1fr; } }
+  .vob-field label { display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:4px; }
+  .vob-field label .req { color:#dc2626; margin-right:3px; }
+  .vob-field input, .vob-field select, .vob-field textarea { width:100%; padding:8px 10px; font-size:14px; border:1px solid #d1d5db; border-radius:6px; background:#fff; box-sizing:border-box; }
+  .vob-field textarea { min-height:90px; resize:vertical; }
+  .vob-field.full { grid-column:1 / -1; }
+  .vob-field select[multiple] { min-height:150px; }
+
+  .radio-group, .check-group { display:flex; flex-wrap:wrap; gap:8px 12px; padding:6px 0 2px; }
+  .radio-group label, .check-group label { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:13px; color:#374151; border:1px solid #d1d5db; border-radius:999px; background:#fff; cursor:pointer; user-select:none; }
+  .radio-group label:has(input:checked), .check-group label:has(input:checked) { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+
+  .vob-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; }
+  .vob-footer .right { display:flex; gap:8px; }
+  .btn { padding:8px 16px; font-size:14px; font-weight:500; border-radius:6px; border:none; cursor:pointer; }
+  .btn-default { background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .btn-primary { background:#1e3a8a; color:#fff; }
+
+  .vob-pane { display:none; }
+  .vob-pane.active { display:block; }
+
+  .cmp-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .cmp-table th, .cmp-table td { padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:left; vertical-align:top; }
+  .cmp-table th { background:#f9fafb; font-weight:600; color:#374151; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .cmp-table input { width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; box-sizing:border-box; }
+  .cmp-table input.short { max-width:90px; }
+  .cmp-row-actions { white-space:nowrap; }
+  .cmp-btn-add { background:#1e3a8a; color:white; border:none; padding:6px 12px; border-radius:4px; font-size:12px; cursor:pointer; margin-top:8px; }
+  .cmp-btn-remove { background:transparent; color:#b91c1c; border:none; cursor:pointer; font-size:13px; }
+
+  .submitted-banner { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<%
+  var pr  = productRequest;
+  var cmp = pr.competitor || {};
+  var alreadySubmitted = !!pr.competitor_completed_at;
+
+  var pickedCountries = (cmp.countries     || []).reduce(function (m,c) { m[c]=1; return m; }, {});
+  var pickedChannels  = (cmp.channels      || []).reduce(function (m,c) { m[c]=1; return m; }, {});
+  var pickedAges      = (cmp.target_ages   || []).reduce(function (m,c) { m[c]=1; return m; }, {});
+  var competitorRows  = (cmp.competitors   || []);
+  if (competitorRows.length === 0) competitorRows = [{}, {}];
+%>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Competitor Analysis — Marketing</h1>
+      <p class="text-sm text-gray-500 mt-1"><strong><%= pr.product_name %></strong> · Request #<%= pr.id %></p>
+    </div>
+    <a href="/products/workflow/queue" class="text-sm text-blue-600 hover:underline">← Back to queue</a>
+  </div>
+
+  <%- include('_workflow_shared', { productRequest: pr, stateLabel: ref.STATE_LABELS[pr.workflow_state] || pr.workflow_state, history: history, comments: comments }) %>
+
+  <% if (alreadySubmitted) { %>
+    <div class="submitted-banner">
+      ✓ Competitor Analysis was submitted on <strong><%= pr.competitor_completed_at %></strong>.
+      The form below is read-only. R&amp;D's Production stage is
+      <% if (pr.production_completed_at) { %>complete and the request is now
+        <strong>CONFIRMED</strong>.<% } else { %>still pending.<% } %>
+    </div>
+  <% } %>
+
+  <div class="vob-shell">
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="market"><span class="num">1</span><span>Market &amp; Channels</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="competitors"><span class="num">2</span><span>Competitors</span><span class="vob-count"></span></button>
+    </nav>
+
+    <form id="cmp-form" method="post" action="/products/workflow/<%= pr.id %>/competitor">
+      <fieldset <%= alreadySubmitted ? 'disabled' : '' %> style="border:none; padding:0; margin:0;">
+
+      <!-- ===== 1) Market & Channels ===== -->
+      <section class="vob-pane active" data-pane="market">
+        <div class="vob-card">
+          <h2>Market &amp; Channels</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Market type</label>
+              <div class="radio-group">
+                <label><input type="radio" name="cmp_market_type" value="EXISTING" required <%= cmp.market_type === 'EXISTING' ? 'checked' : '' %>>Existing market</label>
+                <label><input type="radio" name="cmp_market_type" value="NEW" <%= cmp.market_type === 'NEW' ? 'checked' : '' %>>New market</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Positioning</label>
+              <select name="cmp_positioning" required>
+                <option value="">-- Select --</option>
+                <% ref.POSITIONING_TIERS.forEach(function (p) { %>
+                  <option value="<%= p.code %>" <%= cmp.positioning === p.code ? 'selected' : '' %>><%= p.label %></option>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">Destination countries (select all that apply)</div>
+          <div class="check-group">
+            <% ref.PRODUCT_MARKETS.forEach(function (m) { %>
+              <label><input type="checkbox" name="cmp_countries" value="<%= m.code %>" <%= pickedCountries[m.code] ? 'checked' : '' %>><%= m.name %></label>
+            <% }); %>
+          </div>
+          <p class="text-xs text-gray-500 mt-1" id="cmp-countries-hint">At least one country required.</p>
+
+          <div class="section-title">Distribution channels (select all that apply)</div>
+          <div class="check-group">
+            <% ref.DISTRIBUTION_CHANNELS.forEach(function (c) { %>
+              <label><input type="checkbox" name="cmp_channels" value="<%= c.code %>" <%= pickedChannels[c.code] ? 'checked' : '' %>><%= c.label %></label>
+            <% }); %>
+          </div>
+
+          <div class="section-title">Target age groups (select all that apply)</div>
+          <div class="check-group">
+            <% ref.TARGET_AGE_GROUPS.forEach(function (a) { %>
+              <label><input type="checkbox" name="cmp_target_ages" value="<%= a.code %>" <%= pickedAges[a.code] ? 'checked' : '' %>><%= a.label %></label>
+            <% }); %>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 2) Competitors ===== -->
+      <section class="vob-pane" data-pane="competitors">
+        <div class="vob-card">
+          <h2>Competitors</h2>
+          <p class="text-sm text-gray-600 mb-3">List the key competitors with the product and prices used as reference.</p>
+
+          <table class="cmp-table" id="cmp-table">
+            <thead>
+              <tr>
+                <th style="width:22%">Competitor</th>
+                <th style="width:28%">Product</th>
+                <th style="width:14%">Price (local)</th>
+                <th style="width:9%">Local CCY</th>
+                <th style="width:14%">Price (USD)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% competitorRows.forEach(function (row) { %>
+                <tr class="cmp-row">
+                  <td><input type="text" name="competitor_name"        value="<%= row.name        || '' %>"></td>
+                  <td><input type="text" name="competitor_product"     value="<%= row.product     || '' %>"></td>
+                  <td><input type="number" step="0.01" min="0" name="competitor_price_local" class="short" value="<%= row.price_local != null ? row.price_local : '' %>"></td>
+                  <td><input type="text" maxlength="3" name="competitor_price_local_ccy" class="short" value="<%= row.price_local_ccy || '' %>" placeholder="e.g. MXN"></td>
+                  <td><input type="number" step="0.01" min="0" name="competitor_price_usd" class="short" value="<%= row.price_usd != null ? row.price_usd : '' %>"></td>
+                  <td class="cmp-row-actions"><button type="button" class="cmp-btn-remove" data-remove>✕</button></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+          <button type="button" class="cmp-btn-add" id="cmp-add-row">+ Add competitor row</button>
+
+          <div class="section-title">Market trends</div>
+          <div class="vob-grid">
+            <div class="vob-field full">
+              <textarea name="cmp_market_trends" placeholder="Notes on market trends, consumer shifts, regulatory changes, opportunities, threats…"><%= cmp.market_trends || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="vob-footer">
+        <button type="button" id="cmp-prev" class="btn btn-default">← Previous</button>
+        <div class="right">
+          <% if (!alreadySubmitted) { %>
+            <button type="submit" name="action" value="save_draft" class="btn btn-default">💾 Save as Draft</button>
+            <button type="button" id="cmp-next" class="btn btn-default">Next →</button>
+            <button type="submit" name="action" value="submit" class="btn btn-primary">Submit Competitor Analysis</button>
+          <% } else { %>
+            <a href="/products/workflow/<%= pr.id %>/confirmation" class="btn btn-primary">View confirmation →</a>
+          <% } %>
+        </div>
+      </div>
+      </fieldset>
+    </form>
+  </div>
+</main>
+
+<script>
+(function () {
+  var TABS = ['market','competitors'];
+  var current = 0;
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) {
+      p.classList.toggle('active', p.dataset.pane === TABS[current]);
+    });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === TABS[current]);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { show(TABS.indexOf(btn.dataset.tab)); });
+  });
+  document.getElementById('cmp-prev').addEventListener('click', function () { show(current - 1); });
+  if (document.getElementById('cmp-next')) document.getElementById('cmp-next').addEventListener('click', function () { show(current + 1); });
+
+  // Required-counter — note: countries / channels / ages aren't `required`
+  // attribute (checkboxes can't easily be), but we still want to show their
+  // count. We'll add them as group-required rules.
+  function updateCompletion() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var countEl = btn.querySelector('.vob-count');
+      var required = Array.prototype.slice.call(pane.querySelectorAll('[required]'));
+      var nameGroups = {}, nonGroup = [];
+      required.forEach(function (el) {
+        if ((el.type === 'radio' || el.type === 'checkbox') && el.name) (nameGroups[el.name] = nameGroups[el.name] || []).push(el);
+        else nonGroup.push(el);
+      });
+      // Add the multi-checkbox group "cmp_countries" as a soft-required entry
+      // for the Market tab so users can see they need to pick at least one.
+      var extraGroups = [];
+      if (key === 'market') extraGroups.push('cmp_countries');
+      var total = nonGroup.length + Object.keys(nameGroups).length + extraGroups.length;
+      var done = 0;
+      nonGroup.forEach(function (el) { if ((el.value || '').trim() !== '') done++; });
+      Object.keys(nameGroups).forEach(function (name) {
+        var siblings = pane.querySelectorAll('[name="' + name.replace(/"/g, '\\"') + '"]');
+        for (var i = 0; i < siblings.length; i++) if (siblings[i].checked) { done++; break; }
+      });
+      extraGroups.forEach(function (name) {
+        var any = pane.querySelector('input[name="' + name + '"]:checked');
+        if (any) done++;
+      });
+      if (total === 0) { countEl.style.display='none'; btn.classList.remove('done'); }
+      else { countEl.style.display=''; countEl.textContent = done + '/' + total; btn.classList.toggle('done', done === total); }
+    });
+  }
+  var form = document.getElementById('cmp-form');
+  form.addEventListener('input', updateCompletion);
+  form.addEventListener('change', updateCompletion);
+
+  // Add / remove competitor rows.
+  function attachRemove(row) {
+    row.querySelector('[data-remove]').addEventListener('click', function () {
+      if (document.querySelectorAll('#cmp-table tbody tr').length > 1) row.remove();
+      updateCompletion();
+    });
+  }
+  document.querySelectorAll('#cmp-table tbody tr').forEach(attachRemove);
+  document.getElementById('cmp-add-row').addEventListener('click', function () {
+    var first = document.querySelector('#cmp-table tbody tr');
+    var clone = first.cloneNode(true);
+    clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+    document.querySelector('#cmp-table tbody').appendChild(clone);
+    attachRemove(clone);
+    updateCompletion();
+  });
+
+  // Require at least 1 country before submit (HTML can't enforce on checkboxes).
+  form.addEventListener('submit', function (e) {
+    var btn = document.activeElement;
+    if (!btn || btn.value !== 'submit') return;   // Save Draft is always OK
+    var any = form.querySelector('input[name="cmp_countries"]:checked');
+    if (!any) {
+      e.preventDefault();
+      show(TABS.indexOf('market'));
+      var hint = document.getElementById('cmp-countries-hint');
+      hint.style.color = '#b91c1c';
+      hint.textContent = 'Please select at least one destination country before submitting.';
+    }
+  });
+
+  updateCompletion();
+})();
+</script>
+</div>
+</body></html>

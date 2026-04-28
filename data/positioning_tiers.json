@@ -1,0 +1,7 @@
+[
+  { "code": "VALUE",     "label": "Value" },
+  { "code": "MAINSTREAM","label": "Mainstream" },
+  { "code": "PREMIUM",   "label": "Premium" },
+  { "code": "LUXURY",    "label": "Luxury" },
+  { "code": "SPECIALTY", "label": "Specialty / Artisan" }
+]

@@ -1,0 +1,9 @@
+[
+  { "code": "KIDS_0_12",       "label": "Kids (0–12)" },
+  { "code": "TEENS_13_17",     "label": "Teens (13–17)" },
+  { "code": "YOUNG_ADULT_18_24", "label": "Young Adults (18–24)" },
+  { "code": "ADULT_25_34",     "label": "Adults (25–34)" },
+  { "code": "ADULT_35_49",     "label": "Adults (35–49)" },
+  { "code": "ADULT_50_64",     "label": "Adults (50–64)" },
+  { "code": "SENIOR_65_PLUS",  "label": "Seniors (65+)" }
+]

@@ -1,0 +1,22 @@
+[
+  { "code": "FDA_GRAS",       "label": "FDA — GRAS notice (US)" },
+  { "code": "FDA_FACILITY",   "label": "FDA — Food facility registration (US)" },
+  { "code": "USDA_ORGANIC",   "label": "USDA Organic" },
+  { "code": "EU_ORGANIC",     "label": "EU Organic" },
+  { "code": "HALAL",          "label": "Halal certification" },
+  { "code": "KOSHER",         "label": "Kosher certification (OU / OK / Star-K)" },
+  { "code": "NON_GMO",        "label": "Non-GMO Project Verified" },
+  { "code": "GLUTEN_FREE",    "label": "Gluten-Free certification (GFCO)" },
+  { "code": "FAIRTRADE",      "label": "Fairtrade certification" },
+  { "code": "RAINFOREST",     "label": "Rainforest Alliance certification" },
+  { "code": "VEGAN",          "label": "Certified Vegan" },
+  { "code": "BRC_FOOD",       "label": "BRCGS Food Safety certification" },
+  { "code": "SQF",            "label": "SQF Food Safety certification" },
+  { "code": "ISO22000",       "label": "ISO 22000 — Food Safety Management" },
+  { "code": "HACCP",          "label": "HACCP plan" },
+  { "code": "COFEPRIS",       "label": "COFEPRIS sanitary registration (MX)" },
+  { "code": "ANVISA",         "label": "ANVISA registration (BR)" },
+  { "code": "CFIA",           "label": "CFIA approval (CA)" },
+  { "code": "FSSAI",          "label": "FSSAI registration (IN)" },
+  { "code": "GACC",           "label": "GACC food import registration (CN)" }
+]

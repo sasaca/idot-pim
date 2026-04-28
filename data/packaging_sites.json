@@ -1,0 +1,36 @@
+{
+  "_comment": "Sample packaging-site catalog. Top-level keys are regions, then countries (a few per region), then named sites at each country. Used by the R&D Production stage's Packaging tab — country list filters by region; site list filters by country.",
+
+  "North America": {
+    "United States":   ["US-PA-01 — Pittsburgh PA",   "US-OH-02 — Columbus OH",  "US-TX-03 — Dallas TX",   "US-CA-04 — Fresno CA"],
+    "Mexico":          ["MX-NL-01 — Monterrey",       "MX-JA-02 — Guadalajara",  "MX-CDMX-03 — Mexico City"]
+  },
+
+  "South America": {
+    "Brazil":          ["BR-SP-01 — Campinas SP",     "BR-MG-02 — Belo Horizonte MG", "BR-RS-03 — Porto Alegre RS"],
+    "Colombia":        ["CO-DC-01 — Bogotá",          "CO-VAC-02 — Cali"],
+    "Argentina":       ["AR-BA-01 — Buenos Aires",    "AR-CB-02 — Córdoba"]
+  },
+
+  "Europe": {
+    "Germany":         ["DE-NW-01 — Düsseldorf",      "DE-BY-02 — Munich"],
+    "Italy":           ["IT-LO-01 — Milan",           "IT-EM-02 — Bologna"],
+    "Spain":           ["ES-CT-01 — Barcelona",       "ES-VC-02 — Valencia"],
+    "Netherlands":     ["NL-NH-01 — Amsterdam"]
+  },
+
+  "Asia": {
+    "China":           ["CN-SH-01 — Shanghai",        "CN-GD-02 — Guangzhou"],
+    "India":           ["IN-MH-01 — Mumbai",          "IN-KA-02 — Bengaluru"],
+    "Japan":           ["JP-13-01 — Tokyo",           "JP-27-02 — Osaka"]
+  },
+
+  "Oceania": {
+    "Australia":       ["AU-NSW-01 — Sydney",         "AU-VIC-02 — Melbourne"]
+  },
+
+  "Africa & Middle East": {
+    "South Africa":    ["ZA-GP-01 — Johannesburg"],
+    "United Arab Emirates": ["AE-DU-01 — Dubai"]
+  }
+}

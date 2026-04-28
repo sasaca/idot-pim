@@ -9,13 +9,17 @@
   <%
     var fromAction = (typeof query !== 'undefined' && query && query.from) ? String(query.from) : '';
     var actionLabel = {
-      submit_details:    'Submitted for Marketing Director approval',
-      mktg_approve:      'Marketing Director approval recorded',
-      mktg_reject:       'Marketing Director rejection recorded',
-      mktg_request_info: 'Sent back to the requestor for more information',
-      sc_approve:        'Supply Chain Director approval recorded — request confirmed',
-      sc_reject:         'Supply Chain Director rejection recorded',
-      sc_request_info:   'Sent back to the requestor for more information',
+      submit_details:               'Submitted for Marketing Director approval',
+      mktg_approve:                 'Marketing Director approval recorded',
+      mktg_reject:                  'Marketing Director rejection recorded',
+      mktg_request_info:            'Sent back to the requestor for more information',
+      sc_approve:                   'Supply Chain Director approved — Production & Competitor Analysis are now open',
+      sc_reject:                    'Supply Chain Director rejection recorded',
+      sc_request_info:              'Sent back to the requestor for more information',
+      submit_production_partial:    'Production submitted by R&D — waiting on Marketing competitor analysis',
+      submit_production_final:      'Production submitted by R&D — request confirmed',
+      submit_competitor_partial:    'Competitor analysis submitted — waiting on R&D production',
+      submit_competitor_final:      'Competitor analysis submitted — request confirmed',
     }[fromAction];
   %>
 
@@ -70,7 +74,33 @@
       <p class="mt-2 text-sm text-gray-600">
         This request is currently at stage <strong><%= stateLabel %></strong>.
       </p>
+      <% if (productRequest.workflow_state === 'PENDING_PRODUCTION_AND_ANALYSIS') { %>
+        <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div class="rounded border <%= productRequest.production_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
+            <strong>Production (R&amp;D)</strong>
+            <% if (productRequest.production_completed_at) { %>
+              · ✓ submitted <%= productRequest.production_completed_at %>
+            <% } else { %>
+              · pending
+            <% } %>
+          </div>
+          <div class="rounded border <%= productRequest.competitor_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
+            <strong>Competitor Analysis (Marketing)</strong>
+            <% if (productRequest.competitor_completed_at) { %>
+              · ✓ submitted <%= productRequest.competitor_completed_at %>
+            <% } else { %>
+              · pending
+            <% } %>
+          </div>
+        </div>
+      <% } %>
     </section>
+  <% } %>
+
+  <% if (['PENDING_PRODUCTION_AND_ANALYSIS','CONFIRMED','REJECTED'].includes(productRequest.workflow_state)) { %>
+    <div class="mt-6">
+      <%- include('_readonly_view', { productRequest: productRequest, ref: ref, attachments: (typeof attachments !== 'undefined' ? attachments : []) }) %>
+    </div>
   <% } %>
 </main>
 </div>

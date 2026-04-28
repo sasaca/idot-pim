@@ -16,6 +16,11 @@ var br  = pr.brand     || {};
 var rnd = pr.rnd       || {};
 var fc  = pr.forecast  || {};
 var rp  = pr.referenceProduct || {};
+var prodPlan = (pr.production && pr.production.plan)      || {};
+var prodPkg  = (pr.production && pr.production.packaging) || {};
+var prodFrm  = (pr.production && pr.production.formula)   || {};
+var cmp      = pr.competitor || {};
+var atts     = (typeof attachments !== 'undefined' && attachments) ? attachments : [];
 
 function show(v, fallback) {
   if (v === null || v === undefined || v === '' ) return fallback || '—';
@@ -198,3 +203,114 @@ function fmt(n) {
     <div class="ro-row full"><span class="ro-label">5-Year Total</span><span class="ro-value"><strong style="font-size:16px;color:#1e3a8a;"><%= fmt(fc.total_y5) %></strong></span></div>
   </div>
 </div>
+
+<% if (pr.production_completed_at || prodPlan.launch_start_date) { %>
+  <!-- 5) Production (R&D) -->
+  <div class="ro-card">
+    <h2>5 · Production (R&amp;D)
+      <% if (pr.production_completed_at) { %>
+        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.production_completed_at %></span>
+      <% } else { %>
+        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
+      <% } %>
+    </h2>
+    <h3>Production plan</h3>
+    <div class="ro-grid cols-3">
+      <div class="ro-row"><span class="ro-label">Launch start</span><span class="ro-value"><%= show(prodPlan.launch_start_date) %></span></div>
+      <div class="ro-row"><span class="ro-label">Launch target</span><span class="ro-value"><%= show(prodPlan.launch_target_date) %></span></div>
+      <div class="ro-row"><span class="ro-label">Lead time</span><span class="ro-value"><%= prodPlan.lead_time_weeks != null ? (prodPlan.lead_time_weeks + ' weeks') : '—' %></span></div>
+    </div>
+    <h3>Packaging</h3>
+    <div class="ro-grid cols-3">
+      <div class="ro-row"><span class="ro-label">Origin</span><span class="ro-value"><%= show(prodPkg.origin) %></span></div>
+      <div class="ro-row"><span class="ro-label">Launch type</span><span class="ro-value"><%= show(prodPkg.launch_type && prodPkg.launch_type.replace(/_/g,' ')) %></span></div>
+      <div class="ro-row"><span class="ro-label">Region / Country</span><span class="ro-value"><%= show(prodPkg.region) %><% if (prodPkg.country) { %> · <%= prodPkg.country %><% } %></span></div>
+      <div class="ro-row full"><span class="ro-label">Site</span><span class="ro-value"><%= show(prodPkg.site) %></span></div>
+    </div>
+    <h3>Formula</h3>
+    <div class="ro-grid cols-3">
+      <div class="ro-row"><span class="ro-label">Origin</span><span class="ro-value"><%= show(prodFrm.origin) %></span></div>
+      <div class="ro-row"><span class="ro-label">Category</span><span class="ro-value"><%= show(prodFrm.category) %></span></div>
+      <div class="ro-row"><span class="ro-label">Class</span><span class="ro-value"><%= show(prodFrm.class) %></span></div>
+      <div class="ro-row"><span class="ro-label">Brand</span><span class="ro-value"><%= show(prodFrm.brand_tier) %></span></div>
+      <div class="ro-row"><span class="ro-label">Formula type</span><span class="ro-value"><%= show(prodFrm.formula_type) %></span></div>
+      <div class="ro-row"><span class="ro-label">Flavor</span><span class="ro-value"><%= show(prodFrm.flavor) %></span></div>
+      <div class="ro-row"><span class="ro-label">Color</span><span class="ro-value"><%= show(prodFrm.color) %></span></div>
+      <div class="ro-row"><span class="ro-label">Appearance</span><span class="ro-value"><%= show(prodFrm.appearance) %></span></div>
+      <div class="ro-row"><span class="ro-label">Cold storage</span><span class="ro-value"><%= show(prodFrm.cold_storage) %></span></div>
+      <div class="ro-row"><span class="ro-label">Carbonated</span><span class="ro-value"><%= show(prodFrm.carbonated) %></span></div>
+    </div>
+    <% if (prodFrm.certificates && prodFrm.certificates.length) { %>
+      <h3>Legal certificates</h3>
+      <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
+        <% prodFrm.certificates.forEach(function (c) { %>
+          <li>
+            <strong><%= c.code %></strong>
+            <% if (c.comment) { %> — <em><%= c.comment %></em><% } %>
+            <%
+              var fileMatches = atts.filter(function (a) { return a.certificate_type === c.code; });
+              fileMatches.forEach(function (f) { %>
+              · <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
+            <% }); %>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (pr.competitor_completed_at || cmp.market_type) { %>
+  <!-- 6) Competitor Analysis -->
+  <div class="ro-card">
+    <h2>6 · Competitor Analysis (Marketing)
+      <% if (pr.competitor_completed_at) { %>
+        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.competitor_completed_at %></span>
+      <% } else { %>
+        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
+      <% } %>
+    </h2>
+    <div class="ro-grid">
+      <div class="ro-row"><span class="ro-label">Market type</span><span class="ro-value"><%= show(cmp.market_type) %></span></div>
+      <div class="ro-row"><span class="ro-label">Positioning</span><span class="ro-value"><%= show(cmp.positioning) %></span></div>
+      <div class="ro-row full"><span class="ro-label">Destination countries</span><span class="ro-value">
+        <%= (cmp.countries || []).map(function (c) {
+          var m = (ref.PRODUCT_MARKETS || []).find(function (x) { return x.code === c; });
+          return m ? m.name : c;
+        }).join(', ') || '—' %>
+      </span></div>
+      <div class="ro-row full"><span class="ro-label">Distribution channels</span><span class="ro-value">
+        <%= (cmp.channels || []).map(function (c) {
+          var m = (ref.DISTRIBUTION_CHANNELS || []).find(function (x) { return x.code === c; });
+          return m ? m.label : c;
+        }).join(', ') || '—' %>
+      </span></div>
+      <div class="ro-row full"><span class="ro-label">Target ages</span><span class="ro-value">
+        <%= (cmp.target_ages || []).map(function (c) {
+          var m = (ref.TARGET_AGE_GROUPS || []).find(function (x) { return x.code === c; });
+          return m ? m.label : c;
+        }).join(', ') || '—' %>
+      </span></div>
+    </div>
+    <% if (cmp.competitors && cmp.competitors.length) { %>
+      <h3>Competitor pricing</h3>
+      <table class="ro-fc-table">
+        <thead><tr><th>Competitor</th><th>Product</th><th>Price (local)</th><th>Local CCY</th><th>Price (USD)</th></tr></thead>
+        <tbody>
+          <% cmp.competitors.forEach(function (c) { %>
+            <tr>
+              <td style="text-align:left;"><%= show(c.name) %></td>
+              <td style="text-align:left;"><%= show(c.product) %></td>
+              <td><%= fmt(c.price_local) %></td>
+              <td><%= show(c.price_local_ccy) %></td>
+              <td><%= fmt(c.price_usd) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+    <% if (cmp.market_trends) { %>
+      <h3>Market trends</h3>
+      <div class="ro-row full" style="border-bottom:none;"><span class="ro-value"><%= cmp.market_trends %></span></div>
+    <% } %>
+  </div>
+<% } %>
