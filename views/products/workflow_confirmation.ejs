@@ -16,10 +16,12 @@
       sc_approve:                   'Supply Chain Director approved — Production & Competitor Analysis are now open',
       sc_reject:                    'Supply Chain Director rejection recorded',
       sc_request_info:              'Sent back to the requestor for more information',
-      submit_production:            'Production submitted by R&D — Packaging Materials is now open',
-      submit_packaging_partial:     'Packaging Materials submitted by R&D — waiting on Marketing competitor analysis',
+      submit_production:            'Production submitted by R&D — Packaging Materials and Design are now open',
+      submit_packaging_partial:     'Packaging Materials submitted by R&D — other tracks still pending',
       submit_packaging_final:       'Packaging Materials submitted by R&D — request confirmed',
-      submit_competitor_partial:    'Competitor analysis submitted — waiting on R&D',
+      submit_design_partial:        'Design submitted by R&D — other tracks still pending',
+      submit_design_final:          'Design submitted by R&D — request confirmed',
+      submit_competitor_partial:    'Competitor analysis submitted — other tracks still pending',
       submit_competitor_final:      'Competitor analysis submitted — request confirmed',
     }[fromAction];
   %>
@@ -76,7 +78,7 @@
         This request is currently at stage <strong><%= stateLabel %></strong>.
       </p>
       <% if (productRequest.workflow_state === 'PENDING_PRODUCTION_AND_ANALYSIS') { %>
-        <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
+        <div class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <div class="rounded border <%= productRequest.production_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
             <strong>Production (R&amp;D)</strong>
             <% if (productRequest.production_completed_at) { %>
@@ -87,6 +89,12 @@
             <strong>Packaging Materials (R&amp;D)</strong>
             <% if (productRequest.packaging_completed_at) { %>
               · ✓ submitted <%= productRequest.packaging_completed_at %>
+            <% } else if (productRequest.production_completed_at) { %>· in progress<% } else { %>· waiting on Production<% } %>
+          </div>
+          <div class="rounded border <%= productRequest.design_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
+            <strong>Design (R&amp;D)</strong>
+            <% if (productRequest.design_completed_at) { %>
+              · ✓ submitted <%= productRequest.design_completed_at %>
             <% } else if (productRequest.production_completed_at) { %>· in progress<% } else { %>· waiting on Production<% } %>
           </div>
           <div class="rounded border <%= productRequest.competitor_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
@@ -102,7 +110,7 @@
 
   <% if (['PENDING_PRODUCTION_AND_ANALYSIS','CONFIRMED','REJECTED'].includes(productRequest.workflow_state)) { %>
     <div class="mt-6">
-      <%- include('_readonly_view', { productRequest: productRequest, ref: ref, attachments: (typeof attachments !== 'undefined' ? attachments : []) }) %>
+      <%- include('_readonly_view', { productRequest: productRequest, ref: ref, attachments: (typeof attachments !== 'undefined' ? attachments : []), designAttachments: (typeof designAttachments !== 'undefined' ? designAttachments : []) }) %>
     </div>
   <% } %>
 </main>

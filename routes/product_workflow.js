@@ -55,6 +55,9 @@ const POSITIONING_TIERS      = loadJson('positioning_tiers.json');
 const PACKAGING_MATERIALS    = loadJson('packaging_materials.json');
 const PACKAGING_COMPONENTS   = loadJson('packaging_components.json');
 const INCOTERMS              = loadJson('incoterms.json');
+const LANGUAGES              = loadJson('languages.json');
+
+const labelExtract = require('../lib/label_extract');
 
 // Bundle reference data for views.
 function refData() {
@@ -73,6 +76,7 @@ function refData() {
     PACKAGING_MATERIALS,
     PACKAGING_COMPONENTS,
     INCOTERMS,
+    LANGUAGES,
     REJECT_REASONS: productWorkflow.REJECT_REASONS,
     INFO_REASONS:   productWorkflow.INFO_REASONS,
     STATE_LABELS:   productWorkflow.STATE_LABELS,
@@ -90,6 +94,7 @@ function decode(req) {
     referenceProduct: safeJson(req.reference_product_json),
     production:       safeJson(req.production_json),
     packaging:        safeJson(req.packaging_json),
+    design:           safeJson(req.design_json),
     competitor:       safeJson(req.competitor_json),
   });
 }
@@ -455,12 +460,12 @@ module.exports = function makeRouter(db) {
       `).run(JSON.stringify(competitor), now, reqId);
 
       if (action === 'submit') {
-        // Competitor submit confirms only when BOTH R&D forms (production
-        // and packaging) are already complete; otherwise the request stays
-        // in PENDING_PRODUCTION_AND_ANALYSIS until R&D finishes.
+        // Competitor submit confirms only when ALL R&D forms (production,
+        // packaging, design) are already complete; otherwise stay in state.
         const rndDone =
           !!res.locals.productRequest.production_completed_at &&
-          !!res.locals.productRequest.packaging_completed_at;
+          !!res.locals.productRequest.packaging_completed_at &&
+          !!res.locals.productRequest.design_completed_at;
         const transitionAction = rndDone ? 'submit_competitor_final' : 'submit_competitor_partial';
         const cur = res.locals.productRequest.workflow_state;
         const result = productWorkflow.transition(cur, transitionAction);
@@ -522,11 +527,12 @@ module.exports = function makeRouter(db) {
       `).run(JSON.stringify(packaging), now, reqId);
 
       if (action === 'submit') {
-        // Packaging confirms only if Marketing's competitor analysis has
-        // already closed too — otherwise we just stay in the same state and
-        // wait on Marketing.
-        const competitorDone = !!pr.competitor_completed_at;
-        const transitionAction = competitorDone ? 'submit_packaging_final' : 'submit_packaging_partial';
+        // Packaging confirms only when EVERY other R&D + Marketing track is
+        // already closed (design + competitor); otherwise we stay in state.
+        const allOtherDone =
+          !!pr.design_completed_at &&
+          !!pr.competitor_completed_at;
+        const transitionAction = allOtherDone ? 'submit_packaging_final' : 'submit_packaging_partial';
         const cur = pr.workflow_state;
         const result = productWorkflow.transition(cur, transitionAction);
         const tx = db.transaction(() => {
@@ -545,6 +551,154 @@ module.exports = function makeRouter(db) {
     });
 
   // -------------------------------------------------------------------------
+  // Stage 5c — Design (R&D, parallel with Packaging Materials).
+  // -------------------------------------------------------------------------
+  // multer.any() so the same submit can ship a design brief, translation,
+  // label image, plus arbitrary numbers of logo/pictogram/symbol files.
+  // Each file is stamped with stage='design' and a category derived from
+  // its fieldname.
+  const FIELD_CATEGORY = {
+    design_brief:       'design_brief',
+    design_translation: 'design_translation',
+    design_label:       'design_label',
+  };
+  function categoryFor(fieldname) {
+    if (FIELD_CATEGORY[fieldname]) return FIELD_CATEGORY[fieldname];
+    if (fieldname === 'design_logo'      || fieldname === 'design_logo[]')      return 'design_logo';
+    if (fieldname === 'design_pictogram' || fieldname === 'design_pictogram[]') return 'design_pictogram';
+    if (fieldname === 'design_symbol'    || fieldname === 'design_symbol[]')    return 'design_symbol';
+    return null;
+  }
+
+  router.get('/:id/design',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS, productWorkflow.STATES.CONFIRMED),
+    (req, res) => {
+      const pr = res.locals.productRequest;
+      if (!pr.production_completed_at) {
+        return res.redirect(`/products/workflow/${pr.id}/production`);
+      }
+      const decoded = decode(pr);
+      res.render('products/workflow_design', {
+        ref: refData(),
+        productRequest: decoded,
+        attachments: loadDesignAttachments(decoded.id),
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/design',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    uploadCert.any(),                                  // reuses the multer upload dir
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS),
+    (req, res) => {
+      const pr = res.locals.productRequest;
+      if (!pr.production_completed_at) {
+        return res.redirect(`/products/workflow/${pr.id}/production`);
+      }
+      const b = req.body || {};
+      const u = res.locals.currentUser || {};
+      const reqId = pr.id;
+      const action = String(b.action || 'save_draft');
+      const design = pickDesign(b);
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE product_requests SET design_json = ?, updated_at = ? WHERE id = ?
+      `).run(JSON.stringify(design), now, reqId);
+
+      // Persist files. Single-slot fields (brief/translation/label) replace
+      // any existing attachment for that category; the multi-slot fields
+      // (logos/pictograms/symbols) are append-only — users can clear them
+      // out via dedicated DELETE endpoints if needed (future work).
+      if (Array.isArray(req.files) && req.files.length) {
+        const ins = db.prepare(`
+          INSERT INTO product_request_attachments
+            (product_req_id, stage, category, certificate_type,
+             filename, original_name, mime_type, size_bytes, comment, uploaded_by)
+          VALUES (?, 'design', ?, NULL, ?, ?, ?, ?, NULL, ?)
+        `);
+        const del = db.prepare(`
+          DELETE FROM product_request_attachments
+            WHERE product_req_id=? AND stage='design' AND category=?
+        `);
+        const tx = db.transaction(() => {
+          req.files.forEach((f) => {
+            const cat = categoryFor(f.fieldname);
+            if (!cat) return;
+            // Single-slot fields overwrite existing rows for the same category.
+            if (cat === 'design_brief' || cat === 'design_translation' || cat === 'design_label') {
+              del.run(reqId, cat);
+            }
+            ins.run(reqId, cat, f.filename, f.originalname, f.mimetype, f.size, u.id || null);
+          });
+        });
+        tx();
+      }
+
+      if (action === 'submit') {
+        const allOtherDone =
+          !!pr.packaging_completed_at &&
+          !!pr.competitor_completed_at;
+        const transitionAction = allOtherDone ? 'submit_design_final' : 'submit_design_partial';
+        const cur = pr.workflow_state;
+        const result = productWorkflow.transition(cur, transitionAction);
+        const tx = db.transaction(() => {
+          db.prepare(`
+            UPDATE product_requests
+               SET design_completed_at = ?, design_completed_by = ?
+             WHERE id = ?
+          `).run(now, u.id || null, reqId);
+          applyTransition(reqId, result, u.id, u.role || 'RND_TEAM', null, b.note || null);
+        });
+        tx();
+        return res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+      }
+
+      res.redirect(`/products/workflow/${reqId}/design`);
+    });
+
+  // POST a single label image and get back the seven extracted fields.
+  // Used by the "Auto-fill from label" button on the Design tab. We do NOT
+  // persist the image here — the actual save happens on the main /design
+  // POST when the user submits.
+  router.post('/:id/api/extract-label',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    uploadCert.single('label'),
+    async (req, res) => {
+      try {
+        if (!req.file) return res.status(400).json({ error: 'image required' });
+        const buf = fs.readFileSync(path.join(uploadDir, req.file.filename));
+        // Keep the upload — when the user submits the design form they may
+        // want to attach this same image. But discard if they don't, so we
+        // delete it once we've read the bytes.
+        try { fs.unlinkSync(path.join(uploadDir, req.file.filename)); } catch {}
+        const fields = await labelExtract.extractLabel({
+          dataBase64: buf.toString('base64'),
+          mediaType: req.file.mimetype || 'image/jpeg',
+        });
+        res.json({ ok: true, fields });
+      } catch (e) {
+        res.status(500).json({ error: String(e.message || e), code: e.code });
+      }
+    });
+
+  // Convenience loader for design-stage attachments.
+  function loadDesignAttachments(reqId) {
+    return db.prepare(`
+      SELECT a.*, u.name AS uploader_name
+        FROM product_request_attachments a
+        LEFT JOIN users u ON u.id = a.uploaded_by
+       WHERE a.product_req_id = ? AND a.stage = 'design'
+       ORDER BY a.id ASC
+    `).all(reqId);
+  }
+
+  // -------------------------------------------------------------------------
   // Confirmation page (any authenticated user can view)
   // -------------------------------------------------------------------------
   router.get('/:id/confirmation', loadProductRequest(db), (req, res) => {
@@ -553,6 +707,7 @@ module.exports = function makeRouter(db) {
       ref: refData(),
       productRequest: decoded,
       attachments: loadAttachments(decoded.id, 'production'),
+      designAttachments: loadDesignAttachments(decoded.id),
       history: loadHistory(decoded.id),
       comments: loadComments(decoded.id),
       stateLabel: productWorkflow.STATE_LABELS[decoded.workflow_state] || decoded.workflow_state,
@@ -608,9 +763,10 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       states = ['PENDING_SC_DIRECTOR'];
     } else if (roles.includes('RND_TEAM')) {
       states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
-      // R&D's track has TWO sequential forms — show anything where either
-      // production OR packaging is still incomplete.
-      extraWhere = ' AND (production_completed_at IS NULL OR packaging_completed_at IS NULL)';
+      // R&D's track has THREE forms — production (sequential first), then
+      // packaging + design in parallel. Show anything where any of them
+      // are still incomplete.
+      extraWhere = ' AND (production_completed_at IS NULL OR packaging_completed_at IS NULL OR design_completed_at IS NULL)';
     } else if (roles.includes('MARKETING_TEAM')) {
       states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
       extraWhere = ' AND competitor_completed_at IS NULL';
@@ -846,6 +1002,34 @@ function pickPackaging(b) {
     rationale_volume:   b.pkm_rationale_volume || '',
     inventory_agreement: b.pkm_inventory_agreement || '',
     comparisons,
+  };
+}
+
+// ---------- Stage 5c — Design (R&D) ----------------------------------------
+
+function pickDesign(b) {
+  return {
+    brief: {
+      languages: [].concat(b.dsn_languages || []),
+      // Free-text notes alongside the brief upload.
+      notes:     b.dsn_brief_notes || '',
+    },
+    agency: {
+      name:        b.dsn_agency_name        || '',
+      vendor_code: b.dsn_agency_vendor_code || '',
+      contact:     b.dsn_agency_contact     || '',
+      email:       b.dsn_agency_email       || '',
+      phone:       b.dsn_agency_phone       || '',
+    },
+    label: {
+      marketing_text:        b.dsn_marketing_text        || '',
+      claims:                b.dsn_claims                || '',
+      legal_claims:          b.dsn_legal_claims          || '',
+      environmental_claims:  b.dsn_environmental_claims  || '',
+      nutritional_claims:    b.dsn_nutritional_claims    || '',
+      dietary_claims:        b.dsn_dietary_claims        || '',
+      contacts:              b.dsn_contacts              || '',
+    },
   };
 }
 

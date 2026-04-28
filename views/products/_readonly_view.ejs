@@ -28,6 +28,9 @@ var pkmInco  = pkm.incoterms      || [];
 var pkmCost  = pkm.cost_updated   || {};
 var pkmVol   = pkm.volume_updated || {};
 var pkmComp  = pkm.comparisons    || [];
+var dsn      = pr.design || {};
+var dsnAtts  = (typeof designAttachments !== 'undefined' && designAttachments) ? designAttachments : [];
+var dsnByCat = dsnAtts.reduce(function (m, a) { (m[a.category] = m[a.category] || []).push(a); return m; }, {});
 
 function show(v, fallback) {
   if (v === null || v === undefined || v === '' ) return fallback || '—';
@@ -380,6 +383,81 @@ function fmt(n) {
           <% }); %>
         </tbody>
       </table>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (pr.design_completed_at || (dsn.agency && dsn.agency.name) || dsnAtts.length) { %>
+  <!-- 5c) Design (R&D, parallel with Packaging) -->
+  <div class="ro-card">
+    <h2>5c · Design (R&amp;D)
+      <% if (pr.design_completed_at) { %>
+        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.design_completed_at %></span>
+      <% } else { %>
+        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
+      <% } %>
+    </h2>
+    <h3>Brief</h3>
+    <div class="ro-grid">
+      <div class="ro-row full"><span class="ro-label">Required languages</span><span class="ro-value">
+        <%= ((dsn.brief && dsn.brief.languages) || []).map(function (c) {
+          var m = (ref.LANGUAGES || []).find(function (x) { return x.code === c; });
+          return m ? m.label : c;
+        }).join(', ') || '—' %>
+      </span></div>
+      <% if (dsn.brief && dsn.brief.notes) { %>
+        <div class="ro-row full"><span class="ro-label">Brief notes</span><span class="ro-value"><%= dsn.brief.notes %></span></div>
+      <% } %>
+      <% if ((dsnByCat.design_brief || [])[0]) { var f = dsnByCat.design_brief[0]; %>
+        <div class="ro-row full"><span class="ro-label">Design brief file</span><span class="ro-value">
+          <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
+        </span></div>
+      <% } %>
+      <% if ((dsnByCat.design_translation || [])[0]) { var f = dsnByCat.design_translation[0]; %>
+        <div class="ro-row full"><span class="ro-label">Translation file</span><span class="ro-value">
+          <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
+        </span></div>
+      <% } %>
+    </div>
+
+    <h3>Agency</h3>
+    <div class="ro-grid cols-3">
+      <div class="ro-row"><span class="ro-label">Name</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.name) %></span></div>
+      <div class="ro-row"><span class="ro-label">Vendor code</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.vendor_code) %></span></div>
+      <div class="ro-row"><span class="ro-label">Contact</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.contact) %></span></div>
+      <div class="ro-row"><span class="ro-label">Email</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.email) %></span></div>
+      <div class="ro-row"><span class="ro-label">Phone</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.phone) %></span></div>
+    </div>
+
+    <% if (dsn.label) { var L = dsn.label; if (L.marketing_text || L.claims || L.legal_claims || L.environmental_claims || L.nutritional_claims || L.dietary_claims || L.contacts) { %>
+      <h3>Label content</h3>
+      <% [
+        ['Marketing text',       L.marketing_text],
+        ['Claims',               L.claims],
+        ['Legal claims',         L.legal_claims],
+        ['Environmental claims', L.environmental_claims],
+        ['Nutritional claims',   L.nutritional_claims],
+        ['Dietary claims',       L.dietary_claims],
+        ['Contacts',             L.contacts],
+      ].forEach(function (pair) { if (pair[1]) { %>
+        <div class="ro-row full"><span class="ro-label"><%= pair[0] %></span><span class="ro-value"><%= pair[1] %></span></div>
+      <% }}); %>
+    <% }} %>
+
+    <% if ((dsnByCat.design_label || []).length || (dsnByCat.design_logo || []).length || (dsnByCat.design_pictogram || []).length || (dsnByCat.design_symbol || []).length) { %>
+      <h3>Visual assets</h3>
+      <% [
+        ['Label image', dsnByCat.design_label || []],
+        ['Logos',       dsnByCat.design_logo  || []],
+        ['Pictograms',  dsnByCat.design_pictogram || []],
+        ['Symbols',     dsnByCat.design_symbol || []],
+      ].forEach(function (pair) { if (pair[1].length) { %>
+        <div class="ro-row full"><span class="ro-label"><%= pair[0] %> (<%= pair[1].length %>)</span><span class="ro-value">
+          <% pair[1].forEach(function (a) { %>
+            <a href="/products/workflow/<%= pr.id %>/attachments/<%= a.id %>" class="text-blue-600 hover:underline" target="_blank" style="margin-right:8px;"><%= a.original_name %></a>
+          <% }); %>
+        </span></div>
+      <% }}); %>
     <% } %>
   </div>
 <% } %>

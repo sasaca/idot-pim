@@ -1,0 +1,463 @@
+<%
+/*
+  views/products/workflow_design.ejs
+  ---------------------------------------------------------------------------
+  Stage 5c — Design (R&D, parallel with Packaging Materials).
+  Tabs:
+    1. Brief — design-brief upload (with image preview), required-language
+       multi-select, label-translation upload.
+    2. Agency — name, vendor code, contact, email, phone.
+    3. Labels — single label-image upload that drives an AI auto-fill button
+       to populate seven free-text fields, plus three multi-upload sections
+       (Logos, Pictograms, Symbols) each with thumbnail previews and
+       download links for already-attached files.
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'Product Request — Design (R&D)' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Design (R&D)', topSub: 'Capture design brief, agency, label content and graphic assets.' }) %>
+
+<style>
+  .vob-nav { display:flex; flex-wrap:nowrap; gap:2px; padding:0 6px; margin:0 0 -1px 0; position:relative; z-index:2; overflow-x:auto; }
+  .vob-nav button { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; margin:0; border:1px solid #e5e7eb; border-radius:8px 8px 0 0; background:#f3f4f6; color:#4b5563; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .vob-nav button:hover { background:#e5e7eb; }
+  .vob-nav button.active { background:#fff; color:#111827; font-weight:600; border-bottom-color:#fff; z-index:3; }
+  .vob-nav .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:#e5e7eb; color:#374151; font-size:12px; font-weight:600; }
+  .vob-nav button.active .num { background:#1e3a8a; color:#fff; }
+  .vob-nav .vob-count { display:inline-block; padding:1px 7px; font-size:11px; border-radius:9999px; background:#d1d5db; color:#374151; font-weight:600; }
+  .vob-nav button.active .vob-count { background:#e5e7eb; color:#111827; }
+  .vob-nav button.done { background:#10b981; color:#fff; border-color:#10b981; }
+  .vob-nav button.done .num, .vob-nav button.done .vob-count { background:rgba(255,255,255,.35); color:#fff; }
+
+  .vob-card { background:#fff; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; padding:24px; box-shadow:0 1px 2px rgba(0,0,0,.04); position:relative; z-index:1; }
+  .vob-card h2 { font-size:18px; font-weight:600; color:#111827; margin:0 0 4px; }
+  .vob-card .indicates-required { color:#dc2626; font-size:12px; margin-bottom:14px; }
+  .vob-card .section-title { font-size:15px; font-weight:600; color:#111827; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:18px 0 12px; }
+
+  .vob-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  .vob-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+  @media (max-width:700px) { .vob-grid, .vob-grid.cols-3 { grid-template-columns:1fr; } }
+  .vob-field label { display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:4px; }
+  .vob-field label .req { color:#dc2626; margin-right:3px; }
+  .vob-field input, .vob-field select, .vob-field textarea { width:100%; padding:8px 10px; font-size:14px; border:1px solid #d1d5db; border-radius:6px; background:#fff; box-sizing:border-box; }
+  .vob-field textarea { min-height:90px; resize:vertical; }
+  .vob-field.full { grid-column:1 / -1; }
+
+  .check-group { display:flex; flex-wrap:wrap; gap:8px 12px; padding:6px 0 2px; }
+  .check-group label { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:13px; color:#374151; border:1px solid #d1d5db; border-radius:999px; background:#fff; cursor:pointer; user-select:none; }
+  .check-group label:has(input:checked) { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+
+  .vob-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; }
+  .vob-footer .right { display:flex; gap:8px; }
+  .btn { padding:8px 16px; font-size:14px; font-weight:500; border-radius:6px; border:none; cursor:pointer; }
+  .btn-default { background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .btn-primary { background:#1e3a8a; color:#fff; }
+
+  .vob-pane { display:none; }
+  .vob-pane.active { display:block; }
+
+  /* File slot — single upload with preview. */
+  .file-slot {
+    border:1px dashed #d1d5db; border-radius:8px; padding:14px;
+    background:#fafafa; display:flex; align-items:center; gap:14px;
+  }
+  .file-slot .preview {
+    width:120px; height:120px; flex:0 0 120px; border:1px solid #e5e7eb;
+    border-radius:6px; background:#fff; overflow:hidden; display:flex;
+    align-items:center; justify-content:center; color:#9ca3af; font-size:11px;
+  }
+  .file-slot .preview img { width:100%; height:100%; object-fit:contain; background:#f9fafb; }
+  .file-slot .preview iframe { width:100%; height:100%; border:none; }
+  .file-slot .meta { font-size:12px; color:#6b7280; flex:1; }
+  .file-slot input[type=file] { font-size:13px; }
+  .file-slot a { color:#1d4ed8; text-decoration:underline; font-size:12px; }
+
+  /* Multi-asset gallery (logos / pictograms / symbols) */
+  .gallery {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+    gap:12px; margin-top:10px;
+  }
+  .gallery-tile {
+    border:1px solid #e5e7eb; border-radius:6px; padding:8px; background:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .gallery-tile .thumb {
+    width:100%; height:100px; display:flex; align-items:center; justify-content:center;
+    background:#f9fafb; border-radius:4px; overflow:hidden;
+  }
+  .gallery-tile .thumb img { max-width:100%; max-height:100%; object-fit:contain; }
+  .gallery-tile .name { font-size:11px; color:#374151; word-break:break-all; text-align:center; }
+
+  .ai-row { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; padding:.5rem .75rem; background:#eef2ff; border:1px dashed #c7d2fe; border-radius:.5rem; margin-top:.4rem; font-size:13px; color:#3730a3; }
+  .submitted-banner { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<%
+  var pr  = productRequest;
+  var dsn = pr.design || {};
+  var brief  = dsn.brief  || {};
+  var agency = dsn.agency || {};
+  var lbl    = dsn.label  || {};
+  var pickedLangs = (brief.languages || []).reduce(function (m, c) { m[c] = 1; return m; }, {});
+  var byCat = (attachments || []).reduce(function (m, a) {
+    (m[a.category] = m[a.category] || []).push(a); return m;
+  }, {});
+  var briefAtt       = (byCat.design_brief       || [])[0];
+  var translationAtt = (byCat.design_translation || [])[0];
+  var labelAtt       = (byCat.design_label       || [])[0];
+  var logos      = byCat.design_logo      || [];
+  var pictograms = byCat.design_pictogram || [];
+  var symbols    = byCat.design_symbol    || [];
+
+  var alreadySubmitted = !!pr.design_completed_at;
+%>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Design — R&amp;D</h1>
+      <p class="text-sm text-gray-500 mt-1"><strong><%= pr.product_name %></strong> · Request #<%= pr.id %></p>
+    </div>
+    <a href="/products/workflow/queue" class="text-sm text-blue-600 hover:underline">← Back to queue</a>
+  </div>
+
+  <%- include('_workflow_shared', { productRequest: pr, stateLabel: ref.STATE_LABELS[pr.workflow_state] || pr.workflow_state, history: history, comments: comments }) %>
+
+  <% if (alreadySubmitted) { %>
+    <div class="submitted-banner">
+      ✓ Design submitted on <strong><%= pr.design_completed_at %></strong>.
+      The form below is read-only.
+    </div>
+  <% } %>
+
+  <div class="vob-shell">
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="brief"><span class="num">1</span><span>Design Brief</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="agency"><span class="num">2</span><span>Design Agency</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="labels"><span class="num">3</span><span>Labels &amp; Assets</span><span class="vob-count"></span></button>
+    </nav>
+
+    <form id="dsn-form" method="post" enctype="multipart/form-data" action="/products/workflow/<%= pr.id %>/design">
+      <fieldset <%= alreadySubmitted ? 'disabled' : '' %> style="border:none; padding:0; margin:0;">
+
+      <!-- ===== 1) Brief ===== -->
+      <section class="vob-pane active" data-pane="brief">
+        <div class="vob-card">
+          <h2>Design Brief</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <div class="section-title">Brief attachment</div>
+          <div class="file-slot">
+            <div class="preview" id="brief-preview">
+              <% if (briefAtt) { %>
+                <% if ((briefAtt.mime_type || '').startsWith('image/')) { %>
+                  <img src="/products/workflow/<%= pr.id %>/attachments/<%= briefAtt.id %>" alt="">
+                <% } else { %>
+                  <span>📄 PDF</span>
+                <% } %>
+              <% } else { %>
+                <span>No file</span>
+              <% } %>
+            </div>
+            <div class="meta" style="flex:1;">
+              <% if (briefAtt) { %>
+                <div><strong>Current:</strong>
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= briefAtt.id %>" target="_blank"><%= briefAtt.original_name %></a>
+                </div>
+                <div style="margin-top:4px; color:#6b7280;">Upload again to replace.</div>
+              <% } %>
+              <input type="file" name="design_brief" accept="image/*,application/pdf" data-preview-into="brief-preview" style="margin-top:6px;">
+            </div>
+          </div>
+
+          <div class="section-title">Required languages</div>
+          <p class="text-sm text-gray-600">Tick every language the label must be translated into.</p>
+          <div class="check-group">
+            <% ref.LANGUAGES.forEach(function (l) { %>
+              <label><input type="checkbox" name="dsn_languages" value="<%= l.code %>" <%= pickedLangs[l.code] ? 'checked' : '' %>><%= l.label %></label>
+            <% }); %>
+          </div>
+
+          <div class="section-title">Translation of label</div>
+          <div class="file-slot">
+            <div class="preview" id="translation-preview">
+              <% if (translationAtt) { %>
+                <% if ((translationAtt.mime_type || '').startsWith('image/')) { %>
+                  <img src="/products/workflow/<%= pr.id %>/attachments/<%= translationAtt.id %>" alt="">
+                <% } else { %>
+                  <span>📄 PDF</span>
+                <% } %>
+              <% } else { %>
+                <span>No file</span>
+              <% } %>
+            </div>
+            <div class="meta" style="flex:1;">
+              <% if (translationAtt) { %>
+                <div><strong>Current:</strong>
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= translationAtt.id %>" target="_blank"><%= translationAtt.original_name %></a>
+                </div>
+              <% } %>
+              <input type="file" name="design_translation" accept="image/*,application/pdf" data-preview-into="translation-preview" style="margin-top:6px;">
+            </div>
+          </div>
+
+          <div class="vob-grid" style="margin-top:14px;">
+            <div class="vob-field full">
+              <label>Brief notes (optional)</label>
+              <textarea name="dsn_brief_notes" placeholder="Any additional context for the design agency"><%= brief.notes || '' %></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 2) Agency ===== -->
+      <section class="vob-pane" data-pane="agency">
+        <div class="vob-card">
+          <h2>Design Agency</h2>
+          <div class="indicates-required">* Indicates required</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Agency name</label>
+              <input type="text" name="dsn_agency_name" required value="<%= agency.name || '' %>">
+            </div>
+            <div class="vob-field">
+              <label>Vendor code</label>
+              <input type="text" name="dsn_agency_vendor_code" value="<%= agency.vendor_code || '' %>" placeholder="ERP supplier code (if known)">
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Contact name</label>
+              <input type="text" name="dsn_agency_contact" required value="<%= agency.contact || '' %>">
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Contact email</label>
+              <input type="email" name="dsn_agency_email" required value="<%= agency.email || '' %>">
+            </div>
+            <div class="vob-field">
+              <label>Phone</label>
+              <input type="tel" name="dsn_agency_phone" value="<%= agency.phone || '' %>">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 3) Labels & assets ===== -->
+      <section class="vob-pane" data-pane="labels">
+        <div class="vob-card">
+          <h2>Labels &amp; assets</h2>
+
+          <div class="section-title">Label image</div>
+          <p class="text-sm text-gray-600">Upload the label artwork (image). Click <em>Auto-fill from label</em> to have Claude read every block of text and populate the fields below.</p>
+          <div class="file-slot">
+            <div class="preview" id="label-preview">
+              <% if (labelAtt) { %>
+                <% if ((labelAtt.mime_type || '').startsWith('image/')) { %>
+                  <img src="/products/workflow/<%= pr.id %>/attachments/<%= labelAtt.id %>" alt="">
+                <% } else { %>
+                  <span>📄 PDF</span>
+                <% } %>
+              <% } else { %>
+                <span>No file</span>
+              <% } %>
+            </div>
+            <div class="meta" style="flex:1;">
+              <% if (labelAtt) { %>
+                <div><strong>Current:</strong>
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= labelAtt.id %>" target="_blank"><%= labelAtt.original_name %></a>
+                </div>
+              <% } %>
+              <input type="file" name="design_label" id="label-file" accept="image/*" data-preview-into="label-preview" style="margin-top:6px;">
+            </div>
+          </div>
+          <div class="ai-row">
+            <button type="button" id="label-extract-btn" class="btn btn-default">✨ Auto-fill from label</button>
+            <span id="label-extract-status" style="font-size:12px; color:#3730a3;">Pick an image, then click to extract.</span>
+          </div>
+
+          <div class="vob-grid" style="margin-top:14px;">
+            <% [
+              { name:'dsn_marketing_text',       label:'General marketing text', val:lbl.marketing_text },
+              { name:'dsn_claims',               label:'Claims',                 val:lbl.claims },
+              { name:'dsn_legal_claims',         label:'Legal claims',           val:lbl.legal_claims },
+              { name:'dsn_environmental_claims', label:'Environmental claims',   val:lbl.environmental_claims },
+              { name:'dsn_nutritional_claims',   label:'Nutritional claims',     val:lbl.nutritional_claims },
+              { name:'dsn_dietary_claims',       label:'Dietary claims',         val:lbl.dietary_claims },
+              { name:'dsn_contacts',             label:'Contacts',               val:lbl.contacts }
+            ].forEach(function (f) { %>
+              <div class="vob-field full">
+                <label><%= f.label %></label>
+                <textarea name="<%= f.name %>" data-label-field="<%= f.name %>" placeholder="Will auto-populate from the label image, or type manually."><%= f.val || '' %></textarea>
+              </div>
+            <% }); %>
+          </div>
+
+          <% function gallery(label, items, name, idAttr) { %>
+            <div class="section-title"><%= label %></div>
+            <input type="file" name="<%= name %>" multiple accept="image/*" data-gallery="<%= idAttr %>">
+            <div class="gallery" id="<%= idAttr %>">
+              <% items.forEach(function (a) { %>
+                <div class="gallery-tile">
+                  <div class="thumb">
+                    <% if ((a.mime_type || '').startsWith('image/')) { %>
+                      <img src="/products/workflow/<%= pr.id %>/attachments/<%= a.id %>" alt="">
+                    <% } else { %>
+                      <span>📄</span>
+                    <% } %>
+                  </div>
+                  <div class="name"><a href="/products/workflow/<%= pr.id %>/attachments/<%= a.id %>" target="_blank"><%= a.original_name %></a></div>
+                </div>
+              <% }); %>
+            </div>
+          <% } %>
+
+          <%- gallery('Logos',      logos,      'design_logo',      'gal-logos') %>
+          <%- gallery('Pictograms', pictograms, 'design_pictogram', 'gal-pictograms') %>
+          <%- gallery('Symbols',    symbols,    'design_symbol',    'gal-symbols') %>
+        </div>
+      </section>
+
+      <div class="vob-footer">
+        <button type="button" id="dsn-prev" class="btn btn-default">← Previous</button>
+        <div class="right">
+          <% if (!alreadySubmitted) { %>
+            <button type="submit" name="action" value="save_draft" class="btn btn-default">💾 Save as Draft</button>
+            <button type="button" id="dsn-next" class="btn btn-default">Next →</button>
+            <button type="submit" name="action" value="submit" class="btn btn-primary">Submit Design</button>
+          <% } else { %>
+            <a href="/products/workflow/<%= pr.id %>/confirmation" class="btn btn-primary">View confirmation →</a>
+          <% } %>
+        </div>
+      </div>
+      </fieldset>
+    </form>
+  </div>
+</main>
+
+<script>
+(function () {
+  // ---- tabs ----
+  var TABS = ['brief','agency','labels'];
+  var current = 0;
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) { p.classList.toggle('active', p.dataset.pane === TABS[current]); });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === TABS[current]); });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) { btn.addEventListener('click', function () { show(TABS.indexOf(btn.dataset.tab)); }); });
+  document.getElementById('dsn-prev').addEventListener('click', function () { show(current - 1); });
+  if (document.getElementById('dsn-next')) document.getElementById('dsn-next').addEventListener('click', function () { show(current + 1); });
+
+  // ---- counter ----
+  function updateCompletion() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var countEl = btn.querySelector('.vob-count');
+      var required = Array.prototype.slice.call(pane.querySelectorAll('[required]'));
+      var nameGroups = {}, nonGroup = [];
+      required.forEach(function (el) {
+        if ((el.type === 'radio' || el.type === 'checkbox') && el.name) (nameGroups[el.name] = nameGroups[el.name] || []).push(el);
+        else nonGroup.push(el);
+      });
+      var total = nonGroup.length + Object.keys(nameGroups).length;
+      var done = 0;
+      nonGroup.forEach(function (el) { if ((el.value || '').trim() !== '') done++; });
+      Object.keys(nameGroups).forEach(function (name) {
+        var siblings = pane.querySelectorAll('[name="' + name.replace(/"/g, '\\"') + '"]');
+        for (var i = 0; i < siblings.length; i++) if (siblings[i].checked) { done++; break; }
+      });
+      if (total === 0) { countEl.style.display='none'; btn.classList.remove('done'); }
+      else { countEl.style.display=''; countEl.textContent = done + '/' + total; btn.classList.toggle('done', done === total); }
+    });
+  }
+  var form = document.getElementById('dsn-form');
+  form.addEventListener('input', updateCompletion);
+  form.addEventListener('change', updateCompletion);
+
+  // ---- File preview (single-slot inputs) ----
+  document.querySelectorAll('input[type=file][data-preview-into]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var f = input.files && input.files[0];
+      var dest = document.getElementById(input.dataset.previewInto);
+      if (!dest) return;
+      if (!f) return;
+      dest.innerHTML = '';
+      if ((f.type || '').startsWith('image/')) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var img = document.createElement('img');
+          img.src = reader.result;
+          dest.appendChild(img);
+        };
+        reader.readAsDataURL(f);
+      } else if (f.type === 'application/pdf') {
+        dest.innerHTML = '<span>📄 ' + f.name + '</span>';
+      } else {
+        dest.innerHTML = '<span>📎 ' + f.name + '</span>';
+      }
+    });
+  });
+
+  // ---- Multi-file gallery preview ----
+  document.querySelectorAll('input[type=file][data-gallery]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var dest = document.getElementById(input.dataset.gallery);
+      if (!dest) return;
+      Array.from(input.files || []).forEach(function (f) {
+        var tile = document.createElement('div'); tile.className = 'gallery-tile';
+        var thumb = document.createElement('div'); thumb.className = 'thumb';
+        var nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = f.name;
+        if ((f.type || '').startsWith('image/')) {
+          var reader = new FileReader();
+          reader.onload = function () { var img = document.createElement('img'); img.src = reader.result; thumb.appendChild(img); };
+          reader.readAsDataURL(f);
+        } else {
+          thumb.textContent = '📄';
+        }
+        tile.appendChild(thumb); tile.appendChild(nameEl);
+        dest.appendChild(tile);
+      });
+    });
+  });
+
+  // ---- Auto-fill label fields ----
+  document.getElementById('label-extract-btn').addEventListener('click', async function () {
+    var fileInput = document.getElementById('label-file');
+    var status = document.getElementById('label-extract-status');
+    var f = fileInput.files && fileInput.files[0];
+    if (!f) { status.textContent = 'Pick a label image first.'; status.style.color = '#b91c1c'; return; }
+    status.textContent = 'Extracting fields with Claude…'; status.style.color = '#3730a3';
+    var fd = new FormData();
+    fd.append('label', f);
+    try {
+      var resp = await fetch('/products/workflow/<%= pr.id %>/api/extract-label', { method:'POST', body: fd });
+      var data = await resp.json();
+      if (!data.ok) throw new Error(data.error || 'Extraction failed');
+      Object.keys(data.fields).forEach(function (k) {
+        var fieldName = 'dsn_' + (k === 'marketing_text' ? 'marketing_text' :
+                                  k === 'claims' ? 'claims' :
+                                  k === 'legal_claims' ? 'legal_claims' :
+                                  k === 'environmental_claims' ? 'environmental_claims' :
+                                  k === 'nutritional_claims' ? 'nutritional_claims' :
+                                  k === 'dietary_claims' ? 'dietary_claims' :
+                                  k === 'contacts' ? 'contacts' : null);
+        if (!fieldName) return;
+        var el = document.querySelector('[data-label-field="' + fieldName + '"]');
+        if (el && data.fields[k]) el.value = data.fields[k];
+      });
+      status.textContent = '✓ Fields populated. Review, edit and submit when ready.';
+      status.style.color = '#065f46';
+      updateCompletion();
+    } catch (e) {
+      status.textContent = '⚠ ' + (e.message || e);
+      status.style.color = '#b91c1c';
+    }
+  });
+
+  updateCompletion();
+})();
+</script>
+</div>
+</body></html>

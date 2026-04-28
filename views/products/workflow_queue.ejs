@@ -46,6 +46,7 @@
                 if (roles.indexOf('RND_TEAM') >= 0) {
                   if      (!r.production_completed_at) deepLink = '/products/workflow/' + r.id + '/production';
                   else if (!r.packaging_completed_at)  deepLink = '/products/workflow/' + r.id + '/packaging';
+                  else if (!r.design_completed_at)     deepLink = '/products/workflow/' + r.id + '/design';
                   else deepLink = '/products/workflow/' + r.id + '/confirmation';
                 }
                 else if (roles.indexOf('MARKETING_TEAM') >= 0) deepLink = '/products/workflow/' + r.id + '/competitor';
