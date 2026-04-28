@@ -1,0 +1,50 @@
+<%- include('../partials/head', { pageTitle: 'Product Request — R&D Director Approval' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'R&D Director Approval', topSub: 'Final R&D-side sign-off. Runs in parallel with Quality Director.' }) %>
+
+<style>
+  .submitted-banner { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+  .info-banner { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <%
+    var pr = productRequest;
+    var alreadyDecided = !!pr.rnd_director_approved_at;
+  %>
+
+  <%- include('_workflow_shared', { productRequest: pr, stateLabel: ref.STATE_LABELS[pr.workflow_state] || pr.workflow_state, history: history, comments: comments }) %>
+
+  <% if (alreadyDecided) { %>
+    <div class="submitted-banner">
+      ✓ You approved this request as R&amp;D Director on <strong><%= pr.rnd_director_approved_at %></strong>.
+      <% if (pr.quality_director_approved_at) { %>
+        Quality Director also approved — request is now <strong>CONFIRMED</strong>.
+      <% } else if (pr.workflow_state === 'PENDING_RND_AND_QUALITY_DIRECTORS') { %>
+        Awaiting Quality Director decision.
+      <% } %>
+    </div>
+  <% } else if (pr.workflow_state === 'PENDING_RND_AND_QUALITY_DIRECTORS') { %>
+    <div class="info-banner">
+      <% if (pr.quality_director_approved_at) { %>
+        Quality Director already approved on <%= pr.quality_director_approved_at %>. Your decision will close out this stage.
+      <% } else { %>
+        Quality Director's decision is still pending — both approvals are required to confirm.
+      <% } %>
+    </div>
+  <% } %>
+
+  <%- include('_readonly_view', { productRequest: pr, ref: ref, attachments: attachments, designAttachments: designAttachments }) %>
+
+  <% if (!alreadyDecided && pr.workflow_state === 'PENDING_RND_AND_QUALITY_DIRECTORS') { %>
+    <%- include('_approval_form', {
+      formAction: '/products/workflow/' + pr.id + '/rnd-director',
+      actionPrefix: 'rnd_dir',
+      rejectReasons: ref.REJECT_REASONS,
+      infoReasons: ref.INFO_REASONS
+    }) %>
+  <% } %>
+</main>
+</div>
+</body></html>

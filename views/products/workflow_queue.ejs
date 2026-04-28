@@ -56,6 +56,11 @@
                 if (roles.indexOf('RND_TEAM') >= 0) deepLink = '/products/workflow/' + r.id + '/bom';
                 else deepLink = '/products/workflow/' + r.id + '/confirmation';
               }
+              else if (r.workflow_state === 'PENDING_RND_AND_QUALITY_DIRECTORS') {
+                if      (roles.indexOf('RND_DIRECTOR')     >= 0) deepLink = '/products/workflow/' + r.id + '/rnd-director';
+                else if (roles.indexOf('QUALITY_DIRECTOR') >= 0) deepLink = '/products/workflow/' + r.id + '/quality-director';
+                else deepLink = '/products/workflow/' + r.id + '/confirmation';
+              }
             %>
             <tr class="hover:bg-gray-50">
               <td class="px-4 py-2 font-mono text-xs text-gray-500"><%= r.id %></td>

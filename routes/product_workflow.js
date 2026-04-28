@@ -848,6 +848,113 @@ module.exports = function makeRouter(db) {
     });
 
   // -------------------------------------------------------------------------
+  // Stage 8 — R&D Director + Quality Director (parallel) approvals.
+  // -------------------------------------------------------------------------
+  router.get('/:id/rnd-director',
+    requireRole(productWorkflow.ROLES.RND_DIRECTOR),
+    loadProductRequest(db),
+    requireState(
+      productWorkflow.STATES.PENDING_RND_AND_QUALITY_DIRECTORS,
+      productWorkflow.STATES.CONFIRMED, productWorkflow.STATES.REJECTED, productWorkflow.STATES.NEEDS_INFO),
+    (req, res) => {
+      const decoded = decode(res.locals.productRequest);
+      res.render('products/workflow_rnd_director', {
+        ref: refData(),
+        productRequest: decoded,
+        attachments: loadAttachments(decoded.id, 'production'),
+        designAttachments: loadDesignAttachments(decoded.id),
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/rnd-director',
+    requireRole(productWorkflow.ROLES.RND_DIRECTOR),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_RND_AND_QUALITY_DIRECTORS),
+    (req, res) => handleDualDirector(req, res, 'rnd'));
+
+  router.get('/:id/quality-director',
+    requireRole(productWorkflow.ROLES.QUALITY_DIRECTOR),
+    loadProductRequest(db),
+    requireState(
+      productWorkflow.STATES.PENDING_RND_AND_QUALITY_DIRECTORS,
+      productWorkflow.STATES.CONFIRMED, productWorkflow.STATES.REJECTED, productWorkflow.STATES.NEEDS_INFO),
+    (req, res) => {
+      const decoded = decode(res.locals.productRequest);
+      res.render('products/workflow_quality_director', {
+        ref: refData(),
+        productRequest: decoded,
+        attachments: loadAttachments(decoded.id, 'production'),
+        designAttachments: loadDesignAttachments(decoded.id),
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/quality-director',
+    requireRole(productWorkflow.ROLES.QUALITY_DIRECTOR),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_RND_AND_QUALITY_DIRECTORS),
+    (req, res) => handleDualDirector(req, res, 'quality'));
+
+  // Shared dispatcher for both director POSTs. Picks the right transition
+  // variant (_partial / _final) for approve based on whether the OTHER
+  // director has already approved.
+  function handleDualDirector(req, res, side) {
+    const b = req.body || {};
+    const u = res.locals.currentUser || {};
+    const pr = res.locals.productRequest;
+    const reqId = pr.id;
+    const action = String(b.action || '');
+
+    // Block re-submission once this side has already approved.
+    const myFlagCol = side === 'rnd' ? 'rnd_director_approved_at' : 'quality_director_approved_at';
+    if (pr[myFlagCol]) {
+      return res.redirect(`/products/workflow/${reqId}/${side}-director`);
+    }
+
+    // The action submitted by the form is one of:
+    //   <prefix>_approve | <prefix>_reject | <prefix>_request_info
+    // where prefix is 'rnd_dir' for R&D Director or 'quality_dir' for Quality.
+    const prefix = side === 'rnd' ? 'rnd_dir' : 'quality_dir';
+    if (![`${prefix}_approve`, `${prefix}_reject`, `${prefix}_request_info`].includes(action)) {
+      return res.status(400).send('Invalid action');
+    }
+
+    let transitionAction;
+    if (action === `${prefix}_approve`) {
+      const otherFlagCol = side === 'rnd' ? 'quality_director_approved_at' : 'rnd_director_approved_at';
+      const otherDone = !!pr[otherFlagCol];
+      transitionAction = `${prefix}_approve_${otherDone ? 'final' : 'partial'}`;
+    } else {
+      transitionAction = action;       // *_reject or *_request_info — direct mapping
+    }
+
+    const cur = pr.workflow_state;
+    const result = productWorkflow.transition(cur, transitionAction);
+
+    const tx = db.transaction(() => {
+      // Stamp the approval flag for the side that just acted, so the next
+      // visitor knows whether the other side is still pending.
+      if (action === `${prefix}_approve`) {
+        const stamps = side === 'rnd'
+          ? { col: 'rnd_director_approved_at',     by: 'rnd_director_approved_by',     note: 'rnd_director_note' }
+          : { col: 'quality_director_approved_at', by: 'quality_director_approved_by', note: 'quality_director_note' };
+        db.prepare(`
+          UPDATE product_requests
+             SET ${stamps.col} = ?, ${stamps.by} = ?, ${stamps.note} = ?
+           WHERE id = ?
+        `).run(new Date().toISOString(), u.id || null, b.note || null, reqId);
+      }
+      applyTransition(reqId, result, u.id, u.role || null, b.reason_code || null, b.note || null);
+    });
+    tx();
+
+    res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+  }
+
+  // -------------------------------------------------------------------------
   // Confirmation page (any authenticated user can view)
   // -------------------------------------------------------------------------
   router.get('/:id/confirmation', loadProductRequest(db), (req, res) => {
@@ -905,12 +1012,19 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       states = [
         'DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR',
         'PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM',
+        'PENDING_RND_AND_QUALITY_DIRECTORS',
         'NEEDS_INFO','REJECTED','CONFIRMED',
       ];
     } else if (roles.includes('MKTG_DIRECTOR')) {
       states = ['PENDING_MKTG_DIRECTOR'];
     } else if (roles.includes('SC_DIRECTOR')) {
       states = ['PENDING_SC_DIRECTOR'];
+    } else if (roles.includes('RND_DIRECTOR')) {
+      states = ['PENDING_RND_AND_QUALITY_DIRECTORS'];
+      extraWhere = ' AND rnd_director_approved_at IS NULL';
+    } else if (roles.includes('QUALITY_DIRECTOR')) {
+      states = ['PENDING_RND_AND_QUALITY_DIRECTORS'];
+      extraWhere = ' AND quality_director_approved_at IS NULL';
     } else if (roles.includes('RND_TEAM')) {
       // R&D owns three earlier forms (production / packaging / design) inside
       // PENDING_PRODUCTION_AND_ANALYSIS, plus the BOM stage. Show both states
