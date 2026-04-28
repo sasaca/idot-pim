@@ -25,13 +25,17 @@
       submit_competitor_final:      'Competitor analysis submitted — BOM selection now opens for R&D',
       submit_bom:                   'BOM submitted by R&D — sent to R&D Director and Quality Director for parallel approval',
       rnd_dir_approve_partial:      'R&D Director approval recorded — waiting on Quality Director',
-      rnd_dir_approve_final:        'R&D Director approval recorded — request confirmed',
+      rnd_dir_approve_final:        'R&D Director approval recorded — Legal + MDM tasks now open',
       rnd_dir_reject:               'R&D Director rejection recorded',
       rnd_dir_request_info:         'R&D Director sent the request back for more information',
       quality_dir_approve_partial:  'Quality Director approval recorded — waiting on R&D Director',
-      quality_dir_approve_final:    'Quality Director approval recorded — request confirmed',
+      quality_dir_approve_final:    'Quality Director approval recorded — Legal + MDM tasks now open',
       quality_dir_reject:           'Quality Director rejection recorded',
       quality_dir_request_info:     'Quality Director sent the request back for more information',
+      submit_legal_partial:         'Legal submitted — waiting on MDM',
+      submit_legal_final:           'Legal submitted — request confirmed',
+      submit_mdm_partial:           'MDM submitted — waiting on Legal',
+      submit_mdm_final:             'MDM submitted — request confirmed',
     }[fromAction];
   %>
 
@@ -130,6 +134,33 @@
     </section>
   <% } %>
 
+  <% if (productRequest.workflow_state === 'PENDING_LEGAL_AND_MDM') { %>
+    <section class="rounded-lg border border-blue-200 bg-blue-50 p-6 mt-4 shadow-sm">
+      <h2 class="text-lg font-semibold text-blue-900">Awaiting Legal &amp; MDM tasks</h2>
+      <p class="mt-2 text-sm text-blue-800">
+        Both directors approved. Legal and MDM teams now work in parallel —
+        the request only confirms once both submit.
+      </p>
+      <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div class="rounded border <%= productRequest.legal_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
+          <strong>Legal</strong>
+          <% if (productRequest.legal_completed_at) { %>· ✓ submitted <%= productRequest.legal_completed_at %><% } else { %>· pending<% } %>
+        </div>
+        <div class="rounded border <%= productRequest.mdm_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
+          <strong>MDM material review</strong>
+          <% if (productRequest.mdm_completed_at) { %>· ✓ submitted <%= productRequest.mdm_completed_at %><% } else { %>· pending<% } %>
+        </div>
+      </div>
+      <% if (currentUser) { %>
+        <% if (currentUser.role === 'LEGAL' && !productRequest.legal_completed_at) { %>
+          <a href="/products/workflow/<%= productRequest.id %>/legal" class="mt-3 inline-block rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Open Legal task →</a>
+        <% } else if (currentUser.role === 'MDM_TEAM' && !productRequest.mdm_completed_at) { %>
+          <a href="/products/workflow/<%= productRequest.id %>/mdm" class="mt-3 inline-block rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Open MDM review →</a>
+        <% } %>
+      <% } %>
+    </section>
+  <% } %>
+
   <% if (productRequest.workflow_state === 'PENDING_RND_AND_QUALITY_DIRECTORS') { %>
     <section class="rounded-lg border border-blue-200 bg-blue-50 p-6 mt-4 shadow-sm">
       <h2 class="text-lg font-semibold text-blue-900">Awaiting director approvals</h2>
@@ -161,9 +192,14 @@
     </section>
   <% } %>
 
-  <% if (['PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM','PENDING_RND_AND_QUALITY_DIRECTORS','CONFIRMED','REJECTED'].includes(productRequest.workflow_state)) { %>
+  <% if (['PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM','PENDING_RND_AND_QUALITY_DIRECTORS','PENDING_LEGAL_AND_MDM','CONFIRMED','REJECTED'].includes(productRequest.workflow_state)) { %>
     <div class="mt-6">
-      <%- include('_readonly_view', { productRequest: productRequest, ref: ref, attachments: (typeof attachments !== 'undefined' ? attachments : []), designAttachments: (typeof designAttachments !== 'undefined' ? designAttachments : []) }) %>
+      <%- include('_readonly_view', {
+        productRequest: productRequest, ref: ref,
+        attachments:       (typeof attachments       !== 'undefined' ? attachments       : []),
+        designAttachments: (typeof designAttachments !== 'undefined' ? designAttachments : []),
+        legalAttachments:  (typeof legalAttachments  !== 'undefined' ? legalAttachments  : [])
+      }) %>
     </div>
   <% } %>
 </main>

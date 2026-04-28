@@ -33,6 +33,8 @@ var dsnAtts  = (typeof designAttachments !== 'undefined' && designAttachments) ?
 var dsnByCat = dsnAtts.reduce(function (m, a) { (m[a.category] = m[a.category] || []).push(a); return m; }, {});
 var bomPkgRO = pr.bomPackaging || [];
 var bomFrmRO = pr.bomFormula   || [];
+var legalRO  = pr.legal || {};
+var legalAtts = (typeof legalAttachments !== 'undefined' && legalAttachments) ? legalAttachments : [];
 
 function show(v, fallback) {
   if (v === null || v === undefined || v === '' ) return fallback || '—';
@@ -588,5 +590,84 @@ function fmt(n) {
 
     <%- bomRoTable('Packaging BOM', bomPkgRO) %>
     <%- bomRoTable('Formula BOM',   bomFrmRO) %>
+  </div>
+<% } %>
+
+<% if (pr.legal_completed_at || (legalRO.certifications || []).length || (legalRO.registrations || []).length) { %>
+  <!-- 8) Legal Task -->
+  <div class="ro-card">
+    <h2>8 · Legal Task
+      <% if (pr.legal_completed_at) { %>
+        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.legal_completed_at %></span>
+      <% } else { %>
+        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
+      <% } %>
+    </h2>
+    <% var certAttsByCode = legalAtts.filter(function (a) { return a.category === 'legal_cert'; })
+         .reduce(function (m, a) { (m[a.certificate_type] = m[a.certificate_type] || []).push(a); return m; }, {}); %>
+    <% var regAttsByCountry = legalAtts.filter(function (a) { return a.category === 'legal_reg'; })
+         .reduce(function (m, a) { (m[a.certificate_type] = m[a.certificate_type] || []).push(a); return m; }, {}); %>
+
+    <% if ((legalRO.certifications || []).length) { %>
+      <h3>Legal certifications</h3>
+      <table class="ro-fc-table">
+        <thead><tr><th style="text-align:left;">Certification</th><th>Status</th><th style="text-align:left;">Comment</th><th style="text-align:left;">File</th></tr></thead>
+        <tbody>
+          <% legalRO.certifications.forEach(function (c) {
+              var match = (ref.LEGAL_CERTIFICATES || []).find(function (x) { return x.code === c.code; });
+              var label = match ? match.label : c.code;
+              var files = certAttsByCode[c.code] || [];
+          %>
+            <tr>
+              <td style="text-align:left;"><%= label %></td>
+              <td><%= show(c.status && c.status.replace(/_/g,' ')) %></td>
+              <td style="text-align:left;"><%= show(c.comment) %></td>
+              <td style="text-align:left;">
+                <% files.forEach(function (f) { %>
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="text-blue-600 hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+                <% }); %>
+                <% if (!files.length) { %>—<% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+
+    <% if ((legalRO.registrations || []).length) { %>
+      <h3>Packaging country registration</h3>
+      <table class="ro-fc-table">
+        <thead><tr><th style="text-align:left;">Country</th><th>Status</th><th style="text-align:left;">Reg. #</th><th style="text-align:left;">Comment</th><th style="text-align:left;">File</th></tr></thead>
+        <tbody>
+          <% legalRO.registrations.forEach(function (r) {
+              var match = (ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === r.country; });
+              var label = match ? match.name : r.country;
+              var files = regAttsByCountry[r.country] || [];
+          %>
+            <tr>
+              <td style="text-align:left;"><%= label %></td>
+              <td><%= show(r.status && r.status.replace(/_/g,' ')) %></td>
+              <td style="text-align:left;font-family:ui-monospace,monospace;"><%= show(r.registration_number) %></td>
+              <td style="text-align:left;"><%= show(r.comment) %></td>
+              <td style="text-align:left;">
+                <% files.forEach(function (f) { %>
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="text-blue-600 hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+                <% }); %>
+                <% if (!files.length) { %>—<% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (pr.mdm_completed_at) { %>
+  <div class="ro-card">
+    <h2>9 · MDM Material Review
+      <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.mdm_completed_at %></span>
+    </h2>
+    <p style="font-size:13px;color:#4b5563;">MDM has reviewed and refined the BOM components above to align with SAP material-master conventions.</p>
   </div>
 <% } %>

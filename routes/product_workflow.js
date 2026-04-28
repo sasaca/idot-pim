@@ -106,6 +106,7 @@ function decode(req) {
     competitor:       safeJson(req.competitor_json),
     bomPackaging:     safeJsonArr(req.bom_packaging_json),
     bomFormula:       safeJsonArr(req.bom_formula_json),
+    legal:            safeJson(req.legal_json),
   });
 }
 
@@ -955,6 +956,166 @@ module.exports = function makeRouter(db) {
   }
 
   // -------------------------------------------------------------------------
+  // Stage 9 — Legal task (parallel with MDM).
+  // -------------------------------------------------------------------------
+  router.get('/:id/legal',
+    requireRole(productWorkflow.ROLES.LEGAL),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_LEGAL_AND_MDM, productWorkflow.STATES.CONFIRMED),
+    (req, res) => {
+      const decoded = decode(res.locals.productRequest);
+      res.render('products/workflow_legal', {
+        ref: refData(),
+        productRequest: decoded,
+        attachments: loadAttachments(decoded.id, 'production'),
+        designAttachments: loadDesignAttachments(decoded.id),
+        legalAttachments: loadLegalAttachments(decoded.id),
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/legal',
+    requireRole(productWorkflow.ROLES.LEGAL),
+    loadProductRequest(db),
+    uploadCert.any(),
+    requireState(productWorkflow.STATES.PENDING_LEGAL_AND_MDM),
+    (req, res) => {
+      const b = req.body || {};
+      const u = res.locals.currentUser || {};
+      const pr = res.locals.productRequest;
+      const reqId = pr.id;
+      const action = String(b.action || 'save_draft');
+      const legal = pickLegal(b);
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE product_requests SET legal_json = ?, updated_at = ? WHERE id = ?
+      `).run(JSON.stringify(legal), now, reqId);
+
+      // Persist uploaded attachments. Filenames carry the row index + the
+      // collection name, so we can recover which cert/registration row each
+      // file belongs to.
+      if (Array.isArray(req.files) && req.files.length) {
+        const ins = db.prepare(`
+          INSERT INTO product_request_attachments
+            (product_req_id, stage, category, certificate_type,
+             filename, original_name, mime_type, size_bytes, comment, uploaded_by)
+          VALUES (?, 'legal', ?, ?, ?, ?, ?, ?, NULL, ?)
+        `);
+        const tx = db.transaction(() => {
+          req.files.forEach((f) => {
+            // legal_cert_file_<idx>  →  category='legal_cert',  certificate_type=<cert_code>
+            // legal_reg_file_<idx>   →  category='legal_reg',   certificate_type=<country_code>
+            let mCert = /^legal_cert_file_(\d+)$/.exec(f.fieldname);
+            let mReg  = /^legal_reg_file_(\d+)$/.exec(f.fieldname);
+            if (mCert) {
+              const idx = Number(mCert[1]);
+              const certCode = (legal.certifications[idx] && legal.certifications[idx].code) || '';
+              ins.run(reqId, 'legal_cert', certCode || null,
+                f.filename, f.originalname, f.mimetype, f.size, u.id || null);
+            } else if (mReg) {
+              const idx = Number(mReg[1]);
+              const country = (legal.registrations[idx] && legal.registrations[idx].country) || '';
+              ins.run(reqId, 'legal_reg', country || null,
+                f.filename, f.originalname, f.mimetype, f.size, u.id || null);
+            }
+          });
+        });
+        tx();
+      }
+
+      if (action === 'submit') {
+        const mdmDone = !!pr.mdm_completed_at;
+        const transitionAction = mdmDone ? 'submit_legal_final' : 'submit_legal_partial';
+        const cur = pr.workflow_state;
+        const result = productWorkflow.transition(cur, transitionAction);
+        const tx = db.transaction(() => {
+          db.prepare(`
+            UPDATE product_requests
+               SET legal_completed_at = ?, legal_completed_by = ?
+             WHERE id = ?
+          `).run(now, u.id || null, reqId);
+          applyTransition(reqId, result, u.id, u.role || 'LEGAL', null, b.note || null);
+        });
+        tx();
+        return res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+      }
+
+      res.redirect(`/products/workflow/${reqId}/legal`);
+    });
+
+  function loadLegalAttachments(reqId) {
+    return db.prepare(`
+      SELECT a.*, u.name AS uploader_name
+        FROM product_request_attachments a
+        LEFT JOIN users u ON u.id = a.uploaded_by
+       WHERE a.product_req_id = ? AND a.stage = 'legal'
+       ORDER BY a.id ASC
+    `).all(reqId);
+  }
+
+  // -------------------------------------------------------------------------
+  // Stage 10 — MDM task (parallel with Legal). MDM edits the BOM rows
+  // that R&D filled in to align them with SAP material master standards.
+  // -------------------------------------------------------------------------
+  router.get('/:id/mdm',
+    requireRole(productWorkflow.ROLES.MDM_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_LEGAL_AND_MDM, productWorkflow.STATES.CONFIRMED),
+    (req, res) => {
+      const decoded = decode(res.locals.productRequest);
+      res.render('products/workflow_mdm', {
+        ref: refData(),
+        productRequest: decoded,
+        bomPackaging: decoded.bomPackaging,
+        bomFormula:   decoded.bomFormula,
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/mdm',
+    requireRole(productWorkflow.ROLES.MDM_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_LEGAL_AND_MDM),
+    (req, res) => {
+      const b = req.body || {};
+      const u = res.locals.currentUser || {};
+      const pr = res.locals.productRequest;
+      const reqId = pr.id;
+      const action = String(b.action || 'save_draft');
+      const pkgRows = pickBomRows(b, 'pkg');
+      const frmRows = pickBomRows(b, 'frm');
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE product_requests
+           SET bom_packaging_json = ?, bom_formula_json = ?, updated_at = ?
+         WHERE id = ?
+      `).run(JSON.stringify(pkgRows), JSON.stringify(frmRows), now, reqId);
+
+      if (action === 'submit') {
+        const legalDone = !!pr.legal_completed_at;
+        const transitionAction = legalDone ? 'submit_mdm_final' : 'submit_mdm_partial';
+        const cur = pr.workflow_state;
+        const result = productWorkflow.transition(cur, transitionAction);
+        const tx = db.transaction(() => {
+          db.prepare(`
+            UPDATE product_requests
+               SET mdm_completed_at = ?, mdm_completed_by = ?
+             WHERE id = ?
+          `).run(now, u.id || null, reqId);
+          applyTransition(reqId, result, u.id, u.role || 'MDM_TEAM', null, b.note || null);
+        });
+        tx();
+        return res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+      }
+
+      res.redirect(`/products/workflow/${reqId}/mdm`);
+    });
+
+  // -------------------------------------------------------------------------
   // Confirmation page (any authenticated user can view)
   // -------------------------------------------------------------------------
   router.get('/:id/confirmation', loadProductRequest(db), (req, res) => {
@@ -964,6 +1125,7 @@ module.exports = function makeRouter(db) {
       productRequest: decoded,
       attachments: loadAttachments(decoded.id, 'production'),
       designAttachments: loadDesignAttachments(decoded.id),
+      legalAttachments: loadLegalAttachments(decoded.id),
       history: loadHistory(decoded.id),
       comments: loadComments(decoded.id),
       stateLabel: productWorkflow.STATE_LABELS[decoded.workflow_state] || decoded.workflow_state,
@@ -1013,6 +1175,7 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
         'DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR',
         'PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM',
         'PENDING_RND_AND_QUALITY_DIRECTORS',
+        'PENDING_LEGAL_AND_MDM',
         'NEEDS_INFO','REJECTED','CONFIRMED',
       ];
     } else if (roles.includes('MKTG_DIRECTOR')) {
@@ -1025,6 +1188,12 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
     } else if (roles.includes('QUALITY_DIRECTOR')) {
       states = ['PENDING_RND_AND_QUALITY_DIRECTORS'];
       extraWhere = ' AND quality_director_approved_at IS NULL';
+    } else if (roles.includes('LEGAL')) {
+      states = ['PENDING_LEGAL_AND_MDM'];
+      extraWhere = ' AND legal_completed_at IS NULL';
+    } else if (roles.includes('MDM_TEAM')) {
+      states = ['PENDING_LEGAL_AND_MDM'];
+      extraWhere = ' AND mdm_completed_at IS NULL';
     } else if (roles.includes('RND_TEAM')) {
       // R&D owns three earlier forms (production / packaging / design) inside
       // PENDING_PRODUCTION_AND_ANALYSIS, plus the BOM stage. Show both states
@@ -1270,6 +1439,44 @@ function pickPackaging(b) {
     inventory_agreement: b.pkm_inventory_agreement || '',
     comparisons,
   };
+}
+
+// ---------- Stage 9 — Legal task (certs + country registrations) -----------
+
+function pickLegal(b) {
+  // Certifications: arrays of code, status, comment indexed by row.
+  const cCodes    = [].concat(b.legal_cert_code     || []);
+  const cStatuses = [].concat(b.legal_cert_status   || []);
+  const cComments = [].concat(b.legal_cert_comment  || []);
+  const certifications = [];
+  for (let i = 0; i < cCodes.length; i++) {
+    const code = (cCodes[i] || '').trim();
+    if (!code) continue;
+    certifications.push({
+      code,
+      status:  (cStatuses[i] || '').toUpperCase(),  // OBTAINED|IN_PROGRESS|EXPIRED|NOT_OBTAINED|NOT_APPLICABLE
+      comment: cComments[i] || '',
+    });
+  }
+
+  // Packaging country registrations.
+  const rCountries = [].concat(b.legal_reg_country || []);
+  const rStatuses  = [].concat(b.legal_reg_status  || []);
+  const rNumbers   = [].concat(b.legal_reg_number  || []);
+  const rComments  = [].concat(b.legal_reg_comment || []);
+  const registrations = [];
+  for (let i = 0; i < rCountries.length; i++) {
+    const country = (rCountries[i] || '').trim();
+    if (!country) continue;
+    registrations.push({
+      country,
+      status:              (rStatuses[i] || '').toUpperCase(),  // REGISTERED|IN_PROGRESS|NOT_REGISTERED|NOT_REQUIRED
+      registration_number: rNumbers[i]  || '',
+      comment:             rComments[i] || '',
+    });
+  }
+
+  return { certifications, registrations };
 }
 
 // ---------- Stage 7 — BOM rows (Packaging + Formula) -----------------------

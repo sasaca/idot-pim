@@ -1,0 +1,341 @@
+<%
+/*
+  views/products/workflow_mdm.ejs
+  ---------------------------------------------------------------------------
+  Stage 10 — MDM material review (parallel with Legal).
+
+  Layout mirrors workflow_bom.ejs so MDM sees exactly what R&D entered. MDM
+  edits land directly on bom_packaging_json + bom_formula_json — they're the
+  source of truth for SAP material master records.
+
+  MDM can edit any field on any row; add/remove are intentionally kept so
+  MDM can re-classify or normalize the material list before it ships to SAP.
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'Product Request — MDM Review' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'MDM Material Review', topSub: 'Review and refine the BOM components R&D filled in. Edits land on the SAP-bound material master.' }) %>
+
+<style>
+  /* Reuse the same styles as workflow_bom.ejs verbatim. */
+  .vob-nav { display:flex; flex-wrap:nowrap; gap:2px; padding:0 6px; margin:0 0 -1px 0; position:relative; z-index:2; overflow-x:auto; }
+  .vob-nav button { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; margin:0; border:1px solid #e5e7eb; border-radius:8px 8px 0 0; background:#f3f4f6; color:#4b5563; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .vob-nav button.active { background:#fff; color:#111827; font-weight:600; border-bottom-color:#fff; z-index:3; }
+  .vob-nav .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:#e5e7eb; color:#374151; font-size:12px; font-weight:600; }
+  .vob-nav button.active .num { background:#1e3a8a; color:#fff; }
+  .vob-nav .vob-count { display:inline-block; padding:1px 7px; font-size:11px; border-radius:9999px; background:#d1d5db; color:#374151; font-weight:600; }
+  .vob-nav button.active .vob-count { background:#e5e7eb; color:#111827; }
+
+  .vob-card { background:#fff; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; padding:18px 22px; box-shadow:0 1px 2px rgba(0,0,0,.04); position:relative; z-index:1; }
+  .vob-card h2 { font-size:18px; font-weight:600; color:#111827; margin:0 0 2px; }
+  .vob-card .blurb { font-size:13px; color:#6b7280; margin-bottom:14px; }
+
+  .vob-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; }
+  .vob-footer .right { display:flex; gap:8px; }
+  .btn { padding:8px 16px; font-size:14px; font-weight:500; border-radius:6px; border:none; cursor:pointer; }
+  .btn-default { background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .btn-primary { background:#1e3a8a; color:#fff; }
+
+  .vob-pane { display:none; }
+  .vob-pane.active { display:block; }
+
+  .bom-toolbar { display:flex; gap:.6rem; align-items:flex-end; flex-wrap:wrap; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:14px; }
+  .bom-search-wrap { position:relative; flex:1 1 320px; }
+  .bom-search-wrap label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; display:block; margin-bottom:3px; }
+  .bom-search-wrap input { width:100%; padding:8px 10px; font-size:13px; border:1px solid #d1d5db; border-radius:5px; }
+  .bom-results { position:absolute; left:0; right:0; top:calc(100% + 4px); background:white; border:1px solid #d1d5db; border-radius:.4rem; max-height:18rem; overflow-y:auto; z-index:30; box-shadow:0 4px 14px rgba(0,0,0,.08); display:none; }
+  .bom-results.open { display:block; }
+  .bom-result { padding:7px 10px; border-bottom:1px solid #f3f4f6; cursor:pointer; font-size:13px; }
+  .bom-result:hover { background:#f9fafb; }
+  .bom-result .meta { font-family:ui-monospace,monospace; font-size:11px; color:#6b7280; }
+  .bom-result .src { font-size:10px; padding:1px 6px; border-radius:9999px; margin-left:.4rem; }
+  .bom-result .src.MASTER { background:#dbeafe; color:#1e40af; }
+  .bom-result .src.CROSS  { background:#fde68a; color:#92400e; }
+  .bom-add-new { background:#1e3a8a; color:white; border:none; padding:8px 14px; border-radius:5px; font-size:13px; cursor:pointer; }
+
+  .bom-table { width:100%; border-collapse:collapse; font-size:13px; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+  .bom-table thead th { background:#f9fafb; padding:8px 6px; font-weight:600; color:#374151; font-size:11px; text-transform:uppercase; letter-spacing:.04em; text-align:left; border-bottom:1px solid #e5e7eb; white-space:nowrap; }
+  .bom-table td { padding:6px; vertical-align:top; border-bottom:1px solid #f3f4f6; }
+  .bom-table tr.row-NEW       td { background:#fef3c7; }
+  .bom-table tr.row-MASTER    td { background:#eff6ff; }
+  .bom-table tr.row-REFERENCE td { background:#f0fdf4; }
+  .bom-table input, .bom-table select { width:100%; padding:5px 7px; font-size:12.5px; border:1px solid #d1d5db; border-radius:4px; box-sizing:border-box; background:#fff; }
+  .bom-table input.short { max-width:90px; }
+  .bom-table .col-actions { white-space:nowrap; }
+  .bom-table .src-pill { display:inline-block; padding:1px 7px; border-radius:9999px; font-size:10px; font-weight:600; margin-bottom:4px; }
+  .bom-table .src-pill.NEW       { background:#fde68a; color:#92400e; }
+  .bom-table .src-pill.MASTER    { background:#dbeafe; color:#1e40af; }
+  .bom-table .src-pill.REFERENCE { background:#bbf7d0; color:#166534; }
+  .bom-table .row-actions button { background:transparent; border:none; cursor:pointer; font-size:12px; padding:2px 6px; color:#6b7280; }
+  .bom-table .row-actions button:hover { color:#111827; }
+  .bom-table .row-actions .rm { color:#b91c1c; }
+
+  .vendor-block { margin-top:6px; padding:6px 8px; background:#fffbeb; border:1px solid #fde68a; border-radius:5px; font-size:12px; }
+  .vendor-block .vt-row { display:flex; gap:6px; margin-bottom:4px; }
+  .vendor-block label { font-size:11px; color:#6b7280; }
+  .vendor-block .vendor-fields { display:grid; grid-template-columns:1fr 1fr; gap:4px 6px; }
+
+  .empty-state { border:1px dashed #d1d5db; border-radius:8px; padding:30px; text-align:center; color:#6b7280; font-size:13px; background:#fafafa; }
+
+  .submitted-banner { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+  .info-banner      { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<%
+  var pr = productRequest;
+  var alreadySubmitted = !!pr.mdm_completed_at;
+%>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">MDM Material Review</h1>
+      <p class="text-sm text-gray-500 mt-1"><strong><%= pr.product_name %></strong> · Request #<%= pr.id %></p>
+    </div>
+    <a href="/products/workflow/queue" class="text-sm text-blue-600 hover:underline">← Back to queue</a>
+  </div>
+
+  <%- include('_workflow_shared', { productRequest: pr, stateLabel: ref.STATE_LABELS[pr.workflow_state] || pr.workflow_state, history: history, comments: comments }) %>
+
+  <% if (alreadySubmitted) { %>
+    <div class="submitted-banner">
+      ✓ MDM submitted on <strong><%= pr.mdm_completed_at %></strong>.
+      <% if (pr.legal_completed_at) { %>
+        Legal also submitted — request is now <strong>CONFIRMED</strong>.
+      <% } else { %>
+        Legal is still pending.
+      <% } %>
+    </div>
+  <% } else { %>
+    <div class="info-banner">
+      Review the components R&amp;D submitted. Edit any fields to align them
+      with SAP master-data conventions. Use the search to add components
+      from the master, branch a row to create variants, or remove rows you
+      consider non-applicable.
+    </div>
+  <% } %>
+
+  <div class="vob-shell">
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="packaging"><span class="num">1</span><span>Packaging BOM</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="formula"><span class="num">2</span><span>Formula BOM</span><span class="vob-count"></span></button>
+    </nav>
+
+    <form id="bom-form" method="post" action="/products/workflow/<%= pr.id %>/mdm">
+      <fieldset <%= alreadySubmitted ? 'disabled' : '' %> style="border:none; padding:0; margin:0;">
+
+        <% function renderTab(opts) { %>
+          <section class="vob-pane <%= opts.active ? 'active' : '' %>" data-pane="<%= opts.tab %>">
+            <div class="vob-card">
+              <h2><%= opts.title %></h2>
+              <p class="blurb"><%= opts.blurb %></p>
+
+              <div class="bom-toolbar">
+                <div class="bom-search-wrap">
+                  <label>Search component master / other products</label>
+                  <input type="text" autocomplete="off" placeholder="Search by name, brand, material #…" data-bom-search data-cat="<%= opts.cat %>">
+                  <div class="bom-results" data-bom-results></div>
+                </div>
+                <button type="button" class="bom-add-new" data-add-new data-cat="<%= opts.cat %>">+ Create new component</button>
+              </div>
+
+              <table class="bom-table" data-bom-table data-prefix="<%= opts.prefix %>">
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Material #</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Brand</th>
+                    <th>Material Group</th>
+                    <th>Material Type</th>
+                    <th>Base UoM</th>
+                    <th>Div.</th>
+                    <th>Volume</th>
+                    <th>Qty</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% (opts.rows || []).forEach(function (r) { %>
+                    <%- include('_bom_row', { r: r, prefix: opts.prefix }) %>
+                  <% }); %>
+                </tbody>
+              </table>
+
+              <div class="empty-state" data-empty-state style="display:<%= (opts.rows || []).length ? 'none' : 'block' %>;">
+                No components yet — search above or create a new one.
+              </div>
+            </div>
+          </section>
+        <% } %>
+
+        <%- renderTab({ tab:'packaging', active:true,  title:'Packaging BOM', cat:'PACKAGING', prefix:'pkg', blurb:'Packaging components — refine fields to match SAP material-master conventions.', rows: bomPackaging }) %>
+        <%- renderTab({ tab:'formula',   active:false, title:'Formula BOM',   cat:'FORMULA',   prefix:'frm', blurb:'Formula components — refine fields to match SAP material-master conventions.', rows: bomFormula }) %>
+
+        <div class="vob-footer">
+          <button type="button" id="bom-prev" class="btn btn-default">← Previous tab</button>
+          <div class="right">
+            <% if (!alreadySubmitted) { %>
+              <button type="submit" name="action" value="save_draft" class="btn btn-default">💾 Save as Draft</button>
+              <button type="button" id="bom-next" class="btn btn-default">Next tab →</button>
+              <button type="submit" name="action" value="submit" class="btn btn-primary">Submit MDM Review</button>
+            <% } else { %>
+              <a href="/products/workflow/<%= pr.id %>/confirmation" class="btn btn-primary">View confirmation →</a>
+            <% } %>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+  </div>
+</main>
+
+<template id="bom-row-tpl"><%- include('_bom_row', { r: { source:'NEW', material_number:'', material_description:'', category_name:'', brand:'', material_group:'', material_type:'ROH', base_uom:'EA', division:'50', volume:null, quantity:null, vendor:{ type:'EXISTING', vendor_code:'', name:'', contact:'', email:'', phone:'' } }, prefix: '__P__' }) %></template>
+
+<script>
+(function () {
+  // The MDM page reuses the EXACT same JS interactions as the BOM page —
+  // tab switching, completion counter, row-handlers, master search,
+  // add-new and add-from-search. The whole block below is identical to
+  // workflow_bom.ejs so the two screens stay in lockstep.
+  var TABS = ['packaging','formula'];
+  var current = 0;
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) { p.classList.toggle('active', p.dataset.pane === TABS[current]); });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === TABS[current]); });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) { btn.addEventListener('click', function () { show(TABS.indexOf(btn.dataset.tab)); }); });
+  document.getElementById('bom-prev').addEventListener('click', function () { show(current - 1); });
+  if (document.getElementById('bom-next')) document.getElementById('bom-next').addEventListener('click', function () { show(current + 1); });
+
+  function updateCounts() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var n = pane.querySelectorAll('tbody tr').length;
+      var c = btn.querySelector('.vob-count');
+      if (n === 0) c.style.display='none';
+      else { c.style.display=''; c.textContent = n; }
+      var empty = pane.querySelector('[data-empty-state]');
+      if (empty) empty.style.display = n === 0 ? 'block' : 'none';
+    });
+  }
+
+  function attachRowHandlers(row) {
+    var sourceEl = row.querySelector('input[data-src-input]');
+    var pill = row.querySelector('[data-src-pill]');
+    function syncPill() {
+      pill.textContent = sourceEl.value;
+      pill.className = 'src-pill ' + sourceEl.value;
+      row.className = 'row-' + sourceEl.value;
+      var vb = row.querySelector('[data-vendor-block]');
+      if (vb) vb.style.display = sourceEl.value === 'NEW' ? 'block' : 'none';
+    }
+    syncPill();
+    row.querySelector('[data-remove]').addEventListener('click', function () { row.remove(); updateCounts(); });
+    row.querySelector('[data-branch]').addEventListener('click', function () {
+      var clone = row.cloneNode(true);
+      attachRowHandlers(clone);
+      var srcInput = clone.querySelector('input[data-src-input]');
+      srcInput.value = 'NEW';
+      clone.querySelector('input[name$="_material_number"]').value = '';
+      var descInput = clone.querySelector('input[name$="_material_description"]');
+      if (descInput && !/\(variant\)/.test(descInput.value)) descInput.value = descInput.value + ' (variant)';
+      row.parentElement.insertBefore(clone, row.nextSibling);
+      attachRowHandlers(clone);
+      updateCounts();
+    });
+    var vTypeRadios = row.querySelectorAll('[data-vendor-type]');
+    function syncVendor() {
+      var vt = (row.querySelector('[data-vendor-type]:checked') || {}).value || 'EXISTING';
+      row.querySelectorAll('[data-vendor-existing]').forEach(function (e) { e.style.display = vt === 'EXISTING' ? '' : 'none'; });
+      row.querySelectorAll('[data-vendor-new]').forEach(function (e) { e.style.display = vt === 'NEW' ? '' : 'none'; });
+    }
+    vTypeRadios.forEach(function (r) { r.addEventListener('change', syncVendor); });
+    syncVendor();
+  }
+  document.querySelectorAll('table[data-bom-table] tbody tr').forEach(attachRowHandlers);
+
+  document.querySelectorAll('[data-bom-search]').forEach(function (input) {
+    var resultsE = input.parentElement.querySelector('[data-bom-results]');
+    var debounce = null;
+    input.addEventListener('input', function () {
+      clearTimeout(debounce);
+      var q = input.value.trim();
+      if (!q) { resultsE.classList.remove('open'); return; }
+      debounce = setTimeout(function () { runSearch(q); }, 180);
+    });
+    document.addEventListener('click', function (e) {
+      if (!resultsE.contains(e.target) && e.target !== input) resultsE.classList.remove('open');
+    });
+    async function runSearch(q) {
+      try {
+        var resp = await fetch('/products/workflow/api/component-search?q=' + encodeURIComponent(q) + '&cat=' + encodeURIComponent(input.dataset.cat));
+        var data = await resp.json();
+        if (!data.results || !data.results.length) { resultsE.innerHTML = '<div class="bom-result" style="color:#6b7280">No matches</div>'; resultsE.classList.add('open'); return; }
+        resultsE.innerHTML = data.results.map(function (r) {
+          var label = '<strong>' + escHtml(r.material_description) + '</strong>' +
+                      '<span class="src ' + r.source + '">' + (r.source === 'CROSS' ? 'used in #' + r.from_request : 'master') + '</span>' +
+                      '<div class="meta">' + escHtml(r.material_number) + ' · ' + escHtml(r.category_name || '') + ' · ' + escHtml(r.material_group || '') + '</div>';
+          return '<div class="bom-result" data-row=\'' + escAttr(JSON.stringify(r)) + '\'>' + label + '</div>';
+        }).join('');
+        resultsE.classList.add('open');
+        Array.from(resultsE.querySelectorAll('.bom-result[data-row]')).forEach(function (rr) {
+          rr.addEventListener('click', function () { var data = JSON.parse(rr.dataset.row); addRowFromSearch(input.dataset.cat, data); input.value = ''; resultsE.classList.remove('open'); });
+        });
+      } catch (e) { console.error(e); }
+    }
+  });
+
+  document.querySelectorAll('[data-add-new]').forEach(function (btn) { btn.addEventListener('click', function () { addBlankRow(btn.dataset.cat); }); });
+  function addBlankRow(cat) {
+    var tab = cat === 'PACKAGING' ? 'packaging' : 'formula';
+    var prefix = cat === 'PACKAGING' ? 'pkg' : 'frm';
+    var tbody = document.querySelector('.vob-pane[data-pane="' + tab + '"] tbody');
+    var html = document.getElementById('bom-row-tpl').innerHTML.replace(/__P__/g, prefix);
+    var tmp = document.createElement('tbody'); tmp.innerHTML = html;
+    var row = tmp.firstElementChild;
+    if (cat === 'PACKAGING') {
+      row.querySelector('input[name="' + prefix + '_material_type"]').value = 'VERP';
+      row.querySelector('input[name="' + prefix + '_division"]').value = '60';
+    }
+    tbody.appendChild(row); attachRowHandlers(row); updateCounts();
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var descIn = row.querySelector('input[name$="_material_description"]'); if (descIn) descIn.focus();
+  }
+  function addRowFromSearch(cat, data) {
+    var tab = cat === 'PACKAGING' ? 'packaging' : 'formula';
+    var prefix = cat === 'PACKAGING' ? 'pkg' : 'frm';
+    var tbody = document.querySelector('.vob-pane[data-pane="' + tab + '"] tbody');
+    var html = document.getElementById('bom-row-tpl').innerHTML.replace(/__P__/g, prefix);
+    var tmp = document.createElement('tbody'); tmp.innerHTML = html;
+    var row = tmp.firstElementChild;
+    var fields = {
+      source: 'MASTER',
+      material_number:      data.material_number || '',
+      material_description: data.material_description || '',
+      category_name:        data.category_name || '',
+      brand:                data.brand || '',
+      material_group:       data.material_group || '',
+      material_type:        data.material_type || '',
+      base_uom:             data.base_uom || '',
+      division:             data.division || '',
+      vendor_code:          data.default_vendor_code || data.vendor_code || '',
+    };
+    Object.keys(fields).forEach(function (k) { var el = row.querySelector('[name="' + prefix + '_' + k + '"]'); if (el) el.value = fields[k]; });
+    tbody.appendChild(row); attachRowHandlers(row); updateCounts();
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function escHtml(s) { return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) { return { '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;' }[c]; }); }
+  function escAttr(s) { return escHtml(s); }
+
+  updateCounts();
+})();
+</script>
+</div>
+</body></html>

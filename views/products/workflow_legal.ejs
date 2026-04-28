@@ -1,0 +1,397 @@
+<%
+/*
+  views/products/workflow_legal.ejs
+  ---------------------------------------------------------------------------
+  Stage 9 — Legal task (parallel with MDM).
+  Tabs:
+    1. Legal Certifications     — repeating rows: cert (dropdown from
+                                  data/legal_certificates.json), status,
+                                  comment, file upload.
+    2. Packaging Country Reg.   — repeating rows: country, status,
+                                  registration number, comment, file upload.
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'Product Request — Legal Task' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Legal Task', topSub: 'Submit legal certifications and packaging country registrations.' }) %>
+
+<style>
+  .vob-nav { display:flex; flex-wrap:nowrap; gap:2px; padding:0 6px; margin:0 0 -1px 0; position:relative; z-index:2; overflow-x:auto; }
+  .vob-nav button { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; margin:0; border:1px solid #e5e7eb; border-radius:8px 8px 0 0; background:#f3f4f6; color:#4b5563; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .vob-nav button.active { background:#fff; color:#111827; font-weight:600; border-bottom-color:#fff; z-index:3; }
+  .vob-nav .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:#e5e7eb; color:#374151; font-size:12px; font-weight:600; }
+  .vob-nav button.active .num { background:#1e3a8a; color:#fff; }
+  .vob-nav .vob-count { display:inline-block; padding:1px 7px; font-size:11px; border-radius:9999px; background:#d1d5db; color:#374151; font-weight:600; }
+  .vob-nav button.active .vob-count { background:#e5e7eb; color:#111827; }
+  .vob-nav button.done { background:#10b981; color:#fff; border-color:#10b981; }
+
+  .vob-card { background:#fff; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; padding:18px 22px; box-shadow:0 1px 2px rgba(0,0,0,.04); position:relative; z-index:1; }
+  .vob-card h2 { font-size:18px; font-weight:600; color:#111827; margin:0 0 4px; }
+  .vob-card .blurb { font-size:13px; color:#6b7280; margin-bottom:12px; }
+  .vob-card .section-title { font-size:14px; font-weight:600; color:#111827; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:18px 0 10px; }
+
+  .vob-footer { display:flex; justify-content:space-between; align-items:center; margin-top:18px; padding-top:14px; border-top:1px solid #e5e7eb; }
+  .vob-footer .right { display:flex; gap:8px; }
+  .btn { padding:8px 16px; font-size:14px; font-weight:500; border-radius:6px; border:none; cursor:pointer; }
+  .btn-default { background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .btn-primary { background:#1e3a8a; color:#fff; }
+
+  .vob-pane { display:none; }
+  .vob-pane.active { display:block; }
+
+  .lr-row {
+    border:1px solid #e5e7eb; border-radius:8px; padding:12px 14px;
+    margin-bottom:10px; background:#fafafa; position:relative;
+    display:grid; grid-template-columns: 2fr 1fr 1fr; gap:8px 14px;
+    align-items:end;
+  }
+  .lr-row .full { grid-column:1 / -1; }
+  .lr-row label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+  .lr-row select, .lr-row input, .lr-row textarea {
+    width:100%; padding:6px 8px; font-size:13px;
+    border:1px solid #d1d5db; border-radius:5px; box-sizing:border-box;
+  }
+  .lr-row textarea { min-height:46px; resize:vertical; }
+  .lr-row .file-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .lr-row input[type=file] { font-size:12px; }
+  .lr-row .existing { font-size:12px; color:#1d4ed8; }
+  .lr-row .lr-remove {
+    position:absolute; top:6px; right:8px; background:transparent;
+    color:#b91c1c; border:none; cursor:pointer; font-size:14px;
+  }
+  .lr-add { background:#1e3a8a; color:white; border:none; padding:6px 14px; border-radius:5px; font-size:13px; cursor:pointer; }
+  .submitted-banner { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+  .info-banner      { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<%
+  var pr = productRequest;
+  var lg = pr.legal || {};
+  var certs = lg.certifications || [];
+  var regs  = lg.registrations  || [];
+  if (certs.length === 0) certs = [{}];
+  if (regs.length  === 0) regs  = [{}];
+  var atts = (typeof legalAttachments !== 'undefined' && legalAttachments) ? legalAttachments : [];
+  var attsByCertCode = {};
+  var attsByRegCountry = {};
+  atts.forEach(function (a) {
+    if (a.category === 'legal_cert' && a.certificate_type) (attsByCertCode[a.certificate_type] = attsByCertCode[a.certificate_type] || []).push(a);
+    if (a.category === 'legal_reg'  && a.certificate_type) (attsByRegCountry[a.certificate_type] = attsByRegCountry[a.certificate_type] || []).push(a);
+  });
+  var alreadySubmitted = !!pr.legal_completed_at;
+  var CERT_STATUS = [
+    ['OBTAINED',       'Obtained'],
+    ['IN_PROGRESS',    'In progress'],
+    ['EXPIRED',        'Expired'],
+    ['NOT_OBTAINED',   'Not obtained'],
+    ['NOT_APPLICABLE', 'Not applicable'],
+  ];
+  var REG_STATUS = [
+    ['REGISTERED',     'Registered'],
+    ['IN_PROGRESS',    'In progress'],
+    ['NOT_REGISTERED', 'Not registered'],
+    ['NOT_REQUIRED',   'Not required'],
+  ];
+%>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Legal Task</h1>
+      <p class="text-sm text-gray-500 mt-1"><strong><%= pr.product_name %></strong> · Request #<%= pr.id %></p>
+    </div>
+    <a href="/products/workflow/queue" class="text-sm text-blue-600 hover:underline">← Back to queue</a>
+  </div>
+
+  <%- include('_workflow_shared', { productRequest: pr, stateLabel: ref.STATE_LABELS[pr.workflow_state] || pr.workflow_state, history: history, comments: comments }) %>
+
+  <% if (alreadySubmitted) { %>
+    <div class="submitted-banner">
+      ✓ Legal submitted on <strong><%= pr.legal_completed_at %></strong>.
+      <% if (pr.mdm_completed_at) { %>
+        MDM also submitted — request is now <strong>CONFIRMED</strong>.
+      <% } else { %>
+        MDM is still pending.
+      <% } %>
+    </div>
+  <% } %>
+
+  <%- include('_readonly_view', { productRequest: pr, ref: ref, attachments: attachments, designAttachments: designAttachments }) %>
+
+  <div class="vob-shell" style="margin-top:18px;">
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="certs"><span class="num">1</span><span>Legal Certifications</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="regs"><span class="num">2</span><span>Packaging Country Registration</span><span class="vob-count"></span></button>
+    </nav>
+
+    <form id="lg-form" method="post" enctype="multipart/form-data" action="/products/workflow/<%= pr.id %>/legal">
+      <fieldset <%= alreadySubmitted ? 'disabled' : '' %> style="border:none; padding:0; margin:0;">
+
+      <!-- ===== 1) Certifications ===== -->
+      <section class="vob-pane active" data-pane="certs">
+        <div class="vob-card">
+          <h2>Legal certifications</h2>
+          <p class="blurb">Add every legal certification that applies to this product. Pick a certification, set its status, attach the document, and add any context notes.</p>
+
+          <div id="cert-rows">
+            <% certs.forEach(function (c, idx) {
+                 var existing = (c.code && attsByCertCode[c.code]) || [];
+            %>
+              <div class="lr-row" data-cert-row data-idx="<%= idx %>">
+                <button type="button" class="lr-remove" data-cert-remove>✕</button>
+                <div>
+                  <label>Certification</label>
+                  <select name="legal_cert_code">
+                    <option value="">-- Select certification --</option>
+                    <% ref.LEGAL_CERTIFICATES.forEach(function (cc) { %>
+                      <option value="<%= cc.code %>" <%= c.code === cc.code ? 'selected' : '' %>><%= cc.label %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div>
+                  <label>Status</label>
+                  <select name="legal_cert_status">
+                    <option value="">-- Select --</option>
+                    <% CERT_STATUS.forEach(function (s) { %>
+                      <option value="<%= s[0] %>" <%= c.status === s[0] ? 'selected' : '' %>><%= s[1] %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div class="full">
+                  <label>Comment</label>
+                  <textarea name="legal_cert_comment" placeholder="Optional notes (jurisdiction, expiry, scope)…"><%= c.comment || '' %></textarea>
+                </div>
+                <div class="full file-row">
+                  <input type="file" name="legal_cert_file_<%= idx %>" accept=".pdf,image/*">
+                  <% if (existing.length) { %>
+                    <span class="existing">
+                      <% existing.forEach(function (f) { %>
+                        <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+                      <% }); %>
+                    </span>
+                  <% } %>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+          <button type="button" id="cert-add" class="lr-add">+ Add certification</button>
+        </div>
+      </section>
+
+      <!-- ===== 2) Packaging Country Registration ===== -->
+      <section class="vob-pane" data-pane="regs">
+        <div class="vob-card">
+          <h2>Packaging country registration</h2>
+          <p class="blurb">Confirm the packaging has been registered in each destination country and attach the registration document.</p>
+
+          <div id="reg-rows">
+            <% regs.forEach(function (r, idx) {
+                 var existing = (r.country && attsByRegCountry[r.country]) || [];
+            %>
+              <div class="lr-row" data-reg-row data-idx="<%= idx %>">
+                <button type="button" class="lr-remove" data-reg-remove>✕</button>
+                <div>
+                  <label>Country</label>
+                  <select name="legal_reg_country">
+                    <option value="">-- Select country --</option>
+                    <% ref.PRODUCT_MARKETS.forEach(function (m) { %>
+                      <option value="<%= m.code %>" <%= r.country === m.code ? 'selected' : '' %>><%= m.name %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div>
+                  <label>Status</label>
+                  <select name="legal_reg_status">
+                    <option value="">-- Select --</option>
+                    <% REG_STATUS.forEach(function (s) { %>
+                      <option value="<%= s[0] %>" <%= r.status === s[0] ? 'selected' : '' %>><%= s[1] %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div>
+                  <label>Registration #</label>
+                  <input type="text" name="legal_reg_number" value="<%= r.registration_number || '' %>" placeholder="e.g. RNB-2026-0011">
+                </div>
+                <div class="full">
+                  <label>Comment</label>
+                  <textarea name="legal_reg_comment" placeholder="Notes (regulator, expiry, scope)…"><%= r.comment || '' %></textarea>
+                </div>
+                <div class="full file-row">
+                  <input type="file" name="legal_reg_file_<%= idx %>" accept=".pdf,image/*">
+                  <% if (existing.length) { %>
+                    <span class="existing">
+                      <% existing.forEach(function (f) { %>
+                        <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+                      <% }); %>
+                    </span>
+                  <% } %>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+          <button type="button" id="reg-add" class="lr-add">+ Add country registration</button>
+        </div>
+      </section>
+
+      <div class="vob-footer">
+        <button type="button" id="lg-prev" class="btn btn-default">← Previous</button>
+        <div class="right">
+          <% if (!alreadySubmitted) { %>
+            <button type="submit" name="action" value="save_draft" class="btn btn-default">💾 Save as Draft</button>
+            <button type="button" id="lg-next" class="btn btn-default">Next →</button>
+            <button type="submit" name="action" value="submit" class="btn btn-primary">Submit Legal</button>
+          <% } else { %>
+            <a href="/products/workflow/<%= pr.id %>/confirmation" class="btn btn-primary">View confirmation →</a>
+          <% } %>
+        </div>
+      </div>
+      </fieldset>
+    </form>
+  </div>
+</main>
+
+<template id="cert-row-tpl">
+  <div class="lr-row" data-cert-row>
+    <button type="button" class="lr-remove" data-cert-remove>✕</button>
+    <div>
+      <label>Certification</label>
+      <select name="legal_cert_code">
+        <option value="">-- Select certification --</option>
+        <% ref.LEGAL_CERTIFICATES.forEach(function (cc) { %>
+          <option value="<%= cc.code %>"><%= cc.label %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div>
+      <label>Status</label>
+      <select name="legal_cert_status">
+        <option value="">-- Select --</option>
+        <% CERT_STATUS.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }); %>
+      </select>
+    </div>
+    <div class="full">
+      <label>Comment</label>
+      <textarea name="legal_cert_comment"></textarea>
+    </div>
+    <div class="full file-row">
+      <input type="file" name="legal_cert_file_NEW" accept=".pdf,image/*">
+    </div>
+  </div>
+</template>
+
+<template id="reg-row-tpl">
+  <div class="lr-row" data-reg-row>
+    <button type="button" class="lr-remove" data-reg-remove>✕</button>
+    <div>
+      <label>Country</label>
+      <select name="legal_reg_country">
+        <option value="">-- Select country --</option>
+        <% ref.PRODUCT_MARKETS.forEach(function (m) { %>
+          <option value="<%= m.code %>"><%= m.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div>
+      <label>Status</label>
+      <select name="legal_reg_status">
+        <option value="">-- Select --</option>
+        <% REG_STATUS.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }); %>
+      </select>
+    </div>
+    <div>
+      <label>Registration #</label>
+      <input type="text" name="legal_reg_number">
+    </div>
+    <div class="full">
+      <label>Comment</label>
+      <textarea name="legal_reg_comment"></textarea>
+    </div>
+    <div class="full file-row">
+      <input type="file" name="legal_reg_file_NEW" accept=".pdf,image/*">
+    </div>
+  </div>
+</template>
+
+<script>
+(function () {
+  // ---- tabs + counter ----
+  var TABS = ['certs','regs'];
+  var current = 0;
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) { p.classList.toggle('active', p.dataset.pane === TABS[current]); });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === TABS[current]); });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) { btn.addEventListener('click', function () { show(TABS.indexOf(btn.dataset.tab)); }); });
+  document.getElementById('lg-prev').addEventListener('click', function () { show(current - 1); });
+  if (document.getElementById('lg-next')) document.getElementById('lg-next').addEventListener('click', function () { show(current + 1); });
+
+  function updateCounts() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var rows = pane.querySelectorAll('[data-cert-row], [data-reg-row]');
+      var n = 0;
+      rows.forEach(function (r) {
+        var sel = r.querySelector('select');
+        if (sel && sel.value) n++;
+      });
+      var c = btn.querySelector('.vob-count');
+      if (n === 0) c.style.display='none';
+      else { c.style.display=''; c.textContent = n; }
+      btn.classList.toggle('done', n > 0);
+    });
+  }
+  document.getElementById('lg-form').addEventListener('input', updateCounts);
+  document.getElementById('lg-form').addEventListener('change', updateCounts);
+
+  // ---- add/remove rows ----
+  function attachCertRow(row) {
+    row.querySelector('[data-cert-remove]').addEventListener('click', function () {
+      if (document.querySelectorAll('[data-cert-row]').length > 1) row.remove();
+      updateCounts();
+    });
+  }
+  function attachRegRow(row) {
+    row.querySelector('[data-reg-remove]').addEventListener('click', function () {
+      if (document.querySelectorAll('[data-reg-row]').length > 1) row.remove();
+      updateCounts();
+    });
+  }
+  document.querySelectorAll('[data-cert-row]').forEach(attachCertRow);
+  document.querySelectorAll('[data-reg-row]').forEach(attachRegRow);
+
+  function nextIdx(selector) {
+    return document.querySelectorAll(selector).length;
+  }
+  document.getElementById('cert-add').addEventListener('click', function () {
+    var t = document.getElementById('cert-row-tpl');
+    var tmp = document.createElement('div'); tmp.innerHTML = t.innerHTML.trim();
+    var row = tmp.firstElementChild;
+    var idx = nextIdx('[data-cert-row]');
+    var f = row.querySelector('input[type=file]');
+    if (f) f.name = 'legal_cert_file_' + idx;
+    document.getElementById('cert-rows').appendChild(row);
+    attachCertRow(row);
+    updateCounts();
+  });
+  document.getElementById('reg-add').addEventListener('click', function () {
+    var t = document.getElementById('reg-row-tpl');
+    var tmp = document.createElement('div'); tmp.innerHTML = t.innerHTML.trim();
+    var row = tmp.firstElementChild;
+    var idx = nextIdx('[data-reg-row]');
+    var f = row.querySelector('input[type=file]');
+    if (f) f.name = 'legal_reg_file_' + idx;
+    document.getElementById('reg-rows').appendChild(row);
+    attachRegRow(row);
+    updateCounts();
+  });
+
+  updateCounts();
+})();
+</script>
+</div>
+</body></html>
