@@ -23,6 +23,7 @@ const path    = require('path');
 const multer  = require('multer');
 
 const productWorkflow = require('../lib/product_workflow');
+const productSlas     = require('../lib/product_slas');
 const fxLookup        = require('../lib/fx_lookup');
 const {
   requireRole,
@@ -1262,6 +1263,25 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
     const userId = u.id || null;
     const roles = getUserRoles(req);
 
+    // ---- Filters ----------------------------------------------------------
+    const range = ['7','30','90','all'].includes(String(req.query.range)) ? String(req.query.range) : '30';
+    const typeF = String(req.query.type || '');
+    const REQUEST_TYPES = ['NEW_PRODUCT','NEW_VARIATION','MODIFICATION','DISCONTINUATION'];
+
+    const dateClause = range === 'all'
+      ? ''
+      : ` AND created_at > datetime('now','-${range} days')`;
+    const dateClauseConfirmed = range === 'all'
+      ? ''
+      : ` AND workflow_updated_at > datetime('now','-${range} days')`;
+    // Same as dateClause but qualified for queries that JOIN another table
+    // (otherwise SQLite can't disambiguate the created_at column).
+    const dateClausePR = range === 'all'
+      ? ''
+      : ` AND pr.created_at > datetime('now','-${range} days')`;
+    const typeClause = typeF ? ` AND request_type = '${typeF.replace(/'/g, "''")}'` : '';
+    const typeClausePR = typeF ? ` AND pr.request_type = '${typeF.replace(/'/g, "''")}'` : '';
+
     const open    = "workflow_state IN ('DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM','PENDING_RND_AND_QUALITY_DIRECTORS','PENDING_LEGAL_AND_MDM','NEEDS_INFO')";
     const closed  = "workflow_state IN ('CONFIRMED','REJECTED')";
     const onlyOne = (s) => `workflow_state = '${s}'`;
@@ -1269,25 +1289,31 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
     const cnt = (whereClause, ...args) =>
       db.prepare(`SELECT COUNT(*) c FROM product_requests WHERE ${whereClause}`).get(...args).c;
 
+    // KPIs honour the type filter; the date range applies to "in-window"
+    // metrics (confirmed/rejected) but the open count is always live.
     const kpi = {
-      total:        cnt('1'),
-      open:         cnt(open),
-      confirmed:    cnt("workflow_state='CONFIRMED'"),
-      rejected:     cnt("workflow_state='REJECTED'"),
-      awaiting_dir: cnt("workflow_state IN ('PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','PENDING_RND_AND_QUALITY_DIRECTORS')"),
-      in_rnd:       cnt("workflow_state IN ('PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM')"),
-      in_legal_mdm: cnt(onlyOne('PENDING_LEGAL_AND_MDM')),
-      mine_open:    userId ? cnt(`requestor_user_id = ? AND ${open}`, userId) : 0,
+      total:        cnt(`1 ${typeClause}`),
+      open:         cnt(`${open} ${typeClause}`),
+      confirmed:    cnt(`workflow_state='CONFIRMED' ${typeClause}`),
+      rejected:     cnt(`workflow_state='REJECTED' ${typeClause}`),
+      awaiting_dir: cnt(`workflow_state IN ('PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','PENDING_RND_AND_QUALITY_DIRECTORS') ${typeClause}`),
+      in_rnd:       cnt(`workflow_state IN ('PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM') ${typeClause}`),
+      in_legal_mdm: cnt(`${onlyOne('PENDING_LEGAL_AND_MDM')} ${typeClause}`),
+      mine_open:    userId ? cnt(`requestor_user_id = ? AND ${open} ${typeClause}`, userId) : 0,
     };
 
-    // Confirmations and rejections in the last 7 days — proxy for throughput.
-    kpi.confirmed_7d = db.prepare(`
+    // Confirmations and rejections inside the active range.
+    kpi.confirmed_window = db.prepare(`
       SELECT COUNT(*) c FROM product_requests
-       WHERE workflow_state='CONFIRMED' AND workflow_updated_at > datetime('now','-7 days')
+       WHERE workflow_state='CONFIRMED' ${dateClauseConfirmed} ${typeClause}
     `).get().c;
-    kpi.rejected_7d = db.prepare(`
+    kpi.rejected_window = db.prepare(`
       SELECT COUNT(*) c FROM product_requests
-       WHERE workflow_state='REJECTED' AND workflow_updated_at > datetime('now','-7 days')
+       WHERE workflow_state='REJECTED' ${dateClauseConfirmed} ${typeClause}
+    `).get().c;
+    kpi.submitted_window = db.prepare(`
+      SELECT COUNT(*) c FROM product_requests
+       WHERE 1 ${dateClause} ${typeClause}
     `).get().c;
 
     // Rejection rate over closed requests (CONFIRMED + REJECTED).
@@ -1310,7 +1336,7 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
     const byStage = db.prepare(`
       SELECT workflow_state AS state, COUNT(*) n
         FROM product_requests
-       WHERE ${open}
+       WHERE ${open} ${typeClause}
        GROUP BY workflow_state
     `).all().map((r) => ({
       state: r.state,
@@ -1323,9 +1349,43 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
     kpi.bottleneck_label = bottleneck ? bottleneck.label : 'None';
     kpi.bottleneck_count = bottleneck ? bottleneck.n     : 0;
 
+    // ---- SLA compliance per stage (for the open requests) ---------------
+    // For each open request we look at how long it has been in its current
+    // state (workflow_updated_at if set, otherwise created_at as a fallback).
+    const openWithDays = db.prepare(`
+      SELECT id, workflow_state,
+             julianday('now') - julianday(COALESCE(workflow_updated_at, created_at)) AS days_in_state
+        FROM product_requests
+       WHERE ${open} ${typeClause}
+    `).all();
+    const slaPerStage = {};
+    Object.keys(productSlas.STAGE_SLA_DAYS).forEach((s) => {
+      slaPerStage[s] = { state: s, label: productWorkflow.STATE_LABELS[s] || s, sla: productSlas.STAGE_SLA_DAYS[s], total: 0, ok: 0, risk: 0, breach: 0, sum_days: 0 };
+    });
+    openWithDays.forEach((r) => {
+      const bucket = slaPerStage[r.workflow_state];
+      if (!bucket) return;
+      const days = r.days_in_state || 0;
+      const status = productSlas.slaStatus(days, bucket.sla);
+      bucket.total += 1;
+      bucket[status] += 1;
+      bucket.sum_days += days;
+    });
+    const slaStages = Object.values(slaPerStage).map((b) => ({
+      ...b,
+      avg_days: b.total ? Math.round((b.sum_days / b.total) * 100) / 100 : 0,
+    }));
+    kpi.breach_count = slaStages.reduce((s, b) => s + b.breach, 0);
+    kpi.risk_count   = slaStages.reduce((s, b) => s + b.risk,   0);
+    kpi.ok_count     = slaStages.reduce((s, b) => s + b.ok,     0);
+
+    // Quick lookup so the process-flow strip can pull avg_days + status by state.
+    const slaStageByState = slaStages.reduce((m, b) => { m[b.state] = b; return m; }, {});
+
     const byType = db.prepare(`
       SELECT request_type AS type, COUNT(*) n
         FROM product_requests
+       WHERE 1=1 ${typeClause}
        GROUP BY request_type
     `).all();
 
@@ -1415,6 +1475,65 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       }]);
     })();
 
+    // ---- Per-user submitter table ---------------------------------------
+    // How many requests each user has submitted (any state). Date-range +
+    // type filters apply.
+    const submitters = db.prepare(`
+      SELECT pr.requestor_user_id AS user_id,
+             u.name  AS user_name,
+             u.role  AS user_role,
+             COUNT(*) AS submitted,
+             SUM(CASE WHEN pr.workflow_state='CONFIRMED' THEN 1 ELSE 0 END) AS confirmed,
+             SUM(CASE WHEN pr.workflow_state IN ('DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM','PENDING_RND_AND_QUALITY_DIRECTORS','PENDING_LEGAL_AND_MDM','NEEDS_INFO') THEN 1 ELSE 0 END) AS open,
+             SUM(CASE WHEN pr.workflow_state='REJECTED' THEN 1 ELSE 0 END) AS rejected,
+             MAX(pr.updated_at) AS last_activity
+        FROM product_requests pr
+        LEFT JOIN users u ON u.id = pr.requestor_user_id
+       WHERE pr.requestor_user_id IS NOT NULL ${dateClausePR} ${typeClausePR}
+       GROUP BY pr.requestor_user_id
+       ORDER BY submitted DESC, last_activity DESC
+       LIMIT 12
+    `).all();
+
+    // ---- Per-actor performance table ------------------------------------
+    // For every transition with an actor, attribute the time the actor took
+    // to fire the transition (from when the request entered that state).
+    // Aggregate per user.
+    const actors = db.prepare(`
+      WITH ordered AS (
+        SELECT h.id, h.product_req_id, h.actor_user_id, h.actor_role, h.from_state,
+               h.created_at AS exit_at,
+               COALESCE(
+                 LAG(h.created_at) OVER (PARTITION BY h.product_req_id ORDER BY h.id),
+                 pr.created_at
+               ) AS enter_at
+          FROM product_workflow_history h
+          JOIN product_requests pr ON pr.id = h.product_req_id
+         WHERE h.actor_user_id IS NOT NULL
+           ${range === 'all' ? '' : `AND h.created_at > datetime('now','-${range} days')`}
+      )
+      SELECT actor_user_id AS user_id,
+             u.name        AS user_name,
+             u.role        AS user_role,
+             COUNT(*)      AS actions,
+             AVG(julianday(exit_at) - julianday(enter_at)) AS avg_days,
+             MAX(o.exit_at) AS last_action_at
+        FROM ordered o
+        LEFT JOIN users u ON u.id = o.actor_user_id
+       GROUP BY actor_user_id
+       ORDER BY actions DESC
+       LIMIT 12
+    `).all().map((r) => {
+      const sla = productSlas.ROLE_SLA_DAYS[r.user_role];
+      const avg = r.avg_days != null ? Math.round(r.avg_days * 100) / 100 : 0;
+      return {
+        ...r,
+        avg_days:    avg,
+        sla_days:    sla != null ? sla : null,
+        sla_status:  sla != null ? productSlas.slaStatus(avg, sla) : null,
+      };
+    });
+
     // Tasks the viewer's role can act on right now.
     let myTasks = [];
     const stateForRole = (() => {
@@ -1480,10 +1599,18 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       confirmations:   fullConfirmations,
       dwell:           dwellRows,
       funnel,
+      slaStages,
+      slaStageByState,
+      submitters,
+      actors,
       myTasks,
       mySubmitted,
       recent,
       stateLabels: productWorkflow.STATE_LABELS,
+      stageOrder:  ['DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM','PENDING_RND_AND_QUALITY_DIRECTORS','PENDING_LEGAL_AND_MDM'],
+      stageSlas:   productSlas.STAGE_SLA_DAYS,
+      totalSlaDays: productSlas.TOTAL_CYCLE_SLA_DAYS,
+      filters:     { range, type: typeF, requestTypes: REQUEST_TYPES },
       activeTab:   'dashboard',
     });
   });

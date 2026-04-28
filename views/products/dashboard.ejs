@@ -1,218 +1,502 @@
 <%- include('../partials/head', { pageTitle: 'Product Dashboard' }) %>
 <%- include('../partials/nav') %>
 <div class="main-content">
-<%- include('../partials/topbar', { topTitle: 'Product Dashboard', topSub: 'Live metrics across every product creation request.' }) %>
+<%- include('../partials/topbar', { topTitle: 'Product Dashboard', topSub: 'Live process-flow metrics, SLA tracking and team performance.' }) %>
+
+<style>
+  /* ------- shared -------- */
+  .pd-section-title {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+    color: #475569; font-weight: 700;
+    margin: 22px 0 12px 4px;
+  }
+
+  /* ------- filter bar -------- */
+  .pd-filter-bar {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    align-items: end;
+  }
+  .pd-filter-bar label { display:flex; flex-direction:column; gap:4px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#64748b; font-weight:600; }
+  .pd-filter-bar select, .pd-filter-bar input { padding:7px 10px; font-size:13px; border:1px solid #cbd5e1; border-radius:6px; min-width:160px; background:white; }
+  .pd-filter-bar .range-pill {
+    display:inline-flex; gap:4px; padding:3px; background:#f1f5f9; border-radius:8px;
+  }
+  .pd-filter-bar .range-pill button {
+    background:transparent; border:none; padding:6px 12px; border-radius:6px;
+    font-size:13px; font-weight:600; color:#475569; cursor:pointer;
+  }
+  .pd-filter-bar .range-pill button.active { background:#1e3a8a; color:white; }
+
+  /* ------- KPI cards ------- */
+  .kpi-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; }
+  @media (min-width: 980px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+  .kpi-card {
+    background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 18px 18px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    position: relative; overflow: hidden;
+  }
+  .kpi-card .kpi-bar { position:absolute; top:0; left:0; bottom:0; width:6px; }
+  .kpi-card .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:6px; }
+  .kpi-card .kpi-value { font-size:32px; font-weight:800; line-height:1; }
+  .kpi-card .kpi-sub   { font-size:11px; color:#64748b; margin-top:8px; }
+  .kpi-card.blue   .kpi-bar { background:#3b82f6; } .kpi-card.blue   .kpi-label { color:#1d4ed8; } .kpi-card.blue   .kpi-value { color:#1e3a8a; }
+  .kpi-card.green  .kpi-bar { background:#10b981; } .kpi-card.green  .kpi-label { color:#047857; } .kpi-card.green  .kpi-value { color:#064e3b; }
+  .kpi-card.amber  .kpi-bar { background:#f59e0b; } .kpi-card.amber  .kpi-label { color:#b45309; } .kpi-card.amber  .kpi-value { color:#78350f; }
+  .kpi-card.violet .kpi-bar { background:#8b5cf6; } .kpi-card.violet .kpi-label { color:#6d28d9; } .kpi-card.violet .kpi-value { color:#4c1d95; }
+  .kpi-card.indigo .kpi-bar { background:#6366f1; } .kpi-card.indigo .kpi-label { color:#4338ca; } .kpi-card.indigo .kpi-value { color:#312e81; }
+  .kpi-card.red    .kpi-bar { background:#ef4444; } .kpi-card.red    .kpi-label { color:#b91c1c; } .kpi-card.red    .kpi-value { color:#7f1d1d; }
+  .kpi-card.slate  .kpi-bar { background:#64748b; } .kpi-card.slate  .kpi-label { color:#334155; } .kpi-card.slate  .kpi-value { color:#0f172a; }
+
+  /* ------- process flow strip ------- */
+  .flow-strip {
+    display:grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap:8px;
+  }
+  @media (max-width: 1280px) { .flow-strip { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+  @media (max-width: 760px)  { .flow-strip { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .flow-cell {
+    background:white; border:1px solid #e2e8f0; border-radius:10px; padding:12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04); position:relative;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .flow-cell .stage-name {
+    font-size:11px; font-weight:600; color:#0f172a;
+    line-height:1.2; min-height:30px;
+  }
+  .flow-cell .stage-count { font-size:24px; font-weight:800; color:#1e293b; line-height:1; }
+  .flow-cell .stage-meta { font-size:10px; color:#64748b; }
+  .sla-pill {
+    display:inline-block; font-size:9px; font-weight:700; letter-spacing:.04em;
+    padding:2px 7px; border-radius:9999px; text-transform:uppercase;
+    align-self:flex-start;
+  }
+  .sla-pill.ok     { background:#dcfce7; color:#166534; }
+  .sla-pill.risk   { background:#fef3c7; color:#92400e; }
+  .sla-pill.breach { background:#fee2e2; color:#991b1b; }
+  .flow-arrow {
+    position:absolute; right:-7px; top:50%; transform:translateY(-50%);
+    width:14px; height:14px; background:white; border-top:1px solid #e2e8f0; border-right:1px solid #e2e8f0;
+    transform: translateY(-50%) rotate(45deg);
+    z-index:1;
+  }
+  .flow-cell:last-child .flow-arrow { display:none; }
+
+  /* ------- card / panel ------- */
+  .panel { background:white; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.04); padding:18px 20px; }
+  .panel-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .panel-header h3 { font-size:14px; font-weight:700; color:#0f172a; margin:0; }
+  .panel-header .hint { font-size:11px; color:#94a3b8; margin-left:auto; }
+
+  /* ------- tables ------- */
+  .pd-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .pd-table th { background:#f8fafc; padding:8px 10px; text-align:left; font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.05em; }
+  .pd-table td { padding:9px 10px; border-top:1px solid #f1f5f9; }
+  .pd-table tr:hover td { background:#f8fafc; }
+  .pd-table .num { text-align:right; font-variant-numeric: tabular-nums; }
+  .pd-table .pill {
+    display:inline-block; padding:1px 8px; border-radius:9999px;
+    font-size:11px; font-weight:600;
+  }
+  .pd-table .pill.user-role { background:#eef2ff; color:#3730a3; }
+
+  /* ------- chart cards ------- */
+  .chart-card { background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+  .chart-card .chart-title { font-size:13px; font-weight:700; color:#0f172a; margin-bottom:8px; }
+  .chart-card .chart-hint  { font-size:11px; color:#94a3b8; margin-bottom:8px; }
+  .chart-card canvas { max-height: 280px; }
+
+  /* ------- cycle summary card ------- */
+  .cycle-bar {
+    background:#f1f5f9; border-radius:9999px; height:10px; overflow:hidden;
+    position:relative;
+  }
+  .cycle-bar .fill {
+    position:absolute; top:0; left:0; bottom:0; border-radius:9999px;
+    background:linear-gradient(90deg, #10b981 0%, #f59e0b 70%, #ef4444 100%);
+  }
+</style>
 
 <main class="p-6">
 
 <%- include('_product_tabs', { activeTab: 'dashboard' }) %>
 
-<!-- Top-level pipeline KPIs (process-flow first) -->
-<section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-  <div class="card card-body">
-    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Open requests</div>
-    <div class="text-3xl font-bold text-blue-600"><%= kpi.open %></div>
-    <div class="text-xs text-slate-500 mt-1">Total in system: <%= kpi.total %></div>
-  </div>
-  <div class="card card-body">
-    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Confirmed (last 7 days)</div>
-    <div class="text-3xl font-bold text-emerald-600"><%= kpi.confirmed_7d %></div>
-    <div class="text-xs text-slate-500 mt-1">All-time confirmed: <%= kpi.confirmed %></div>
-  </div>
-  <div class="card card-body">
-    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Avg cycle time</div>
-    <div class="text-3xl font-bold text-slate-700"><%= kpi.avg_cycle_days %><span class="text-base font-normal text-slate-500"> days</span></div>
-    <div class="text-xs text-slate-500 mt-1">Confirmed requests, last 90d</div>
-  </div>
-  <div class="card card-body">
-    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Rejection rate</div>
-    <div class="text-3xl font-bold text-red-600"><%= kpi.rejection_rate %>%</div>
-    <div class="text-xs text-slate-500 mt-1">Rejected of all closed: <%= kpi.rejected %> / <%= kpi.confirmed + kpi.rejected %></div>
-  </div>
-</section>
-
-<!-- Bottleneck spotlight + work-in-progress breakdown -->
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-  <div class="card lg:col-span-1 card-body" style="background:linear-gradient(135deg,#eff6ff 0%,#fef3c7 100%);">
-    <div class="text-xs uppercase tracking-wider text-amber-700 mb-1">Current bottleneck</div>
-    <div class="text-xl font-bold text-amber-900 leading-tight"><%= kpi.bottleneck_label %></div>
-    <div class="text-3xl font-bold text-amber-700 mt-1"><%= kpi.bottleneck_count %><span class="text-base font-normal text-amber-700"> waiting</span></div>
-  </div>
-  <div class="card card-body">
-    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">In R&D</div>
-    <div class="text-3xl font-bold text-violet-600"><%= kpi.in_rnd %></div>
-    <div class="text-xs text-slate-500 mt-1">Production / Packaging / Design / BOM</div>
-  </div>
-  <div class="card card-body">
-    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">In Legal / MDM</div>
-    <div class="text-3xl font-bold text-indigo-600"><%= kpi.in_legal_mdm %></div>
-    <div class="text-xs text-slate-500 mt-1">Awaiting Director: <%= kpi.awaiting_dir %></div>
-  </div>
-</section>
-
-<!-- My tasks + Quick actions -->
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-  <div class="card lg:col-span-2">
-    <div class="card-header">
-      <h3 class="font-semibold">Tasks waiting on my role
-        <% if (currentUser) { %>(<%= currentUser.role.replace(/_/g,' ') %>)<% } %>
-      </h3>
-      <span class="ml-auto text-xs text-slate-400"><%= myTasks.length %> open</span>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="data">
-        <thead><tr><th>Request #</th><th>Product</th><th>Type</th><th>Stage</th><th>Updated</th><th></th></tr></thead>
-        <tbody>
-          <% if (!myTasks.length) { %>
-            <tr><td colspan="6" class="text-center text-slate-500 p-6">🎉 Nothing waiting — you're all caught up!</td></tr>
-          <% } %>
-          <% myTasks.forEach(function (t) { %>
-            <tr>
-              <td class="font-mono text-xs">PR-<%= t.id %></td>
-              <td><%= t.product_name || '—' %></td>
-              <td class="text-xs text-slate-600"><%= (t.request_type || '').replace(/_/g,' ') %></td>
-              <td><span class="chip bg-amber-100 text-amber-700"><%= t.state_label %></span></td>
-              <td class="text-xs text-slate-500"><%= t.updated_at %></td>
-              <td><a href="<%= t.open_url %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
+<!-- ================ Filter bar ================ -->
+<%
+  // Helper to build a URL with the current filters but a new value for one field.
+  function urlWith(overrides) {
+    var p = { range: filters.range, type: filters.type };
+    Object.keys(overrides).forEach(function (k) { p[k] = overrides[k]; });
+    var qs = Object.keys(p).filter(function (k) { return p[k]; })
+              .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(p[k]); }).join('&');
+    return '/products/dashboard' + (qs ? '?' + qs : '');
+  }
+%>
+<div class="pd-filter-bar">
+  <div style="display:flex; flex-direction:column; gap:4px;">
+    <span style="font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#64748b; font-weight:600;">Date range</span>
+    <div class="range-pill" role="tablist">
+      <% ['7','30','90','all'].forEach(function (r) { %>
+        <a href="<%= urlWith({ range: r }) %>" style="text-decoration:none;">
+          <button type="button" class="<%= filters.range === r ? 'active' : '' %>">
+            <%= r === 'all' ? 'All time' : 'Last ' + r + 'd' %>
+          </button>
+        </a>
+      <% }); %>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header"><h3 class="font-semibold">Quick actions</h3></div>
-    <div class="card-body space-y-2">
+  <form method="get" action="/products/dashboard" style="display:flex; flex-direction:column; gap:4px;">
+    <label style="font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#64748b; font-weight:600;">Request type</label>
+    <input type="hidden" name="range" value="<%= filters.range %>">
+    <select name="type" onchange="this.form.submit()">
+      <option value="">All types</option>
+      <% filters.requestTypes.forEach(function (t) { %>
+        <option value="<%= t %>" <%= filters.type === t ? 'selected' : '' %>><%= t.replace(/_/g,' ') %></option>
+      <% }); %>
+    </select>
+  </form>
+
+  <a href="/products/dashboard" class="btn btn-ghost ml-auto">Reset filters</a>
+</div>
+
+<!-- ================ Top KPI row ================ -->
+<div class="pd-section-title">Pipeline at a glance</div>
+<div class="kpi-grid mb-2">
+  <div class="kpi-card blue">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">Open requests</div>
+    <div class="kpi-value"><%= kpi.open %></div>
+    <div class="kpi-sub">All states · Total in system: <%= kpi.total %></div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">Confirmed in window</div>
+    <div class="kpi-value"><%= kpi.confirmed_window %></div>
+    <div class="kpi-sub">All-time confirmed: <%= kpi.confirmed %></div>
+  </div>
+  <div class="kpi-card slate">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">Avg cycle (days)</div>
+    <div class="kpi-value"><%= kpi.avg_cycle_days %></div>
+    <div class="kpi-sub">Target: <%= totalSlaDays %> days · last 90d</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">SLA breaches</div>
+    <div class="kpi-value"><%= kpi.breach_count %></div>
+    <div class="kpi-sub">At risk: <%= kpi.risk_count %> · On time: <%= kpi.ok_count %></div>
+  </div>
+</div>
+
+<div class="kpi-grid mt-4">
+  <div class="kpi-card amber">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">Submissions in window</div>
+    <div class="kpi-value"><%= kpi.submitted_window %></div>
+    <div class="kpi-sub">Range: <%= filters.range === 'all' ? 'all time' : 'last ' + filters.range + ' days' %></div>
+  </div>
+  <div class="kpi-card violet">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">In R&D</div>
+    <div class="kpi-value"><%= kpi.in_rnd %></div>
+    <div class="kpi-sub">Production / Packaging / Design / BOM</div>
+  </div>
+  <div class="kpi-card indigo">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">In Legal / MDM</div>
+    <div class="kpi-value"><%= kpi.in_legal_mdm %></div>
+    <div class="kpi-sub">Awaiting Director: <%= kpi.awaiting_dir %></div>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-bar"></div>
+    <div class="kpi-label">Rejected</div>
+    <div class="kpi-value"><%= kpi.rejected %></div>
+    <div class="kpi-sub">Rejection rate: <%= kpi.confirmed + kpi.rejected > 0 ? Math.round((kpi.rejected / (kpi.confirmed + kpi.rejected)) * 1000) / 10 : 0 %>%</div>
+  </div>
+</div>
+
+<!-- ================ Process flow strip ================ -->
+<div class="pd-section-title">Process flow — open requests &amp; SLA per stage</div>
+<div class="flow-strip">
+  <% stageOrder.forEach(function (s, i) {
+       var bucket = slaStageByState[s] || { total:0, ok:0, risk:0, breach:0, avg_days:0, sla:stageSlas[s] };
+       var headline = bucket.breach > 0 ? 'breach' : (bucket.risk > 0 ? 'risk' : 'ok');
+       var label = stateLabels[s] || s;
+  %>
+    <div class="flow-cell">
+      <span class="sla-pill <%= headline %>">
+        <%= headline === 'breach' ? '⚠ breach' : (headline === 'risk' ? '◐ at risk' : '✓ on time') %>
+      </span>
+      <div class="stage-name"><%= label %></div>
+      <div class="stage-count"><%= bucket.total %></div>
+      <div class="stage-meta">
+        Avg <%= bucket.avg_days %>d · SLA <%= bucket.sla %>d
+      </div>
+      <% if (bucket.total > 0) { %>
+        <div class="stage-meta" style="display:flex; gap:4px;">
+          <% if (bucket.ok)     { %><span class="sla-pill ok"     style="font-size:9px;padding:1px 5px;"><%= bucket.ok     %></span><% } %>
+          <% if (bucket.risk)   { %><span class="sla-pill risk"   style="font-size:9px;padding:1px 5px;"><%= bucket.risk   %></span><% } %>
+          <% if (bucket.breach) { %><span class="sla-pill breach" style="font-size:9px;padding:1px 5px;"><%= bucket.breach %></span><% } %>
+        </div>
+      <% } %>
+      <div class="flow-arrow"></div>
+    </div>
+  <% }); %>
+</div>
+
+<!-- ================ Charts row 1 ================ -->
+<div class="pd-section-title">Throughput &amp; pipeline funnel</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="chart-card">
+    <div class="chart-title">Submissions vs Confirmations — last 30 days</div>
+    <div class="chart-hint">Daily count of new requests vs requests that closed to CONFIRMED.</div>
+    <canvas id="chartThroughput"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Pipeline funnel</div>
+    <div class="chart-hint">Distinct requests that have entered each stage.</div>
+    <canvas id="chartFunnel"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Avg dwell time per stage vs SLA</div>
+    <div class="chart-hint">Bar = actual avg days · marker = SLA target.</div>
+    <canvas id="chartDwell"></canvas>
+  </div>
+</div>
+
+<!-- ================ Charts row 2 ================ -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+  <div class="chart-card lg:col-span-1">
+    <div class="chart-title">Requests by type</div>
+    <div class="chart-hint">All requests in the active filter window.</div>
+    <canvas id="chartType"></canvas>
+  </div>
+  <div class="chart-card lg:col-span-1">
+    <div class="chart-title">Open requests by stage</div>
+    <div class="chart-hint">Current snapshot of in-flight work.</div>
+    <canvas id="chartStage"></canvas>
+  </div>
+  <div class="chart-card lg:col-span-1">
+    <div class="chart-title">SLA compliance per stage</div>
+    <div class="chart-hint">On-time vs at-risk vs breached.</div>
+    <canvas id="chartSla"></canvas>
+  </div>
+</div>
+
+<!-- ================ User performance ================ -->
+<div class="pd-section-title">People &amp; performance</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+  <div class="panel">
+    <div class="panel-header">
+      <h3>Top requestors</h3>
+      <span class="hint">Submissions in active window</span>
+    </div>
+    <table class="pd-table">
+      <thead><tr><th>User</th><th>Role</th><th class="num">Submitted</th><th class="num">Open</th><th class="num">Confirmed</th><th class="num">Rejected</th><th>Last activity</th></tr></thead>
+      <tbody>
+        <% if (!submitters.length) { %>
+          <tr><td colspan="7" class="text-center text-slate-500" style="padding:24px;">No requests submitted in this window.</td></tr>
+        <% } %>
+        <% submitters.forEach(function (s) { %>
+          <tr>
+            <td><%= s.user_name || '—' %></td>
+            <td><span class="pill user-role"><%= (s.user_role || '—').replace(/_/g,' ') %></span></td>
+            <td class="num"><strong><%= s.submitted %></strong></td>
+            <td class="num" style="color:#1e40af;"><%= s.open %></td>
+            <td class="num" style="color:#047857;"><%= s.confirmed %></td>
+            <td class="num" style="color:#b91c1c;"><%= s.rejected %></td>
+            <td class="text-xs text-slate-500"><%= s.last_activity %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h3>Approver / actor performance</h3>
+      <span class="hint">Avg time to take action vs role SLA</span>
+    </div>
+    <table class="pd-table">
+      <thead><tr><th>User</th><th>Role</th><th class="num">Actions</th><th class="num">Avg days</th><th class="num">SLA</th><th>Status</th></tr></thead>
+      <tbody>
+        <% if (!actors.length) { %>
+          <tr><td colspan="6" class="text-center text-slate-500" style="padding:24px;">No transitions recorded in this window.</td></tr>
+        <% } %>
+        <% actors.forEach(function (a) {
+            var status = a.sla_status || 'ok';
+        %>
+          <tr>
+            <td><%= a.user_name || '—' %></td>
+            <td><span class="pill user-role"><%= (a.user_role || '—').replace(/_/g,' ') %></span></td>
+            <td class="num"><strong><%= a.actions %></strong></td>
+            <td class="num"><%= a.avg_days %></td>
+            <td class="num"><%= a.sla_days != null ? a.sla_days : '—' %></td>
+            <td>
+              <% if (a.sla_days != null) { %>
+                <span class="sla-pill <%= status %>">
+                  <%= status === 'breach' ? 'breach' : (status === 'risk' ? 'at risk' : 'on time') %>
+                </span>
+              <% } else { %>—<% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================ My tasks + Recent activity ================ -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+  <div class="panel lg:col-span-2">
+    <div class="panel-header">
+      <h3>Tasks waiting on my role <% if (currentUser) { %><span style="font-weight:500; color:#64748b;">(<%= currentUser.role.replace(/_/g,' ') %>)</span><% } %></h3>
+      <span class="hint"><%= myTasks.length %> open</span>
+    </div>
+    <table class="pd-table">
+      <thead><tr><th>Request</th><th>Product</th><th>Type</th><th>Stage</th><th>Updated</th><th></th></tr></thead>
+      <tbody>
+        <% if (!myTasks.length) { %>
+          <tr><td colspan="6" class="text-center text-slate-500" style="padding:24px;">🎉 Nothing waiting — you're all caught up!</td></tr>
+        <% } %>
+        <% myTasks.forEach(function (t) { %>
+          <tr>
+            <td class="font-mono text-xs">PR-<%= t.id %></td>
+            <td><%= t.product_name || '—' %></td>
+            <td class="text-xs text-slate-600"><%= (t.request_type || '').replace(/_/g,' ') %></td>
+            <td><span class="sla-pill risk" style="font-size:10px;padding:2px 7px;"><%= t.state_label %></span></td>
+            <td class="text-xs text-slate-500"><%= t.updated_at %></td>
+            <td><a href="<%= t.open_url %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h3>Quick actions</h3>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
       <a href="/products/workflow/new" class="btn btn-primary w-full justify-center">+ New Product Request</a>
       <a href="/products?mine=1" class="btn btn-ghost w-full justify-center">My product requests</a>
       <a href="/products" class="btn btn-ghost w-full justify-center">All product requests</a>
     </div>
-    <div class="card-body" style="border-top:1px solid #e5e7eb; padding-top:14px;">
-      <div class="text-xs uppercase tracking-wider text-slate-500 mb-2">My pipeline</div>
-      <div class="text-sm text-slate-600"><span class="font-semibold text-slate-900"><%= kpi.mine_open %></span> open request<%= kpi.mine_open === 1 ? '' : 's' %> as requestor.</div>
-      <div class="text-sm text-slate-600 mt-1">Total in system: <span class="font-semibold text-slate-900"><%= kpi.total %></span> · Rejected: <span class="font-semibold text-red-600"><%= kpi.rejected %></span></div>
+    <div style="margin-top:14px; padding-top:14px; border-top:1px solid #e2e8f0;">
+      <div class="kpi-label" style="color:#64748b; margin-bottom:8px;">My pipeline</div>
+      <div class="text-sm text-slate-600"><span class="font-semibold text-slate-900"><%= kpi.mine_open %></span> open as requestor.</div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- Process-flow charts -->
-<section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-  <div class="card">
-    <div class="card-header">
-      <h3 class="font-semibold">Pipeline funnel</h3>
-      <span class="ml-auto text-xs text-slate-400">Distinct requests that have passed through each stage</span>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+  <div class="panel lg:col-span-2">
+    <div class="panel-header">
+      <h3>My recent submissions</h3>
     </div>
-    <div class="card-body"><canvas id="chartFunnel"></canvas></div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <h3 class="font-semibold">Avg dwell time per stage</h3>
-      <span class="ml-auto text-xs text-slate-400">Days a request waits before moving on</span>
-    </div>
-    <div class="card-body"><canvas id="chartDwell"></canvas></div>
-  </div>
-</section>
-
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-  <div class="card">
-    <div class="card-header"><h3 class="font-semibold">Open requests by stage</h3></div>
-    <div class="card-body"><canvas id="chartStage"></canvas></div>
-  </div>
-  <div class="card">
-    <div class="card-header"><h3 class="font-semibold">Requests by type</h3></div>
-    <div class="card-body"><canvas id="chartType"></canvas></div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <h3 class="font-semibold">Throughput — last 30 days</h3>
-      <span class="ml-auto text-xs text-slate-400">Submissions vs confirmations</span>
-    </div>
-    <div class="card-body"><canvas id="chartThroughput"></canvas></div>
-  </div>
-</section>
-
-<!-- My submitted + Recent activity -->
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-  <div class="card lg:col-span-2">
-    <div class="card-header"><h3 class="font-semibold">Requests I submitted</h3></div>
-    <div class="overflow-x-auto">
-      <table class="data">
-        <thead><tr><th>Request #</th><th>Product</th><th>Type</th><th>Stage</th><th>Created</th><th>Updated</th><th></th></tr></thead>
-        <tbody>
-          <% if (!mySubmitted.length) { %>
-            <tr><td colspan="7" class="text-center text-slate-500 p-6">No requests submitted yet. Use <em>+ New Product Request</em> to start one.</td></tr>
-          <% } %>
-          <% mySubmitted.forEach(function (t) {
-              var chip = 'bg-slate-100 text-slate-700';
-              if (t.workflow_state === 'CONFIRMED')      chip = 'bg-emerald-100 text-emerald-700';
-              else if (t.workflow_state === 'REJECTED')  chip = 'bg-red-100 text-red-700';
-              else if (t.workflow_state === 'NEEDS_INFO')chip = 'bg-orange-100 text-orange-700';
-              else                                        chip = 'bg-blue-100 text-blue-700';
-          %>
-            <tr>
-              <td class="font-mono text-xs">PR-<%= t.id %></td>
-              <td><%= t.product_name || '—' %></td>
-              <td class="text-xs"><%= (t.request_type || '').replace(/_/g,' ') %></td>
-              <td><span class="chip <%= chip %>"><%= t.state_label %></span></td>
-              <td class="text-xs text-slate-500"><%= t.created_at %></td>
-              <td class="text-xs text-slate-500"><%= t.updated_at %></td>
-              <td><a href="/products/workflow/<%= t.id %>/confirmation" class="text-brand-600 hover:underline text-sm">View →</a></td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header"><h3 class="font-semibold">Recent activity</h3></div>
-    <div class="card-body">
-      <% if (!recent.length) { %>
-        <p class="text-slate-500 text-sm">No activity yet.</p>
-      <% } %>
-      <ul class="space-y-3 text-sm">
-        <% recent.forEach(function (h) { %>
-          <li class="flex items-start gap-2">
-            <span class="mt-1 w-2 h-2 rounded-full bg-brand-500 flex-shrink-0"></span>
-            <div class="flex-1">
-              <div>
-                <a class="text-brand-600 hover:underline font-medium" href="/products/workflow/<%= h.product_req_id %>/confirmation">PR-<%= h.product_req_id %></a>
-                <span class="text-slate-700"> · <%= h.action.replace(/_/g,' ') %></span>
-              </div>
-              <div class="text-xs text-slate-400">
-                <%= h.from_state %> → <%= h.to_state %>
-                <% if (h.actor_role) { %>· <%= h.actor_role.replace(/_/g,' ') %><% } %>
-                <% if (h.actor_name) { %>(<%= h.actor_name %>)<% } %>
-                · <%= h.created_at %>
-              </div>
-            </div>
-          </li>
+    <table class="pd-table">
+      <thead><tr><th>Request</th><th>Product</th><th>Type</th><th>Stage</th><th>Created</th><th>Updated</th><th></th></tr></thead>
+      <tbody>
+        <% if (!mySubmitted.length) { %>
+          <tr><td colspan="7" class="text-center text-slate-500" style="padding:24px;">No requests submitted yet.</td></tr>
+        <% } %>
+        <% mySubmitted.forEach(function (t) {
+            var chip = 'sla-pill ok';
+            if (t.workflow_state === 'CONFIRMED')      chip = 'sla-pill ok';
+            else if (t.workflow_state === 'REJECTED')  chip = 'sla-pill breach';
+            else if (t.workflow_state === 'NEEDS_INFO')chip = 'sla-pill risk';
+            else                                        chip = 'sla-pill risk';
+        %>
+          <tr>
+            <td class="font-mono text-xs">PR-<%= t.id %></td>
+            <td><%= t.product_name || '—' %></td>
+            <td class="text-xs"><%= (t.request_type || '').replace(/_/g,' ') %></td>
+            <td><span class="<%= chip %>" style="font-size:10px;padding:2px 7px;"><%= t.state_label %></span></td>
+            <td class="text-xs text-slate-500"><%= t.created_at %></td>
+            <td class="text-xs text-slate-500"><%= t.updated_at %></td>
+            <td><a href="/products/workflow/<%= t.id %>/confirmation" class="text-brand-600 hover:underline text-sm">View →</a></td>
+          </tr>
         <% }); %>
-      </ul>
-    </div>
+      </tbody>
+    </table>
   </div>
-</section>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h3>Recent activity</h3>
+    </div>
+    <% if (!recent.length) { %>
+      <p class="text-slate-500 text-sm">No activity yet.</p>
+    <% } %>
+    <ul style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
+      <% recent.forEach(function (h) { %>
+        <li style="display:flex; gap:8px; align-items:flex-start;">
+          <span style="margin-top:6px; width:8px; height:8px; border-radius:9999px; background:#1e3a8a; flex-shrink:0;"></span>
+          <div style="flex:1;">
+            <div>
+              <a class="text-brand-600 hover:underline font-medium" href="/products/workflow/<%= h.product_req_id %>/confirmation">PR-<%= h.product_req_id %></a>
+              <span style="color:#475569;"> · <%= h.action.replace(/_/g,' ') %></span>
+            </div>
+            <div class="text-xs text-slate-400">
+              <%= h.from_state %> → <%= h.to_state %>
+              <% if (h.actor_role) { %>· <%= h.actor_role.replace(/_/g,' ') %><% } %>
+              <% if (h.actor_name) { %>(<%= h.actor_name %>)<% } %>
+              · <%= h.created_at %>
+            </div>
+          </div>
+        </li>
+      <% }); %>
+    </ul>
+  </div>
+</div>
 
 </main></div>
 
 <script>
-  // Server-side query results.
+  // Server-rendered query results ----------------------------------------
   const byStage       = <%- JSON.stringify(byStage) %>;
   const byType        = <%- JSON.stringify(byType) %>;
   const velocity      = <%- JSON.stringify(velocity) %>;
   const confirmations = <%- JSON.stringify(confirmations) %>;
   const dwell         = <%- JSON.stringify(dwell) %>;
   const funnel        = <%- JSON.stringify(funnel) %>;
+  const slaStages     = <%- JSON.stringify(slaStages) %>;
 
-  // 1) Pipeline funnel — distinct requests that have entered each stage.
+  // Brand colour ramp (mostly Tailwind palette) — keeps the dashboard
+  // visually cohesive across charts.
+  const PALETTE = ['#1e40af','#3b82f6','#0ea5e9','#06b6d4','#14b8a6','#10b981','#84cc16','#22c55e'];
+
+  // 1) Throughput — submissions vs confirmations.
+  new Chart(document.getElementById('chartThroughput'), {
+    type: 'line',
+    data: {
+      labels: velocity.map(function (x) { return x.day.slice(5); }),
+      datasets: [
+        { label: 'Submitted', data: velocity.map(function (x) { return x.n; }),
+          borderColor: '#1e3a8a', backgroundColor: 'rgba(30,58,138,0.15)',
+          tension: 0.35, fill: true, pointRadius: 2, pointHoverRadius: 5 },
+        { label: 'Confirmed', data: confirmations.map(function (x) { return x.n; }),
+          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)',
+          tension: 0.35, fill: true, pointRadius: 2, pointHoverRadius: 5 },
+      ],
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+      scales:  { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 10 } } } },
+    },
+  });
+
+  // 2) Pipeline funnel — horizontal bar.
   new Chart(document.getElementById('chartFunnel'), {
     type: 'bar',
     data: {
       labels: funnel.map(function (x) { return x.label; }),
       datasets: [{
         data: funnel.map(function (x) { return x.n; }),
-        backgroundColor: ['#1e40af','#3b82f6','#0ea5e9','#06b6d4','#14b8a6','#10b981','#84cc16','#22c55e'],
+        backgroundColor: PALETTE,
+        borderRadius: 4,
       }],
     },
     options: {
@@ -222,41 +506,24 @@
     },
   });
 
-  // 2) Avg dwell time per stage.
+  // 3) Avg dwell vs SLA — bar with SLA marker as a separate dataset.
   new Chart(document.getElementById('chartDwell'), {
     type: 'bar',
     data: {
       labels: dwell.map(function (x) { return x.label; }),
-      datasets: [{
-        data: dwell.map(function (x) { return x.avg_days; }),
-        backgroundColor: '#f59e0b',
-      }],
+      datasets: [
+        { label: 'Avg days',  data: dwell.map(function (x) { return x.avg_days; }), backgroundColor: '#3b82f6', borderRadius: 4 },
+        { label: 'SLA (days)', data: dwell.map(function (x) {
+            // Look up the SLA from slaStages by matching state label.
+            var bucket = slaStages.find(function (b) { return b.label === x.label; });
+            return bucket ? bucket.sla : 0;
+          }), backgroundColor: '#fbbf24', borderRadius: 4 },
+      ],
     },
     options: {
       indexAxis: 'y',
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function (ctx) { var d = dwell[ctx.dataIndex]; return d.avg_days + ' days  (n=' + d.samples + ')'; },
-          },
-        },
-      },
-      scales: { x: { beginAtZero: true, title: { display: true, text: 'Days' } } },
-    },
-  });
-
-  // 3) Open requests by stage — current snapshot.
-  new Chart(document.getElementById('chartStage'), {
-    type: 'bar',
-    data: {
-      labels: byStage.map(function (x) { return x.label; }),
-      datasets: [{ data: byStage.map(function (x) { return x.n; }), backgroundColor: '#3b82f6' }],
-    },
-    options: {
-      indexAxis: 'y',
-      plugins: { legend: { display: false } },
-      scales:  { x: { ticks: { precision: 0 } } },
+      plugins: { legend: { position:'bottom', labels: { boxWidth:10, font:{ size:11 } } } },
+      scales:  { x: { beginAtZero: true, title: { display:true, text:'Days', font:{ size:10 } } } },
     },
   });
 
@@ -270,32 +537,38 @@
         backgroundColor: ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4'],
       }],
     },
-    options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%' },
+    options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: '60%' },
   });
 
-  // 5) Throughput — submissions and confirmations side-by-side, last 30 days.
-  new Chart(document.getElementById('chartThroughput'), {
-    type: 'line',
+  // 5) Open by stage.
+  new Chart(document.getElementById('chartStage'), {
+    type: 'bar',
     data: {
-      labels: velocity.map(function (x) { return x.day.slice(5); }),
+      labels: byStage.map(function (x) { return x.label; }),
+      datasets: [{ data: byStage.map(function (x) { return x.n; }), backgroundColor: '#3b82f6', borderRadius: 4 }],
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales:  { x: { ticks: { precision: 0 } } },
+    },
+  });
+
+  // 6) SLA compliance — stacked bar.
+  new Chart(document.getElementById('chartSla'), {
+    type: 'bar',
+    data: {
+      labels: slaStages.map(function (x) { return x.label; }),
       datasets: [
-        {
-          label: 'Submitted',
-          data:  velocity.map(function (x) { return x.n; }),
-          borderColor: '#1e3a8a', backgroundColor: 'rgba(30,58,138,0.10)',
-          tension: 0.3, fill: true, pointRadius: 2,
-        },
-        {
-          label: 'Confirmed',
-          data:  confirmations.map(function (x) { return x.n; }),
-          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.10)',
-          tension: 0.3, fill: true, pointRadius: 2,
-        },
+        { label: 'On time', data: slaStages.map(function (x) { return x.ok;     }), backgroundColor: '#10b981', borderRadius: 4 },
+        { label: 'At risk', data: slaStages.map(function (x) { return x.risk;   }), backgroundColor: '#f59e0b', borderRadius: 4 },
+        { label: 'Breach',  data: slaStages.map(function (x) { return x.breach; }), backgroundColor: '#ef4444', borderRadius: 4 },
       ],
     },
     options: {
+      indexAxis: 'y',
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
-      scales:  { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 10 } } } },
+      scales:  { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } },
     },
   });
 </script>
