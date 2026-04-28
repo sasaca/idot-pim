@@ -122,6 +122,13 @@
 
 <%- include('_product_tabs', { activeTab: 'dashboard' }) %>
 
+<!-- ================ Action bar (always visible, no scroll needed) ================ -->
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+  <a href="/products/workflow/new" class="btn btn-primary">+ New Product Request</a>
+  <a href="/products?mine=1" class="btn btn-default">My product requests</a>
+  <a href="/products" class="btn btn-default">All product requests</a>
+</div>
+
 <!-- ================ Filter bar ================ -->
 <%
   // Helper to build a URL with the current filters but a new value for one field.
@@ -348,47 +355,30 @@
   </div>
 </div>
 
-<!-- ================ My tasks + Recent activity ================ -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-  <div class="panel lg:col-span-2">
-    <div class="panel-header">
-      <h3>Tasks waiting on my role <% if (currentUser) { %><span style="font-weight:500; color:#64748b;">(<%= currentUser.role.replace(/_/g,' ') %>)</span><% } %></h3>
-      <span class="hint"><%= myTasks.length %> open</span>
-    </div>
-    <table class="pd-table">
-      <thead><tr><th>Request</th><th>Product</th><th>Type</th><th>Stage</th><th>Updated</th><th></th></tr></thead>
-      <tbody>
-        <% if (!myTasks.length) { %>
-          <tr><td colspan="6" class="text-center text-slate-500" style="padding:24px;">🎉 Nothing waiting — you're all caught up!</td></tr>
-        <% } %>
-        <% myTasks.forEach(function (t) { %>
-          <tr>
-            <td class="font-mono text-xs">PR-<%= t.id %></td>
-            <td><%= t.product_name || '—' %></td>
-            <td class="text-xs text-slate-600"><%= (t.request_type || '').replace(/_/g,' ') %></td>
-            <td><span class="sla-pill risk" style="font-size:10px;padding:2px 7px;"><%= t.state_label %></span></td>
-            <td class="text-xs text-slate-500"><%= t.updated_at %></td>
-            <td><a href="<%= t.open_url %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
-          </tr>
-        <% }); %>
-      </tbody>
-    </table>
+<!-- ================ My tasks (full width — quick actions moved to header) ================ -->
+<div class="panel mb-4">
+  <div class="panel-header">
+    <h3>Tasks waiting on my role <% if (currentUser) { %><span style="font-weight:500; color:#64748b;">(<%= currentUser.role.replace(/_/g,' ') %>)</span><% } %></h3>
+    <span class="hint"><%= myTasks.length %> open · <%= kpi.mine_open %> open as my requestor</span>
   </div>
-
-  <div class="panel">
-    <div class="panel-header">
-      <h3>Quick actions</h3>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:8px;">
-      <a href="/products/workflow/new" class="btn btn-primary w-full justify-center">+ New Product Request</a>
-      <a href="/products?mine=1" class="btn btn-ghost w-full justify-center">My product requests</a>
-      <a href="/products" class="btn btn-ghost w-full justify-center">All product requests</a>
-    </div>
-    <div style="margin-top:14px; padding-top:14px; border-top:1px solid #e2e8f0;">
-      <div class="kpi-label" style="color:#64748b; margin-bottom:8px;">My pipeline</div>
-      <div class="text-sm text-slate-600"><span class="font-semibold text-slate-900"><%= kpi.mine_open %></span> open as requestor.</div>
-    </div>
-  </div>
+  <table class="pd-table">
+    <thead><tr><th>Request</th><th>Product</th><th>Type</th><th>Stage</th><th>Updated</th><th></th></tr></thead>
+    <tbody>
+      <% if (!myTasks.length) { %>
+        <tr><td colspan="6" class="text-center text-slate-500" style="padding:24px;">🎉 Nothing waiting — you're all caught up!</td></tr>
+      <% } %>
+      <% myTasks.forEach(function (t) { %>
+        <tr>
+          <td class="font-mono text-xs">PR-<%= t.id %></td>
+          <td><%= t.product_name || '—' %></td>
+          <td class="text-xs text-slate-600"><%= (t.request_type || '').replace(/_/g,' ') %></td>
+          <td><span class="sla-pill risk" style="font-size:10px;padding:2px 7px;"><%= t.state_label %></span></td>
+          <td class="text-xs text-slate-500"><%= t.updated_at %></td>
+          <td><a href="<%= t.open_url %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
