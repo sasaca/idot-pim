@@ -89,15 +89,35 @@
         </label>
         <label>
           Material description
-          <input id="ms-mat-desc" type="text" autocomplete="off" placeholder="e.g. cola, cheddar, ranch">
+          <input id="ms-mat-desc" type="text" autocomplete="off" placeholder="Type product name, brand…">
         </label>
         <label>
           Category
-          <input id="ms-cat" type="text" autocomplete="off" placeholder="e.g. Salty Snacks">
+          <select id="ms-cat">
+            <option value="">All categories</option>
+            <% ref.CATEGORY_OPTIONS.forEach(function (g) { %>
+              <optgroup label="<%= g.group %>">
+                <option value="<%= g.group %>"><%= g.group %> — all</option>
+                <% g.options.forEach(function (o) { %>
+                  <option value="<%= o %>"><%= o %></option>
+                <% }); %>
+              </optgroup>
+            <% }); %>
+          </select>
         </label>
         <label>
           Brand
-          <input id="ms-brand" type="text" autocomplete="off" placeholder="e.g. FizzPop, OatBoost">
+          <select id="ms-brand">
+            <option value="">All brands</option>
+            <% ref.BRAND_OPTIONS.forEach(function (g) { %>
+              <optgroup label="<%= g.group %>">
+                <option value="<%= g.group %>"><%= g.group %> — all</option>
+                <% g.options.forEach(function (o) { %>
+                  <option value="<%= o %>"><%= o %></option>
+                <% }); %>
+              </optgroup>
+            <% }); %>
+          </select>
         </label>
         <label>
           Material type
@@ -183,37 +203,30 @@
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
   });
 
-  document.getElementById('ms-search').addEventListener('click', runSearch);
+  document.getElementById('ms-search').addEventListener('click', function () { runSearch(); });
   document.getElementById('ms-reset').addEventListener('click', function () {
     Object.keys(inputs).forEach(function (k) {
       if (k === 'material_type') inputs[k].value = 'FERT';
       else inputs[k].value = '';
     });
-    resultsWrap.style.display = 'none';
-    resultsBody.innerHTML = '';
-    status.textContent = '';
     clearSelection();
+    runSearch();           // re-render with all FERTs
   });
 
-  // Debounced live search — fires 250ms after the user stops typing in any
-  // field with at least one non-empty value, so the table updates as you go
-  // without a click.
+  // Live search — fires 150ms after the user stops typing in any text field,
+  // immediately on a dropdown change. With no filters set the API returns the
+  // full FERT catalog, so the user always sees something to scroll through.
   var debounce = null;
   Object.values(inputs).forEach(function (el) {
-    el.addEventListener('input', function () {
-      clearTimeout(debounce);
-      debounce = setTimeout(function () {
-        if (anyFieldFilled()) runSearch();
-      }, 250);
-    });
-    if (el.tagName === 'SELECT') el.addEventListener('change', function () { if (anyFieldFilled()) runSearch(); });
+    if (el.tagName === 'SELECT') {
+      el.addEventListener('change', function () { runSearch(); });
+    } else {
+      el.addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(runSearch, 150);
+      });
+    }
   });
-
-  function anyFieldFilled() {
-    return ['material_number','material_description','category','brand'].some(function (k) {
-      return (inputs[k].value || '').trim().length > 0;
-    });
-  }
 
   async function runSearch() {
     var params = new URLSearchParams();
@@ -221,11 +234,6 @@
       var v = (inputs[k].value || '').trim();
       if (v) params.append(k, v);
     });
-    if (![].slice.call(params).length) {
-      status.textContent = 'Enter at least one search field.';
-      status.style.color = '#b91c1c';
-      return;
-    }
     status.textContent = 'Searching…'; status.style.color = '#475569';
     try {
       var resp = await fetch('/products/workflow/api/reference-search?' + params.toString());
@@ -236,6 +244,9 @@
       status.textContent = '⚠ Search failed.'; status.style.color = '#b91c1c';
     }
   }
+
+  // Auto-run on page load so users immediately see the full FERT catalog.
+  runSearch();
 
   function render(rows, total) {
     resultsWrap.style.display = '';

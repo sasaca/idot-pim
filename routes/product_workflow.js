@@ -67,6 +67,29 @@ const COMPONENT_MASTER_BY_NAME = COMPONENT_MASTER.reduce((m, c) => {
   return m;
 }, {});
 
+// Pre-compute distinct category + brand options from the reference catalog.
+// Organized into optgroup buckets so the Stage-1 search dropdowns can show:
+//   Snacks & Confectionery
+//     ├── Salty Snacks
+//     ├── Sweet Snacks & Confectionery
+//     └── Cereal Bars & Granola
+// driven from real catalog content (so the UI never offers a value that
+// has zero matching SKUs).
+function distinctOptions(items, groupKey, optionKey) {
+  const map = new Map();
+  items.forEach((it) => {
+    const g = it[groupKey] || '';
+    const o = it[optionKey] || '';
+    if (!g || !o) return;
+    if (!map.has(g)) map.set(g, new Set());
+    map.get(g).add(o);
+  });
+  return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+    .map(([group, set]) => ({ group, options: [...set].sort() }));
+}
+const CATEGORY_OPTIONS = distinctOptions(REFERENCE_PRODUCTS, 'category_grouper', 'category');
+const BRAND_OPTIONS    = distinctOptions(REFERENCE_PRODUCTS, 'family_brand',     'brand');
+
 // Bundle reference data for views.
 function refData() {
   return {
@@ -86,6 +109,8 @@ function refData() {
     INCOTERMS,
     LANGUAGES,
     COMPONENT_MASTER,
+    CATEGORY_OPTIONS,
+    BRAND_OPTIONS,
     REJECT_REASONS: productWorkflow.REJECT_REASONS,
     INFO_REASONS:   productWorkflow.INFO_REASONS,
     STATE_LABELS:   productWorkflow.STATE_LABELS,
@@ -224,44 +249,46 @@ module.exports = function makeRouter(db) {
   // Always limited to material_type='FERT' (Finished Goods) per requirement.
   // -------------------------------------------------------------------------
   router.get('/api/reference-search', (req, res) => {
-    const q       = String(req.query.q       || '').toLowerCase().trim();
-    const matNum  = String(req.query.material_number || '').toLowerCase().trim();
-    const matDesc = String(req.query.material_description || '').toLowerCase().trim();
-    const cat     = String(req.query.category || '').toLowerCase().trim();
-    const brand   = String(req.query.brand    || '').toLowerCase().trim();
+    const q       = String(req.query.q       || '').trim();
+    const matNum  = String(req.query.material_number || '').trim();
+    const matDesc = String(req.query.material_description || '').trim();
+    const cat     = String(req.query.category || '').trim();
+    const brand   = String(req.query.brand    || '').trim();
     const matType = String(req.query.material_type || '').toUpperCase().trim();
 
-    const hasAnyField = !!(q || matNum || matDesc || cat || brand || matType);
-    if (!hasAnyField) return res.json({ results: [], total: 0 });
+    // Tokenized, case-insensitive partial match. The needle is split on
+    // whitespace; every token must appear as a substring somewhere in the
+    // haystack. So "golden chips" (with space) still matches "GoldenChips
+    // Original 150g" because both "golden" and "chips" are substrings.
+    function tokenMatch(haystack, needle) {
+      if (!needle) return true;
+      const h = String(haystack || '').toLowerCase();
+      const toks = needle.toLowerCase().split(/\s+/).filter(Boolean);
+      return toks.every((t) => h.includes(t));
+    }
 
     const matches = REFERENCE_PRODUCTS.filter((p) => {
       // Hard requirement — Finished Goods only.
       if ((p.material_type || '').toUpperCase() !== 'FERT') return false;
 
-      // Free-text search (legacy single-box) takes precedence when supplied.
-      if (q) {
-        return p.sku.toLowerCase().includes(q) ||
-               p.name.toLowerCase().includes(q) ||
-               (p.brand || '').toLowerCase().includes(q) ||
-               (p.family_brand || '').toLowerCase().includes(q) ||
-               (p.sub_brand || '').toLowerCase().includes(q) ||
-               (p.category || '').toLowerCase().includes(q) ||
-               (p.category_grouper || '').toLowerCase().includes(q) ||
-               (p.material_group || '').toLowerCase().includes(q);
-      }
+      // Wide haystacks per field so e.g. typing a brand name in the
+      // Material Description box still finds the product.
+      const descHaystack  = [p.name, p.family_brand, p.brand, p.sub_brand].filter(Boolean).join(' ');
+      const catHaystack   = [p.category, p.category_grouper, p.material_group].filter(Boolean).join(' ');
+      const brandHaystack = [p.brand, p.family_brand, p.sub_brand].filter(Boolean).join(' ');
+      const allHaystack   = [
+        p.sku, p.name, p.family_brand, p.brand, p.sub_brand,
+        p.category, p.category_grouper, p.material_group, p.material_type,
+      ].filter(Boolean).join(' ');
 
-      // Multi-field search — every supplied field must match.
-      if (matNum  && !p.sku.toLowerCase().includes(matNum)) return false;
-      if (matDesc && !p.name.toLowerCase().includes(matDesc)) return false;
-      if (cat     && !(
-            (p.category || '').toLowerCase().includes(cat) ||
-            (p.category_grouper || '').toLowerCase().includes(cat)
-          )) return false;
-      if (brand   && !(
-            (p.brand || '').toLowerCase().includes(brand) ||
-            (p.family_brand || '').toLowerCase().includes(brand) ||
-            (p.sub_brand || '').toLowerCase().includes(brand)
-          )) return false;
+      // Legacy free-text mode (used by the BOM tabs).
+      if (q && !tokenMatch(allHaystack, q)) return false;
+
+      // Multi-field — every filled field must match.
+      if (matNum  && !tokenMatch(p.sku,         matNum))  return false;
+      if (matDesc && !tokenMatch(descHaystack,  matDesc)) return false;
+      if (cat     && !tokenMatch(catHaystack,   cat))     return false;
+      if (brand   && !tokenMatch(brandHaystack, brand))   return false;
       if (matType && (p.material_type || '').toUpperCase() !== matType) return false;
       return true;
     });
