@@ -1161,68 +1161,94 @@ module.exports = function makeRouter(db) {
 module.exports.makeQueueRouter = function makeQueueRouter(db) {
   const router = express.Router();
 
+  // Map a workflow state → the role/team that owns the next action. Used to
+  // populate the "Assignee role" column the same way /requests does.
+  const STAGE_ROLE = {
+    DRAFT:                              'REQUESTOR',
+    PENDING_MKTG_DIRECTOR:              'MKTG_DIRECTOR',
+    PENDING_SC_DIRECTOR:                'SC_DIRECTOR',
+    PENDING_PRODUCTION_AND_ANALYSIS:    'RND_TEAM / MARKETING_TEAM',
+    PENDING_BOM:                        'RND_TEAM',
+    PENDING_RND_AND_QUALITY_DIRECTORS:  'RND_DIRECTOR / QUALITY_DIRECTOR',
+    PENDING_LEGAL_AND_MDM:              'LEGAL / MDM_TEAM',
+    NEEDS_INFO:                         'REQUESTOR',
+    REJECTED:                           '—',
+    CONFIRMED:                          '—',
+  };
+
+  // Per-state deep-link picker. Same logic the queue view used to embed,
+  // hoisted server-side so the list page is a thin renderer.
+  function deepLinkFor(r, viewerRoles) {
+    const id = r.id;
+    const has = (role) => viewerRoles.indexOf(role) >= 0 || viewerRoles.indexOf('ADMIN') >= 0;
+    const path = (s) => `/products/workflow/${id}/${s}`;
+    switch (r.workflow_state) {
+      case 'DRAFT':
+      case 'NEEDS_INFO':
+        return path('details');
+      case 'PENDING_MKTG_DIRECTOR':          return path('mktg-director');
+      case 'PENDING_SC_DIRECTOR':            return path('sc-director');
+      case 'PENDING_PRODUCTION_AND_ANALYSIS':
+        if (has('RND_TEAM')) {
+          if      (!r.production_completed_at) return path('production');
+          else if (!r.packaging_completed_at)  return path('packaging');
+          else if (!r.design_completed_at)     return path('design');
+        }
+        if (has('MARKETING_TEAM')) return path('competitor');
+        return path('confirmation');
+      case 'PENDING_BOM':                    return has('RND_TEAM')         ? path('bom')              : path('confirmation');
+      case 'PENDING_RND_AND_QUALITY_DIRECTORS':
+        if (has('RND_DIRECTOR'))     return path('rnd-director');
+        if (has('QUALITY_DIRECTOR')) return path('quality-director');
+        return path('confirmation');
+      case 'PENDING_LEGAL_AND_MDM':
+        if (has('LEGAL'))    return path('legal');
+        if (has('MDM_TEAM')) return path('mdm');
+        return path('confirmation');
+      default:                               return path('confirmation');
+    }
+  }
+
   router.get('/', (req, res) => {
     const roles = getUserRoles(req);
-    const isAdmin = roles.includes('ADMIN');
+    const userId = req.session && req.session.userId;
+    const q      = String(req.query.q      || '').trim();
+    const stateF = String(req.query.status || '').trim();
+    const mine   = req.query.mine === '1';
 
-    // Each role sees the queue relevant to them. Admin sees all.
-    // For RND_TEAM / MARKETING_TEAM we add an extra filter so the team only
-    // sees rows where THEIR side is still incomplete.
-    let states = [];
-    let extraWhere = '';
-    if (isAdmin) {
-      states = [
-        'DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR',
-        'PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM',
-        'PENDING_RND_AND_QUALITY_DIRECTORS',
-        'PENDING_LEGAL_AND_MDM',
-        'NEEDS_INFO','REJECTED','CONFIRMED',
-      ];
-    } else if (roles.includes('MKTG_DIRECTOR')) {
-      states = ['PENDING_MKTG_DIRECTOR'];
-    } else if (roles.includes('SC_DIRECTOR')) {
-      states = ['PENDING_SC_DIRECTOR'];
-    } else if (roles.includes('RND_DIRECTOR')) {
-      states = ['PENDING_RND_AND_QUALITY_DIRECTORS'];
-      extraWhere = ' AND rnd_director_approved_at IS NULL';
-    } else if (roles.includes('QUALITY_DIRECTOR')) {
-      states = ['PENDING_RND_AND_QUALITY_DIRECTORS'];
-      extraWhere = ' AND quality_director_approved_at IS NULL';
-    } else if (roles.includes('LEGAL')) {
-      states = ['PENDING_LEGAL_AND_MDM'];
-      extraWhere = ' AND legal_completed_at IS NULL';
-    } else if (roles.includes('MDM_TEAM')) {
-      states = ['PENDING_LEGAL_AND_MDM'];
-      extraWhere = ' AND mdm_completed_at IS NULL';
-    } else if (roles.includes('RND_TEAM')) {
-      // R&D owns three earlier forms (production / packaging / design) inside
-      // PENDING_PRODUCTION_AND_ANALYSIS, plus the BOM stage. Show both states
-      // when the team's work is still open.
-      states = ['PENDING_PRODUCTION_AND_ANALYSIS', 'PENDING_BOM'];
-      extraWhere = ' AND (workflow_state = \'PENDING_BOM\''
-                 + ' OR production_completed_at IS NULL'
-                 + ' OR packaging_completed_at IS NULL'
-                 + ' OR design_completed_at IS NULL)';
-    } else if (roles.includes('MARKETING_TEAM')) {
-      states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
-      extraWhere = ' AND competitor_completed_at IS NULL';
-    } else {
-      states = ['DRAFT', 'NEEDS_INFO'];
+    const clauses = [];
+    const args    = [];
+    if (q) {
+      clauses.push(`(pr.product_name LIKE ? OR CAST(pr.id AS TEXT) LIKE ? OR pr.request_type LIKE ?)`);
+      args.push(`%${q}%`, `%${q}%`, `%${q}%`);
     }
-    const placeholders = states.map(() => '?').join(',');
+    if (stateF) {
+      clauses.push(`pr.workflow_state = ?`);
+      args.push(stateF);
+    }
+    if (mine && userId) {
+      clauses.push(`pr.requestor_user_id = ?`);
+      args.push(userId);
+    }
+    const where = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
+
     const rows = db.prepare(`
       SELECT pr.*, u.name AS requestor_full_name
         FROM product_requests pr
         LEFT JOIN users u ON u.id = pr.requestor_user_id
-       WHERE pr.workflow_state IN (${placeholders})${extraWhere}
+       ${where}
        ORDER BY pr.updated_at DESC
        LIMIT 200
-    `).all(...states);
+    `).all(...args).map((r) => Object.assign(r, {
+      state_label:    productWorkflow.STATE_LABELS[r.workflow_state] || r.workflow_state,
+      assignee_role:  STAGE_ROLE[r.workflow_state] || '—',
+      open_url:       deepLinkFor(r, roles),
+    }));
 
-    res.render('products/workflow_queue', {
-      requests: rows,
-      states,
+    res.render('products/list', {
+      requests:    rows,
       stateLabels: productWorkflow.STATE_LABELS,
+      query:       { q, status: stateF, mine: mine ? '1' : '' },
       viewerRoles: roles,
     });
   });

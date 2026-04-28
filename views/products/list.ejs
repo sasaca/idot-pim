@@ -1,46 +1,76 @@
-<%- include('../partials/head', { pageTitle: 'Products' }) %>
+<%- include('../partials/head', { pageTitle: 'Product Requests' }) %>
 <%- include('../partials/nav') %>
 <div class="main-content">
-<%- include('../partials/topbar', { topTitle: 'Product Master', topSub: 'All product / material master records' }) %>
+<%- include('../partials/topbar', { topTitle: 'Product Requests', topSub: 'All product master creation, variation and modification requests in flight.' }) %>
+
 <main class="p-6">
 
-<div class="flex items-start gap-2 mb-4 flex-wrap">
-  <form method="get" class="flex gap-2 flex-1">
-    <input name="q" placeholder="Search name, SKU, description…" value="<%= typeof query!=='undefined' && query.q || '' %>" class="input max-w-md">
-    <select name="status" class="input max-w-[160px]">
-      <option value="">All lifecycle</option>
-      <% ['NEW','ACTIVE','PHASE_OUT','OBSOLETE','BLOCKED'].forEach(s => { %>
-        <option value="<%= s %>" <%= typeof query!=='undefined' && query.status===s ? 'selected':'' %>><%= s.replace('_',' ') %></option>
-      <% }) %>
-    </select>
-    <button class="btn btn-primary">Search</button>
-  </form>
-  <a href="/products/new/create" class="btn btn-primary">+ Create Product</a>
-</div>
+<form method="get" class="flex flex-wrap gap-2 mb-4">
+  <input type="text" name="q" placeholder="Search ID, product name, type…" value="<%= query.q || '' %>" class="input max-w-xs">
+
+  <select name="status" class="input max-w-[260px]">
+    <option value="">All stages</option>
+    <% Object.keys(stateLabels).forEach(function (s) { %>
+      <option value="<%= s %>" <%= query.status === s ? 'selected' : '' %>><%= stateLabels[s] %></option>
+    <% }); %>
+  </select>
+
+  <label class="inline-flex items-center gap-2 px-3 py-2 text-sm">
+    <input type="checkbox" name="mine" value="1" <%= query.mine === '1' ? 'checked' : '' %>> My requests
+  </label>
+
+  <button class="btn btn-primary">Filter</button>
+  <a href="/products" class="btn btn-ghost">Reset</a>
+
+  <a href="/products/workflow/new" class="btn btn-primary ml-auto">+ New Product Request</a>
+</form>
 
 <div class="card">
   <div class="overflow-x-auto">
     <table class="data">
-      <thead><tr><th>Name</th><th>SKU</th><th>Type</th><th>Material group</th><th>UoM</th><th>Lifecycle</th><th></th></tr></thead>
+      <thead>
+        <tr>
+          <th>Request #</th>
+          <th>Type</th>
+          <th>Product</th>
+          <th>Stage</th>
+          <th>Assignee role</th>
+          <th>Requestor</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
-        <% if (!products.length) { %>
-          <tr><td colspan="7" class="text-center text-slate-500 p-10">No products. <a href="/products/new/create" class="text-brand-600 hover:underline">Create one →</a></td></tr>
+        <% if (!requests.length) { %>
+          <tr><td colspan="8" class="text-center text-slate-500 p-10">No product requests match these filters.</td></tr>
         <% } %>
-        <% products.forEach(p => { %>
+        <% requests.forEach(function (r) {
+            var chip = 'bg-slate-100 text-slate-700';
+            var s = r.workflow_state;
+            if (s === 'CONFIRMED')                                          chip = 'bg-emerald-100 text-emerald-700';
+            else if (s === 'REJECTED')                                      chip = 'bg-red-100 text-red-700';
+            else if (s === 'NEEDS_INFO')                                    chip = 'bg-orange-100 text-orange-700';
+            else if (s === 'DRAFT')                                         chip = 'bg-slate-100 text-slate-700';
+            else if (s === 'PENDING_MKTG_DIRECTOR' || s === 'PENDING_SC_DIRECTOR'
+                  || s === 'PENDING_RND_AND_QUALITY_DIRECTORS')             chip = 'bg-amber-100 text-amber-700';
+            else                                                             chip = 'bg-blue-100 text-blue-700';
+        %>
           <tr>
-            <td class="font-medium"><%= p.name %></td>
-            <td class="font-mono text-xs"><%= p.sku || '—' %></td>
-            <td class="text-xs"><%= p.product_type || '—' %></td>
-            <td class="text-xs"><%= p.material_group || '—' %></td>
-            <td class="text-xs"><%= p.base_uom || '—' %></td>
-            <td><span class="chip <%= p.lifecycle_status==='ACTIVE' ? 'bg-emerald-100 text-emerald-700' : p.lifecycle_status==='OBSOLETE' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700' %>"><%= p.lifecycle_status %></span></td>
-            <td><a href="/products/<%= p.id %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+            <td class="font-mono text-xs">PR-<%= r.id %></td>
+            <td class="text-xs text-slate-600"><%= (r.request_type || '').replace(/_/g, ' ') %></td>
+            <td><%= r.product_name || '—' %></td>
+            <td><span class="chip <%= chip %>"><%= r.state_label %></span></td>
+            <td class="text-xs"><%= (r.assignee_role || '').replace(/_/g, ' ') %></td>
+            <td class="text-xs text-slate-600"><%= r.requestor_full_name || r.requestor_name || '—' %></td>
+            <td class="text-xs text-slate-500"><%= r.updated_at || '' %></td>
+            <td><a href="<%= r.open_url %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
           </tr>
-        <% }) %>
+        <% }); %>
       </tbody>
     </table>
   </div>
 </div>
 
-</main></div>
+</main>
+</div>
 </body></html>

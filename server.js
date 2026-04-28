@@ -99,11 +99,14 @@ app.use('/vendors/queue',        requireAuth, vendorWorkflow.makeQueueRouter(db)
 app.use('/vendors/:id/workflow', requireAuth, vendorWorkflow(db));
 app.use('/vendors/forms',        requireAuth, require('./routes/vendor_forms'));
 
-// Product creation workflow. Mounted BEFORE /products so the queue and
-// detail routes don't get swallowed by the generic /products/:id handler.
+// Product creation workflow.
+//   /products            → product requests list (queue, styled like /requests)
+//   /products/workflow/* → individual workflow stage views
+// Backward-compat: /products/workflow/queue redirects to /products.
 const productWorkflow = require('./routes/product_workflow');
-app.use('/products/workflow/queue', requireAuth, productWorkflow.makeQueueRouter(db));
+app.get('/products/workflow/queue', requireAuth, (req, res) => res.redirect('/products'));
 app.use('/products/workflow',       requireAuth, productWorkflow(db));
+app.use('/products',                requireAuth, productWorkflow.makeQueueRouter(db));
 
 // Routes
 app.use('/', require('./routes/auth'));
@@ -111,6 +114,9 @@ app.use('/dashboard', requireAuth, require('./routes/dashboard'));
 app.use('/requests', requireAuth, require('./routes/requests'));
 app.use('/vendors', requireAuth, require('./routes/vendors'));
 app.use('/customers', requireAuth, require('./routes/customers'));
+// Catch-all redirect for legacy /products/:id deep-links. Mounted AFTER the
+// queue (at /products) and the workflow router (at /products/workflow), so it
+// only matches what they don't.
 app.use('/products', requireAuth, require('./routes/products'));
 app.use('/portal', requireAuth, require('./routes/portal'));
 app.use('/reports', requireAuth, require('./routes/reports'));
