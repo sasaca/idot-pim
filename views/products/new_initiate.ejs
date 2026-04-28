@@ -33,16 +33,36 @@
   .btn-default  { background:white; color:#1f2937; border:1px solid #d1d5db; padding:.55rem 1rem; border-radius:.35rem; font-size:.85rem; cursor:pointer; }
 </style>
 
-<main class="mx-auto max-w-4xl px-4 py-8">
-  <div class="pwf-card">
-    <h2>About this request</h2>
-    <p class="text-sm text-gray-600 mb-3">
-      All product-specific fields throughout this workflow follow the SAP S/4HANA
-      Product Master data model. Once approvals complete, the confirmed payload
-      will be sent to SAP to create the product automatically.
-    </p>
-  </div>
+<style>
+  /* Multi-field SAP search panel */
+  .ms-grid {
+    display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:.75rem 1rem;
+  }
+  @media (min-width: 920px) { .ms-grid { grid-template-columns: repeat(5, minmax(0,1fr)); } }
+  .ms-grid label { display:flex; flex-direction:column; gap:3px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#475569; font-weight:600; }
+  .ms-grid input, .ms-grid select { padding:7px 10px; font-size:13px; border:1px solid #cbd5e1; border-radius:6px; background:white; }
+  .ms-actions { display:flex; gap:8px; margin-top:.85rem; align-items:center; }
+  .ms-table { width:100%; border-collapse:collapse; font-size:12.5px; margin-top:1rem; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+  .ms-table thead th { background:#f8fafc; padding:8px 10px; text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#475569; border-bottom:1px solid #e5e7eb; white-space:nowrap; }
+  .ms-table tbody td { padding:8px 10px; border-top:1px solid #f1f5f9; vertical-align:top; }
+  .ms-table tbody tr { cursor:pointer; }
+  .ms-table tbody tr:hover { background:#f8fafc; }
+  .ms-table tbody tr.selected { background:#dbeafe; }
+  .ms-table tbody tr.selected td { font-weight:500; color:#1e3a8a; }
+  .ms-mat { font-family:ui-monospace,monospace; font-size:11px; color:#1e3a8a; }
+  .ms-pill { display:inline-block; padding:1px 7px; border-radius:9999px; background:#eef2ff; color:#3730a3; font-size:10.5px; font-weight:600; letter-spacing:.02em; }
+  .ms-pill.fert { background:#dcfce7; color:#166534; }
+  .ms-meta { font-size:11px; color:#64748b; margin-top:.5rem; }
+  .ms-banner {
+    background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;
+    padding:.65rem .9rem; font-size:13px; color:#1e3a8a; margin-top:.75rem;
+    display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;
+  }
+  .ms-banner strong { color:#1e40af; }
+  .ms-clear-link { color:#1d4ed8; text-decoration:underline; cursor:pointer; }
+</style>
 
+<main class="mx-auto max-w-6xl px-4 py-8">
   <form method="post" action="/products/workflow/new">
     <div class="pwf-card">
       <h2>1 · Type of request</h2>
@@ -55,20 +75,65 @@
     </div>
 
     <div class="pwf-card">
-      <h2>2 · Reference an existing product (optional)</h2>
+      <h2>2 · Reference an existing finished good (optional)</h2>
       <p class="text-sm text-gray-600 mb-2">
-        If you're creating a variation or a similar product, search the existing
-        catalog. We'll snapshot the chosen product so you can reuse its BOM,
-        dimensions and classification in later steps.
+        Search the SAP material master to find a similar finished good and reuse its
+        BOM, dimensions and classification. Search by any single field or combine
+        multiple — only Finished Goods (material type FERT) are returned.
       </p>
-      <div class="pwf-search-wrap">
-        <input id="ref-search" type="text" autocomplete="off"
-               placeholder="Search by SKU, brand, or product name (e.g. cola, ranch, cheddar)"
-               class="w-full" style="padding:.55rem .65rem; border:1px solid #d1d5db; border-radius:.35rem;">
-        <div id="ref-results" class="pwf-search-results"></div>
+
+      <div class="ms-grid">
+        <label>
+          Material number
+          <input id="ms-mat-num" type="text" autocomplete="off" placeholder="e.g. GCH-ORIG-150">
+        </label>
+        <label>
+          Material description
+          <input id="ms-mat-desc" type="text" autocomplete="off" placeholder="e.g. cola, cheddar, ranch">
+        </label>
+        <label>
+          Category
+          <input id="ms-cat" type="text" autocomplete="off" placeholder="e.g. Salty Snacks">
+        </label>
+        <label>
+          Brand
+          <input id="ms-brand" type="text" autocomplete="off" placeholder="e.g. FizzPop, OatBoost">
+        </label>
+        <label>
+          Material type
+          <select id="ms-type">
+            <option value="FERT" selected>FERT — Finished Good</option>
+          </select>
+        </label>
       </div>
+
+      <div class="ms-actions">
+        <button type="button" id="ms-search" class="btn-primary">🔎 Search</button>
+        <button type="button" id="ms-reset"  class="btn-default">Clear</button>
+        <span id="ms-status" class="ms-meta" style="margin-top:0;"></span>
+      </div>
+
+      <div id="ms-results-wrap" style="display:none;">
+        <table class="ms-table" id="ms-table">
+          <thead>
+            <tr>
+              <th>Material #</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Brand</th>
+              <th>Material group</th>
+              <th>Type</th>
+              <th>Div.</th>
+              <th>UoM</th>
+              <th>Origin</th>
+            </tr>
+          </thead>
+          <tbody id="ms-results"></tbody>
+        </table>
+      </div>
+
       <input id="reference_sku" type="hidden" name="reference_sku">
-      <div id="ref-selected" class="mt-3 text-sm" style="display:none;"></div>
+      <div id="ms-selected" class="ms-banner" style="display:none;"></div>
     </div>
 
     <div class="pwf-card">
@@ -99,67 +164,127 @@
 
 <script>
 (function () {
-  var search   = document.getElementById('ref-search');
-  var results  = document.getElementById('ref-results');
-  var skuInput = document.getElementById('reference_sku');
-  var selected = document.getElementById('ref-selected');
+  // SAP-style multi-field finished-good search.
+  var inputs = {
+    material_number:      document.getElementById('ms-mat-num'),
+    material_description: document.getElementById('ms-mat-desc'),
+    category:             document.getElementById('ms-cat'),
+    brand:                document.getElementById('ms-brand'),
+    material_type:        document.getElementById('ms-type'),
+  };
+  var status      = document.getElementById('ms-status');
+  var resultsWrap = document.getElementById('ms-results-wrap');
+  var resultsBody = document.getElementById('ms-results');
+  var skuInput    = document.getElementById('reference_sku');
+  var selected    = document.getElementById('ms-selected');
+
+  // Submit on enter from any input.
+  Object.values(inputs).forEach(function (el) {
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
+  });
+
+  document.getElementById('ms-search').addEventListener('click', runSearch);
+  document.getElementById('ms-reset').addEventListener('click', function () {
+    Object.keys(inputs).forEach(function (k) {
+      if (k === 'material_type') inputs[k].value = 'FERT';
+      else inputs[k].value = '';
+    });
+    resultsWrap.style.display = 'none';
+    resultsBody.innerHTML = '';
+    status.textContent = '';
+    clearSelection();
+  });
+
+  // Debounced live search — fires 250ms after the user stops typing in any
+  // field with at least one non-empty value, so the table updates as you go
+  // without a click.
   var debounce = null;
-
-  search.addEventListener('input', function () {
-    var q = search.value.trim();
-    clearTimeout(debounce);
-    if (!q) { hide(); return; }
-    debounce = setTimeout(function () { runSearch(q); }, 180);
-  });
-  search.addEventListener('focus', function () {
-    if (search.value.trim()) runSearch(search.value.trim());
-  });
-  document.addEventListener('click', function (e) {
-    if (!results.contains(e.target) && e.target !== search) hide();
+  Object.values(inputs).forEach(function (el) {
+    el.addEventListener('input', function () {
+      clearTimeout(debounce);
+      debounce = setTimeout(function () {
+        if (anyFieldFilled()) runSearch();
+      }, 250);
+    });
+    if (el.tagName === 'SELECT') el.addEventListener('change', function () { if (anyFieldFilled()) runSearch(); });
   });
 
-  function hide() { results.classList.remove('open'); results.innerHTML = ''; }
+  function anyFieldFilled() {
+    return ['material_number','material_description','category','brand'].some(function (k) {
+      return (inputs[k].value || '').trim().length > 0;
+    });
+  }
 
-  async function runSearch(q) {
+  async function runSearch() {
+    var params = new URLSearchParams();
+    Object.keys(inputs).forEach(function (k) {
+      var v = (inputs[k].value || '').trim();
+      if (v) params.append(k, v);
+    });
+    if (![].slice.call(params).length) {
+      status.textContent = 'Enter at least one search field.';
+      status.style.color = '#b91c1c';
+      return;
+    }
+    status.textContent = 'Searching…'; status.style.color = '#475569';
     try {
-      var resp = await fetch('/products/workflow/api/reference-search?q=' + encodeURIComponent(q));
+      var resp = await fetch('/products/workflow/api/reference-search?' + params.toString());
       var data = await resp.json();
-      if (!data.results || data.results.length === 0) {
-        results.innerHTML = '<div class="pwf-search-row" style="color:#6b7280">No matches</div>';
-        results.classList.add('open');
-        return;
-      }
-      results.innerHTML = data.results.map(function (r) {
-        return '<div class="pwf-search-row" data-sku="' + escAttr(r.sku) + '" data-name="' + escAttr(r.name) + '">' +
-               '<div><strong>' + escHtml(r.name) + '</strong>' +
-               '<span class="pwf-pill">' + escHtml(r.material_type || 'FERT') + '</span></div>' +
-               '<div class="sku">' + escHtml(r.sku) + ' · ' + escHtml(r.brand || '') +
-               (r.sub_brand ? ' / ' + escHtml(r.sub_brand) : '') + '</div></div>';
-      }).join('');
-      results.classList.add('open');
-      Array.from(results.querySelectorAll('.pwf-search-row[data-sku]')).forEach(function (row) {
-        row.addEventListener('click', function () { pick(row.dataset.sku, row.dataset.name); });
-      });
+      render(data.results || [], data.total || 0);
     } catch (e) {
       console.error(e);
-      hide();
+      status.textContent = '⚠ Search failed.'; status.style.color = '#b91c1c';
     }
   }
 
-  function pick(sku, name) {
+  function render(rows, total) {
+    resultsWrap.style.display = '';
+    if (!rows.length) {
+      resultsBody.innerHTML = '<tr><td colspan="9" style="padding:18px; text-align:center; color:#94a3b8;">No matching finished goods.</td></tr>';
+      status.textContent = '0 results.'; status.style.color = '#475569';
+      return;
+    }
+    var capped = total > rows.length ? ' (showing ' + rows.length + ' of ' + total + ')' : '';
+    status.innerHTML = '<strong>' + rows.length + ' result' + (rows.length === 1 ? '' : 's') + '</strong>' + capped;
+    status.style.color = '#065f46';
+    resultsBody.innerHTML = rows.map(function (r) {
+      var brand = [r.brand, r.sub_brand].filter(Boolean).join(' / ');
+      return '<tr data-sku="' + escAttr(r.sku) + '" data-name="' + escAttr(r.name) + '">' +
+        '<td><span class="ms-mat">' + escHtml(r.sku) + '</span></td>' +
+        '<td><strong>' + escHtml(r.name) + '</strong></td>' +
+        '<td>' + escHtml(r.category || '—') + '<div style="font-size:11px;color:#94a3b8;">' + escHtml(r.category_grouper || '') + '</div></td>' +
+        '<td>' + escHtml(brand || '—') + '</td>' +
+        '<td><span class="ms-pill">' + escHtml(r.material_group || '') + '</span></td>' +
+        '<td><span class="ms-pill fert">' + escHtml(r.material_type || 'FERT') + '</span></td>' +
+        '<td>' + escHtml(r.division || '') + '</td>' +
+        '<td>' + escHtml(r.base_uom || '') + '</td>' +
+        '<td>' + escHtml(r.country_of_origin || '') + '</td>' +
+        '</tr>';
+    }).join('');
+    Array.from(resultsBody.querySelectorAll('tr[data-sku]')).forEach(function (row) {
+      row.addEventListener('click', function () { pick(row.dataset.sku, row.dataset.name, row); });
+    });
+    // Re-mark selection if the previously chosen sku is in the current page.
+    if (skuInput.value) {
+      var prior = resultsBody.querySelector('tr[data-sku="' + skuInput.value.replace(/"/g, '\\"') + '"]');
+      if (prior) prior.classList.add('selected');
+    }
+  }
+
+  function pick(sku, name, row) {
     skuInput.value = sku;
-    search.value = name + ' (' + sku + ')';
+    Array.from(resultsBody.querySelectorAll('tr.selected')).forEach(function (r) { r.classList.remove('selected'); });
+    if (row) row.classList.add('selected');
     selected.style.display = '';
     selected.innerHTML = 'Reference selected: <strong>' + escHtml(name) + '</strong> ' +
-                        '<span class="sku">' + escHtml(sku) + '</span> · ' +
-                        '<a href="#" id="ref-clear" class="text-blue-600 hover:underline">clear</a>';
-    document.getElementById('ref-clear').addEventListener('click', function (e) {
-      e.preventDefault();
-      skuInput.value = '';
-      search.value = '';
-      selected.style.display = 'none';
-    });
-    hide();
+                         '<span class="ms-mat">' + escHtml(sku) + '</span>' +
+                         ' · <span class="ms-clear-link" id="ms-clear">clear</span>';
+    document.getElementById('ms-clear').addEventListener('click', clearSelection);
+  }
+  function clearSelection() {
+    skuInput.value = '';
+    selected.style.display = 'none';
+    Array.from(resultsBody.querySelectorAll('tr.selected')).forEach(function (r) { r.classList.remove('selected'); });
   }
 
   function escHtml(s) { return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) { return { '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;' }[c]; }); }

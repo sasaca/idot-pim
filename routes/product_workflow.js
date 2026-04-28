@@ -216,24 +216,75 @@ module.exports = function makeRouter(db) {
   });
 
   // -------------------------------------------------------------------------
-  // Reference-product search (used by Stage 1's typeahead).
-  // GET /products/workflow/api/reference-search?q=cola
+  // Reference-product search.
+  // - GET /products/workflow/api/reference-search?q=...                  (legacy free-text — used by the BOM tabs)
+  // - GET /products/workflow/api/reference-search?material_number=...&...&material_description=...
+  //                                                                       (multi-field — used by Stage 1)
+  //
+  // Always limited to material_type='FERT' (Finished Goods) per requirement.
   // -------------------------------------------------------------------------
   router.get('/api/reference-search', (req, res) => {
-    const q = String(req.query.q || '').toLowerCase().trim();
-    if (!q) return res.json({ results: [] });
-    const results = REFERENCE_PRODUCTS
-      .filter((p) =>
-        p.sku.toLowerCase().includes(q) ||
-        p.name.toLowerCase().includes(q) ||
-        (p.brand || '').toLowerCase().includes(q) ||
-        (p.category || '').toLowerCase().includes(q))
-      .slice(0, 12)
-      .map((p) => ({
-        sku: p.sku, name: p.name, category: p.category, brand: p.brand,
-        sub_brand: p.sub_brand, material_type: p.material_type,
-      }));
-    res.json({ results });
+    const q       = String(req.query.q       || '').toLowerCase().trim();
+    const matNum  = String(req.query.material_number || '').toLowerCase().trim();
+    const matDesc = String(req.query.material_description || '').toLowerCase().trim();
+    const cat     = String(req.query.category || '').toLowerCase().trim();
+    const brand   = String(req.query.brand    || '').toLowerCase().trim();
+    const matType = String(req.query.material_type || '').toUpperCase().trim();
+
+    const hasAnyField = !!(q || matNum || matDesc || cat || brand || matType);
+    if (!hasAnyField) return res.json({ results: [], total: 0 });
+
+    const matches = REFERENCE_PRODUCTS.filter((p) => {
+      // Hard requirement — Finished Goods only.
+      if ((p.material_type || '').toUpperCase() !== 'FERT') return false;
+
+      // Free-text search (legacy single-box) takes precedence when supplied.
+      if (q) {
+        return p.sku.toLowerCase().includes(q) ||
+               p.name.toLowerCase().includes(q) ||
+               (p.brand || '').toLowerCase().includes(q) ||
+               (p.family_brand || '').toLowerCase().includes(q) ||
+               (p.sub_brand || '').toLowerCase().includes(q) ||
+               (p.category || '').toLowerCase().includes(q) ||
+               (p.category_grouper || '').toLowerCase().includes(q) ||
+               (p.material_group || '').toLowerCase().includes(q);
+      }
+
+      // Multi-field search — every supplied field must match.
+      if (matNum  && !p.sku.toLowerCase().includes(matNum)) return false;
+      if (matDesc && !p.name.toLowerCase().includes(matDesc)) return false;
+      if (cat     && !(
+            (p.category || '').toLowerCase().includes(cat) ||
+            (p.category_grouper || '').toLowerCase().includes(cat)
+          )) return false;
+      if (brand   && !(
+            (p.brand || '').toLowerCase().includes(brand) ||
+            (p.family_brand || '').toLowerCase().includes(brand) ||
+            (p.sub_brand || '').toLowerCase().includes(brand)
+          )) return false;
+      if (matType && (p.material_type || '').toUpperCase() !== matType) return false;
+      return true;
+    });
+
+    const results = matches.slice(0, 50).map((p) => ({
+      sku:               p.sku,
+      name:              p.name,
+      category_grouper:  p.category_grouper,
+      category:          p.category,
+      family_brand:      p.family_brand,
+      brand:             p.brand,
+      sub_brand:         p.sub_brand,
+      material_type:     p.material_type,
+      material_group:    p.material_group,
+      industry_sector:   p.industry_sector,
+      division:          p.division,
+      base_uom:          p.base_uom,
+      net_weight:        p.net_weight,
+      weight_unit:       p.weight_unit,
+      country_of_origin: p.country_of_origin,
+    }));
+
+    res.json({ results, total: matches.length });
   });
 
   // -------------------------------------------------------------------------
