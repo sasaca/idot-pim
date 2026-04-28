@@ -49,6 +49,9 @@
   .ms-table tbody tr:hover { background:#f8fafc; }
   .ms-table tbody tr.selected { background:#dbeafe; }
   .ms-table tbody tr.selected td { font-weight:500; color:#1e3a8a; }
+  /* When a row is selected, collapse the table to just that row. Click the
+     row again (or the Clear link) to bring the rest back. */
+  .ms-table.has-selection tbody tr:not(.selected) { display:none; }
   .ms-mat { font-family:ui-monospace,monospace; font-size:11px; color:#1e3a8a; }
   .ms-pill { display:inline-block; padding:1px 7px; border-radius:9999px; background:#eef2ff; color:#3730a3; font-size:10.5px; font-weight:600; letter-spacing:.02em; }
   .ms-pill.fert { background:#dcfce7; color:#166534; }
@@ -364,18 +367,29 @@
   }
 
   function pick(sku, name, row) {
+    // Toggle: clicking the already-selected row deselects.
+    if (row && row.classList.contains('selected') && skuInput.value === sku) {
+      clearSelection();
+      return;
+    }
     skuInput.value = sku;
+    var table = document.getElementById('ms-table');
     Array.from(resultsBody.querySelectorAll('tr.selected')).forEach(function (r) { r.classList.remove('selected'); });
     if (row) row.classList.add('selected');
+    if (table) table.classList.add('has-selection');
+    pagination.style.display = 'none';     // pagination is meaningless with one row
     selected.style.display = '';
     selected.innerHTML = 'Reference selected: <strong>' + escHtml(name) + '</strong> ' +
                          '<span class="ms-mat">' + escHtml(sku) + '</span>' +
-                         ' · <span class="ms-clear-link" id="ms-clear">clear</span>';
+                         ' · <span class="ms-clear-link" id="ms-clear">clear (show all results)</span>';
     document.getElementById('ms-clear').addEventListener('click', clearSelection);
   }
   function clearSelection() {
     skuInput.value = '';
     selected.style.display = 'none';
+    var table = document.getElementById('ms-table');
+    if (table) table.classList.remove('has-selection');
+    pagination.style.display = '';
     Array.from(resultsBody.querySelectorAll('tr.selected')).forEach(function (r) { r.classList.remove('selected'); });
   }
 
