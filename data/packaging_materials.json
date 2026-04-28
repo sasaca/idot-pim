@@ -1,0 +1,17 @@
+[
+  { "code": "GLASS",         "label": "Glass" },
+  { "code": "PET",           "label": "Plastic — PET (polyethylene terephthalate)" },
+  { "code": "HDPE",          "label": "Plastic — HDPE (high-density polyethylene)" },
+  { "code": "LDPE",          "label": "Plastic — LDPE (low-density polyethylene)" },
+  { "code": "PP",            "label": "Plastic — PP (polypropylene)" },
+  { "code": "PS",            "label": "Plastic — PS (polystyrene)" },
+  { "code": "ALUMINIUM",     "label": "Aluminium" },
+  { "code": "TIN_STEEL",     "label": "Tin / Steel" },
+  { "code": "CARTON",        "label": "Paper / Folding Carton" },
+  { "code": "CORRUGATED",    "label": "Corrugated Board" },
+  { "code": "TETRA",         "label": "Composite (Tetra Pak / aseptic)" },
+  { "code": "BIOPLASTIC",    "label": "Bioplastic (PLA / PHA)" },
+  { "code": "WOOD",          "label": "Wood" },
+  { "code": "FOIL_LAMINATE", "label": "Foil / Multilayer Laminate" },
+  { "code": "OTHER",         "label": "Other (specify in description)" }
+]

@@ -1,0 +1,623 @@
+<%
+/*
+  views/products/workflow_packaging.ejs
+  ---------------------------------------------------------------------------
+  Stage 5b — Packaging Materials (R&D, sequential after Production).
+  Tabs:
+    1. Materials & Components — status (existing/new/modification), material
+       type, height/width/volume, description, components multi-select with
+       per-component status + description, units per case.
+    2. Incoterms              — multi-select with per-term description.
+    3. Cost & Price           — sub-tabs: Initial (read-only from Stage 2 R&D)
+                                vs Updated (R&D inputs).
+    4. Volumes                — sub-tabs: Initial (read-only from Stage 2
+                                Forecast) vs Updated (R&D inputs); Y1 monthly
+                                grid + Y2-Y5 yearly + auto totals.
+    5. Inventory & Comparison — inventory agreement, rationale-price,
+                                rationale-volume, repeating product
+                                comparison rows (search → market → shelf
+                                price local + USD).
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'Product Request — Packaging Materials' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Packaging Materials (R&D)', topSub: 'Provide packaging detail, incoterms, updated cost / volume estimates and competitor comparisons.' }) %>
+
+<style>
+  .vob-nav { display:flex; flex-wrap:nowrap; gap:2px; padding:0 6px; margin:0 0 -1px 0; position:relative; z-index:2; overflow-x:auto; }
+  .vob-nav button { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; margin:0; border:1px solid #e5e7eb; border-radius:8px 8px 0 0; background:#f3f4f6; color:#4b5563; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .vob-nav button:hover { background:#e5e7eb; }
+  .vob-nav button.active { background:#fff; color:#111827; font-weight:600; border-bottom-color:#fff; z-index:3; }
+  .vob-nav .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:#e5e7eb; color:#374151; font-size:12px; font-weight:600; }
+  .vob-nav button.active .num { background:#1e3a8a; color:#fff; }
+  .vob-nav .vob-count { display:inline-block; padding:1px 7px; font-size:11px; border-radius:9999px; background:#d1d5db; color:#374151; font-weight:600; }
+  .vob-nav button.active .vob-count { background:#e5e7eb; color:#111827; }
+  .vob-nav button.done { background:#10b981; color:#fff; border-color:#10b981; }
+  .vob-nav button.done .num, .vob-nav button.done .vob-count { background:rgba(255,255,255,.35); color:#fff; }
+  .vob-nav button.done.active { border-bottom-color:#10b981; }
+
+  .vob-card { background:#fff; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; padding:24px; box-shadow:0 1px 2px rgba(0,0,0,.04); position:relative; z-index:1; }
+  .vob-card h2 { font-size:18px; font-weight:600; color:#111827; margin:0 0 4px; }
+  .vob-card .indicates-required { color:#dc2626; font-size:12px; margin-bottom:14px; }
+  .vob-card .section-title { font-size:15px; font-weight:600; color:#111827; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:18px 0 12px; }
+
+  .vob-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  .vob-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+  .vob-grid.cols-4 { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+  @media (max-width:700px) { .vob-grid, .vob-grid.cols-3, .vob-grid.cols-4 { grid-template-columns:1fr; } }
+
+  .vob-field label { display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:4px; }
+  .vob-field label .req { color:#dc2626; margin-right:3px; }
+  .vob-field input, .vob-field select, .vob-field textarea { width:100%; padding:8px 10px; font-size:14px; border:1px solid #d1d5db; border-radius:6px; background:#fff; box-sizing:border-box; }
+  .vob-field input[readonly] { background:#f3f4f6; color:#374151; }
+  .vob-field textarea { min-height:90px; resize:vertical; }
+  .vob-field.full { grid-column:1 / -1; }
+
+  .radio-group, .check-group { display:flex; flex-wrap:wrap; gap:8px 12px; padding:6px 0 2px; }
+  .radio-group label, .check-group label { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:13px; color:#374151; border:1px solid #d1d5db; border-radius:999px; background:#fff; cursor:pointer; user-select:none; }
+  .radio-group label:has(input:checked), .check-group label:has(input:checked) { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+
+  .vob-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; }
+  .vob-footer .right { display:flex; gap:8px; }
+  .btn { padding:8px 16px; font-size:14px; font-weight:500; border-radius:6px; border:none; cursor:pointer; }
+  .btn-default { background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .btn-primary { background:#1e3a8a; color:#fff; }
+
+  .vob-pane { display:none; }
+  .vob-pane.active { display:block; }
+
+  /* Component / Incoterm row */
+  .pkm-row { border:1px solid #e5e7eb; border-radius:6px; padding:10px 14px; margin-bottom:8px; background:#fafafa; }
+  .pkm-row label.pkm-pick { display:flex; align-items:center; gap:8px; font-weight:500; cursor:pointer; }
+  .pkm-row .pkm-detail { display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e5e7eb; gap:10px; }
+  .pkm-row.open .pkm-detail { display:flex; flex-wrap:wrap; }
+  .pkm-row .pkm-status { flex:0 0 auto; }
+  .pkm-row .pkm-status-radio { display:flex; gap:6px; flex-wrap:wrap; padding-top:0; }
+  .pkm-row .pkm-status-radio label { padding:4px 10px; font-size:12px; }
+  .pkm-row .pkm-detail textarea { flex:1 1 320px; padding:6px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; min-height:48px; resize:vertical; }
+  .pkm-row .pkm-detail .pkm-status-label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; display:block; }
+
+  /* Sub-tab nav for Cost / Volume */
+  .pkm-sub { display:flex; gap:6px; margin:0 0 14px; border-bottom:2px solid #e5e7eb; }
+  .pkm-sub button { background:none; border:none; padding:8px 14px 10px; font-size:13px; color:#6b7280; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; font-weight:500; }
+  .pkm-sub button.active { color:#1e3a8a; border-bottom-color:#1e3a8a; font-weight:600; }
+  .pkm-sub-pane { display:none; }
+  .pkm-sub-pane.active { display:block; }
+
+  /* Forecast tables (Initial + Updated) */
+  .fc-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .fc-table th, .fc-table td { padding:5px 7px; border-bottom:1px solid #e5e7eb; text-align:right; }
+  .fc-table th { background:#f9fafb; font-weight:600; color:#374151; text-align:center; }
+  .fc-table th:first-child, .fc-table td:first-child { text-align:left; }
+  .fc-table input { width:100%; padding:5px 7px; border:1px solid #d1d5db; border-radius:4px; text-align:right; font-size:13px; }
+  .fc-table .fc-total { background:#eff6ff; font-weight:600; color:#1e3a8a; }
+  .fc-table .fc-total input { background:#eff6ff; border-color:#bfdbfe; font-weight:600; color:#1e3a8a; }
+  .fc-readonly td { background:#f9fafb; color:#374151; }
+
+  /* Comparison rows */
+  .cmp-row { border:1px solid #e5e7eb; border-radius:6px; padding:10px 14px; margin-bottom:10px; background:#fff; display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; align-items:end; }
+  .cmp-row .cmp-search { grid-column: span 2; position:relative; }
+  .cmp-row .cmp-results { position:absolute; left:0; right:0; top:calc(100% + 4px); background:white; border:1px solid #d1d5db; border-radius:.4rem; max-height:14rem; overflow-y:auto; z-index:30; box-shadow:0 4px 14px rgba(0,0,0,.08); display:none; font-size:12px; }
+  .cmp-row .cmp-results.open { display:block; }
+  .cmp-row .cmp-row-result { padding:6px 10px; border-bottom:1px solid #f3f4f6; cursor:pointer; }
+  .cmp-row .cmp-row-result:hover { background:#f9fafb; }
+  .cmp-row label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+  .cmp-row input, .cmp-row select { padding:6px 8px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; box-sizing:border-box; }
+  .cmp-row .cmp-remove { background:transparent; color:#b91c1c; border:none; cursor:pointer; font-size:14px; height:32px; }
+  .cmp-add { background:#1e3a8a; color:white; border:none; padding:6px 12px; border-radius:4px; font-size:12px; cursor:pointer; margin-top:8px; }
+
+  .submitted-banner { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+  .info-banner      { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<%
+  var pr   = productRequest;
+  var pkg  = pr.packaging || {};
+  var mat  = pkg.materials || {};
+  var comps = (pkg.components || []).reduce(function (m, c) { m[c.code] = c; return m; }, {});
+  var inco  = (pkg.incoterms  || []).reduce(function (m, c) { m[c.code] = c; return m; }, {});
+  var costU = pkg.cost_updated   || {};
+  var volU  = pkg.volume_updated || {};
+  var cmpRows = pkg.comparisons || [];
+  if (cmpRows.length === 0) cmpRows = [{}];
+
+  // Initial estimates from Stage 2 (R&D's own earlier inputs).
+  var rndInit  = pr.rnd      || {};
+  var fcInit   = pr.forecast || {};
+
+  var alreadySubmitted = !!pr.packaging_completed_at;
+%>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Packaging Materials — R&amp;D</h1>
+      <p class="text-sm text-gray-500 mt-1"><strong><%= pr.product_name %></strong> · Request #<%= pr.id %></p>
+    </div>
+    <a href="/products/workflow/queue" class="text-sm text-blue-600 hover:underline">← Back to queue</a>
+  </div>
+
+  <%- include('_workflow_shared', { productRequest: pr, stateLabel: ref.STATE_LABELS[pr.workflow_state] || pr.workflow_state, history: history, comments: comments }) %>
+
+  <% if (alreadySubmitted) { %>
+    <div class="submitted-banner">
+      ✓ Packaging Materials submitted on <strong><%= pr.packaging_completed_at %></strong>.
+      <% if (pr.competitor_completed_at) { %>
+        Marketing's Competitor Analysis is complete — request is now <strong>CONFIRMED</strong>.
+      <% } else { %>
+        Marketing's Competitor Analysis is still pending.
+      <% } %>
+    </div>
+  <% } else { %>
+    <div class="info-banner">
+      Production submitted <strong><%= pr.production_completed_at %></strong>.
+      Now provide the packaging detail. The Cost &amp; Volume tabs let you
+      compare the original Marketing / R&amp;D estimates against your updated
+      figures.
+    </div>
+  <% } %>
+
+  <div class="vob-shell">
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="materials"><span class="num">1</span><span>Materials &amp; Components</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="incoterms"><span class="num">2</span><span>Incoterms</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="cost"><span class="num">3</span><span>Cost &amp; Price</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="volume"><span class="num">4</span><span>Volumes</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="extras"><span class="num">5</span><span>Inventory &amp; Comparison</span><span class="vob-count"></span></button>
+    </nav>
+
+    <form id="pkm-form" method="post" action="/products/workflow/<%= pr.id %>/packaging">
+      <fieldset <%= alreadySubmitted ? 'disabled' : '' %> style="border:none; padding:0; margin:0;">
+
+      <!-- ===== 1) Materials & Components ===== -->
+      <section class="vob-pane active" data-pane="materials">
+        <div class="vob-card">
+          <h2>Packaging materials</h2>
+          <div class="indicates-required">* Indicates required</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Status</label>
+              <div class="radio-group">
+                <label><input type="radio" name="pkm_status" value="EXISTING" required <%= mat.status === 'EXISTING' ? 'checked' : '' %>>Existing</label>
+                <label><input type="radio" name="pkm_status" value="NEW"         <%= mat.status === 'NEW'         ? 'checked' : '' %>>New</label>
+                <label><input type="radio" name="pkm_status" value="MODIFICATION"<%= mat.status === 'MODIFICATION'? 'checked' : '' %>>Modification</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Type of material</label>
+              <select name="pkm_material_type" required>
+                <option value="">-- Select --</option>
+                <% ref.PACKAGING_MATERIALS.forEach(function (m) { %>
+                  <option value="<%= m.code %>" <%= mat.material_type === m.code ? 'selected' : '' %>><%= m.label %></option>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+          <div class="vob-grid cols-4" style="margin-top:14px;">
+            <div class="vob-field"><label>Height</label><input type="number" name="pkm_height" step="0.01" min="0" value="<%= mat.height != null ? mat.height : (rndInit.height || '') %>"></div>
+            <div class="vob-field"><label>Width</label> <input type="number" name="pkm_width"  step="0.01" min="0" value="<%= mat.width  != null ? mat.width  : (rndInit.width  || '') %>"></div>
+            <div class="vob-field"><label>Dim Unit</label>
+              <select name="pkm_dim_unit">
+                <option value="">--</option>
+                <% (ref.UOM.dimension || []).forEach(function (u) { %>
+                  <option value="<%= u[0] %>" <%= (mat.dim_unit || rndInit.dim_unit || 'MM') === u[0] ? 'selected' : '' %>><%= u[0] %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="vob-field"><label>Volume</label><input type="number" name="pkm_volume" step="0.01" min="0" value="<%= mat.volume != null ? mat.volume : (rndInit.volume || '') %>"></div>
+          </div>
+          <div class="vob-grid cols-3" style="margin-top:14px;">
+            <div class="vob-field"><label>Volume Unit</label>
+              <select name="pkm_volume_unit">
+                <option value="">--</option>
+                <% (ref.UOM.volume || []).forEach(function (u) { %>
+                  <option value="<%= u[0] %>" <%= (mat.volume_unit || rndInit.volume_unit) === u[0] ? 'selected' : '' %>><%= u[0] %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="vob-field"><label><span class="req">*</span>Units per case</label><input type="number" name="pkm_units_per_case" step="1" min="1" required value="<%= mat.units_per_case != null ? mat.units_per_case : '' %>"></div>
+            <div class="vob-field"><label>Case-pack label</label><input type="text" name="pkm_case_pack_label" value="<%= mat.case_pack_label || '' %>" placeholder="e.g. 12-pack, 6-pack carton"></div>
+          </div>
+          <div class="vob-grid" style="margin-top:14px;">
+            <div class="vob-field full">
+              <label><span class="req">*</span>Description of packaging</label>
+              <textarea name="pkm_description" required placeholder="Describe the overall packaging concept (shape, finish, look-and-feel, primary differentiators)"><%= mat.description || '' %></textarea>
+            </div>
+          </div>
+
+          <div class="section-title">Components</div>
+          <p class="text-sm text-gray-600" style="margin-bottom:10px;">
+            Tick each component used. For each, mark whether it's existing,
+            new or a modification of an existing component, and add a brief
+            description.
+          </p>
+          <% ref.PACKAGING_COMPONENTS.forEach(function (c) { %>
+            <% var picked = comps[c.code]; %>
+            <div class="pkm-row <%= picked ? 'open' : '' %>" data-pkm-row data-code="<%= c.code %>">
+              <label class="pkm-pick">
+                <input type="checkbox" name="pkm_component_selected" value="<%= c.code %>" <%= picked ? 'checked' : '' %> data-pkm-toggle>
+                <span><%= c.label %></span>
+                <span style="margin-left:auto; font-family:monospace; font-size:11px; color:#6b7280;"><%= c.code %></span>
+              </label>
+              <div class="pkm-detail">
+                <div class="pkm-status">
+                  <span class="pkm-status-label">Status</span>
+                  <div class="radio-group pkm-status-radio">
+                    <label><input type="radio" name="pkm_component_status_<%= c.code %>" value="EXISTING"     <%= picked && picked.status === 'EXISTING'     ? 'checked' : '' %>>Existing</label>
+                    <label><input type="radio" name="pkm_component_status_<%= c.code %>" value="NEW"          <%= picked && picked.status === 'NEW'          ? 'checked' : '' %>>New</label>
+                    <label><input type="radio" name="pkm_component_status_<%= c.code %>" value="MODIFICATION" <%= picked && picked.status === 'MODIFICATION' ? 'checked' : '' %>>Modification</label>
+                  </div>
+                </div>
+                <textarea name="pkm_component_description_<%= c.code %>" placeholder="Notes on this component"><%= picked ? (picked.description || '') : '' %></textarea>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </section>
+
+      <!-- ===== 2) Incoterms ===== -->
+      <section class="vob-pane" data-pane="incoterms">
+        <div class="vob-card">
+          <h2>Incoterms</h2>
+          <p class="text-sm text-gray-600" style="margin-bottom:10px;">
+            Tick each incoterm that applies to this product's distribution
+            and add any incoterm-specific notes.
+          </p>
+          <% ref.INCOTERMS.forEach(function (t) { %>
+            <% var picked = inco[t.code]; %>
+            <div class="pkm-row <%= picked ? 'open' : '' %>" data-pkm-row data-code="<%= t.code %>">
+              <label class="pkm-pick">
+                <input type="checkbox" name="pkm_incoterm_selected" value="<%= t.code %>" <%= picked ? 'checked' : '' %> data-pkm-toggle>
+                <span><%= t.label %></span>
+              </label>
+              <div class="pkm-detail">
+                <textarea name="pkm_incoterm_description_<%= t.code %>" placeholder="Description / context (route, carrier, terms)"><%= picked ? (picked.description || '') : '' %></textarea>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </section>
+
+      <!-- ===== 3) Cost & Price ===== -->
+      <section class="vob-pane" data-pane="cost">
+        <div class="vob-card">
+          <h2>Estimated Cost &amp; Shelf Price</h2>
+          <p class="text-sm text-gray-600">
+            Compare the initial Stage-2 R&amp;D estimate with your updated figures.
+          </p>
+
+          <div class="pkm-sub">
+            <button type="button" data-pkm-sub="cost-init"  class="active">Initial estimates</button>
+            <button type="button" data-pkm-sub="cost-upd">Updated estimates</button>
+          </div>
+
+          <div data-pkm-sub-pane="cost-init" class="pkm-sub-pane active">
+            <div class="vob-grid cols-3">
+              <div class="vob-field"><label>Manufacturing Price</label><input type="text" readonly value="<%= rndInit.mfg_price != null ? (rndInit.mfg_price + ' ' + (rndInit.mfg_price_ccy || 'USD')) : '—' %>"></div>
+              <div class="vob-field"><label>Retail Price (USD)</label> <input type="text" readonly value="<%= rndInit.retail_price_usd  != null ? (rndInit.retail_price_usd + ' USD') : '—' %>"></div>
+              <div class="vob-field"><label>Retail Price (Local)</label><input type="text" readonly value="<%= rndInit.retail_price_local != null ? (rndInit.retail_price_local + ' ' + (rndInit.retail_price_local_ccy || '')) : '—' %>"></div>
+              <% if (rndInit.fx_rate) { %>
+                <div class="vob-field full"><label>FX rate at submit</label><input type="text" readonly value="1 USD = <%= rndInit.fx_rate %> <%= rndInit.retail_price_local_ccy || '' %> · <%= rndInit.fx_as_of || '' %> · <%= rndInit.fx_source || '' %>"></div>
+              <% } %>
+            </div>
+          </div>
+
+          <div data-pkm-sub-pane="cost-upd" class="pkm-sub-pane">
+            <div class="vob-grid cols-3">
+              <div class="vob-field"><label><span class="req">*</span>Cost (Local)</label>      <input type="number" step="0.0001" min="0" required name="pkm_cost_local"     value="<%= costU.cost_local   != null ? costU.cost_local   : '' %>"></div>
+              <div class="vob-field"><label>Local Currency</label>                              <input type="text"   maxlength="3"           name="pkm_cost_local_ccy" value="<%= costU.cost_local_ccy || rndInit.retail_price_local_ccy || '' %>"></div>
+              <div class="vob-field"><label><span class="req">*</span>Cost (USD)</label>        <input type="number" step="0.0001" min="0" required name="pkm_cost_usd"       value="<%= costU.cost_usd     != null ? costU.cost_usd     : '' %>"></div>
+              <div class="vob-field"><label><span class="req">*</span>Shelf Price (Local)</label><input type="number" step="0.0001" min="0" required name="pkm_shelf_local"   value="<%= costU.shelf_local  != null ? costU.shelf_local  : '' %>"></div>
+              <div class="vob-field"><label>Local Currency</label>                              <input type="text"   maxlength="3"           name="pkm_shelf_local_ccy" value="<%= costU.shelf_local_ccy || rndInit.retail_price_local_ccy || '' %>"></div>
+              <div class="vob-field"><label><span class="req">*</span>Shelf Price (USD)</label> <input type="number" step="0.0001" min="0" required name="pkm_shelf_usd"     value="<%= costU.shelf_usd    != null ? costU.shelf_usd    : '' %>"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 4) Volumes ===== -->
+      <section class="vob-pane" data-pane="volume">
+        <div class="vob-card">
+          <h2>Estimated Volumes (cases)</h2>
+          <p class="text-sm text-gray-600">
+            Compare the initial Stage-2 forecast with your updated case-volume estimates.
+          </p>
+
+          <div class="pkm-sub">
+            <button type="button" data-pkm-sub="vol-init" class="active">Initial estimates</button>
+            <button type="button" data-pkm-sub="vol-upd">Updated estimates</button>
+          </div>
+
+          <div data-pkm-sub-pane="vol-init" class="pkm-sub-pane active">
+            <table class="fc-table fc-readonly">
+              <thead>
+                <tr><th>Period</th>
+                  <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %><th><%= m %></th><% }); %>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Year 1</strong></td>
+                  <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
+                    <td><%= fcInit['y1_' + m] != null ? fcInit['y1_' + m] : '—' %></td>
+                  <% }); %>
+                  <td class="fc-total"><%= fcInit.total_y1 != null ? fcInit.total_y1 : '—' %></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="vob-grid cols-4" style="margin-top:10px;">
+              <div class="vob-field"><label>Year 2</label><input type="text" readonly value="<%= fcInit.y2 != null ? fcInit.y2 : '—' %>"></div>
+              <div class="vob-field"><label>Year 3</label><input type="text" readonly value="<%= fcInit.y3 != null ? fcInit.y3 : '—' %>"></div>
+              <div class="vob-field"><label>Year 4</label><input type="text" readonly value="<%= fcInit.y4 != null ? fcInit.y4 : '—' %>"></div>
+              <div class="vob-field"><label>Year 5</label><input type="text" readonly value="<%= fcInit.y5 != null ? fcInit.y5 : '—' %>"></div>
+              <div class="vob-field full"><label>5-Year Total</label><input type="text" readonly value="<%= fcInit.total_y5 != null ? fcInit.total_y5 : '—' %>"></div>
+            </div>
+          </div>
+
+          <div data-pkm-sub-pane="vol-upd" class="pkm-sub-pane">
+            <table class="fc-table">
+              <thead>
+                <tr><th>Period</th>
+                  <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %><th><%= m %></th><% }); %>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Year 1</strong></td>
+                  <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
+                    <td><input type="number" min="0" step="1" name="pkm_vol_y1_<%= m %>" value="<%= volU['y1_' + m] != null ? volU['y1_' + m] : '' %>" data-pkm-y1></td>
+                  <% }); %>
+                  <td class="fc-total"><input type="number" id="pkm-total-y1" readonly value="<%= volU.total_y1 != null ? volU.total_y1 : '' %>"></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="vob-grid cols-4" style="margin-top:10px;">
+              <div class="vob-field"><label>Year 2</label><input type="number" min="0" step="1" name="pkm_vol_y2" value="<%= volU.y2 != null ? volU.y2 : '' %>" data-pkm-yN></div>
+              <div class="vob-field"><label>Year 3</label><input type="number" min="0" step="1" name="pkm_vol_y3" value="<%= volU.y3 != null ? volU.y3 : '' %>" data-pkm-yN></div>
+              <div class="vob-field"><label>Year 4</label><input type="number" min="0" step="1" name="pkm_vol_y4" value="<%= volU.y4 != null ? volU.y4 : '' %>" data-pkm-yN></div>
+              <div class="vob-field"><label>Year 5</label><input type="number" min="0" step="1" name="pkm_vol_y5" value="<%= volU.y5 != null ? volU.y5 : '' %>" data-pkm-yN></div>
+              <div class="vob-field full"><label>5-Year Total (auto)</label><input type="text" id="pkm-total-y5" readonly value="<%= volU.total_y5 != null ? volU.total_y5 : '' %>" style="background:#eff6ff; font-weight:600; color:#1e3a8a;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 5) Inventory & Comparison ===== -->
+      <section class="vob-pane" data-pane="extras">
+        <div class="vob-card">
+          <h2>Inventory, rationale &amp; competitor comparison</h2>
+          <div class="vob-grid">
+            <div class="vob-field full">
+              <label>Inventory Agreement</label>
+              <textarea name="pkm_inventory_agreement" placeholder="Min stock, safety days, plant ownership, replenishment cycle, etc."><%= pkg.inventory_agreement || '' %></textarea>
+            </div>
+            <div class="vob-field full">
+              <label>Rationale for price estimate</label>
+              <textarea name="pkm_rationale_price" placeholder="Why is the updated price right? Cost build-up, margin targets, competitor benchmarks…"><%= pkg.rationale_price || '' %></textarea>
+            </div>
+            <div class="vob-field full">
+              <label>Rationale for volume estimate</label>
+              <textarea name="pkm_rationale_volume" placeholder="Why is the updated volume right? Distribution coverage, channel split, seasonality…"><%= pkg.rationale_volume || '' %></textarea>
+            </div>
+          </div>
+
+          <div class="section-title">Compare similar products across markets</div>
+          <p class="text-sm text-gray-600" style="margin-bottom:10px;">
+            Search the catalog (same source as Stage 1), pick a market and add the local shelf price to build a side-by-side comparison.
+          </p>
+
+          <div id="pkm-cmp-rows">
+            <% cmpRows.forEach(function (row, idx) { %>
+              <div class="cmp-row" data-cmp-row>
+                <div class="cmp-search">
+                  <label>Reference product</label>
+                  <input type="text" class="cmp-search-input" value="<%= row.name ? (row.name + (row.sku ? ' (' + row.sku + ')' : '')) : '' %>" autocomplete="off" placeholder="Search SKU / name…">
+                  <input type="hidden" name="pkm_cmp_sku"  value="<%= row.sku  || '' %>">
+                  <input type="hidden" name="pkm_cmp_name" value="<%= row.name || '' %>">
+                  <div class="cmp-results"></div>
+                </div>
+                <div>
+                  <label>Market</label>
+                  <select name="pkm_cmp_market" data-cmp-market>
+                    <option value="">--</option>
+                    <% ref.PRODUCT_MARKETS.forEach(function (m) { %>
+                      <option value="<%= m.code %>" data-currency="<%= m.currency %>" <%= row.market === m.code ? 'selected' : '' %>><%= m.name %> (<%= m.currency %>)</option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div>
+                  <label>Shelf (Local)</label>
+                  <input type="number" step="0.01" min="0" name="pkm_cmp_shelf_local" value="<%= row.shelf_local != null ? row.shelf_local : '' %>">
+                </div>
+                <div>
+                  <label>Local CCY</label>
+                  <input type="text" maxlength="3" name="pkm_cmp_shelf_local_ccy" value="<%= row.shelf_local_ccy || '' %>" data-cmp-ccy>
+                </div>
+                <div>
+                  <label>Shelf (USD)</label>
+                  <input type="number" step="0.01" min="0" name="pkm_cmp_shelf_usd" value="<%= row.shelf_usd != null ? row.shelf_usd : '' %>">
+                </div>
+                <div>
+                  <label>&nbsp;</label>
+                  <button type="button" class="cmp-remove" data-cmp-remove>✕ remove</button>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+          <button type="button" id="pkm-cmp-add" class="cmp-add">+ Add comparison row</button>
+        </div>
+      </section>
+
+      <div class="vob-footer">
+        <button type="button" id="pkm-prev" class="btn btn-default">← Previous</button>
+        <div class="right">
+          <% if (!alreadySubmitted) { %>
+            <button type="submit" name="action" value="save_draft" class="btn btn-default">💾 Save as Draft</button>
+            <button type="button" id="pkm-next" class="btn btn-default">Next →</button>
+            <button type="submit" name="action" value="submit" class="btn btn-primary">Submit Packaging Materials</button>
+          <% } else { %>
+            <a href="/products/workflow/<%= pr.id %>/confirmation" class="btn btn-primary">View confirmation →</a>
+          <% } %>
+        </div>
+      </div>
+      </fieldset>
+    </form>
+  </div>
+</main>
+
+<script>
+(function () {
+  // ---- tabs ----
+  var TABS = ['materials','incoterms','cost','volume','extras'];
+  var current = 0;
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) { p.classList.toggle('active', p.dataset.pane === TABS[current]); });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === TABS[current]); });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) { btn.addEventListener('click', function () { show(TABS.indexOf(btn.dataset.tab)); }); });
+  document.getElementById('pkm-prev').addEventListener('click', function () { show(current - 1); });
+  if (document.getElementById('pkm-next')) document.getElementById('pkm-next').addEventListener('click', function () { show(current + 1); });
+
+  // ---- sub-tabs (Cost / Volume) ----
+  document.querySelectorAll('[data-pkm-sub]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var key = btn.dataset.pkmSub;
+      var group = btn.parentElement;
+      group.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      var card = btn.closest('.vob-card');
+      card.querySelectorAll('[data-pkm-sub-pane]').forEach(function (p) {
+        p.classList.toggle('active', p.dataset.pkmSubPane === key);
+      });
+    });
+  });
+
+  // ---- counter ----
+  function updateCompletion() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var countEl = btn.querySelector('.vob-count');
+      var required = Array.prototype.slice.call(pane.querySelectorAll('[required]'));
+      var nameGroups = {}, nonGroup = [];
+      required.forEach(function (el) {
+        if ((el.type === 'radio' || el.type === 'checkbox') && el.name) (nameGroups[el.name] = nameGroups[el.name] || []).push(el);
+        else nonGroup.push(el);
+      });
+      var total = nonGroup.length + Object.keys(nameGroups).length;
+      var done = 0;
+      nonGroup.forEach(function (el) { if ((el.value || '').trim() !== '') done++; });
+      Object.keys(nameGroups).forEach(function (name) {
+        var siblings = pane.querySelectorAll('[name="' + name.replace(/"/g, '\\"') + '"]');
+        for (var i = 0; i < siblings.length; i++) if (siblings[i].checked) { done++; break; }
+      });
+      if (total === 0) { countEl.style.display='none'; btn.classList.remove('done'); }
+      else { countEl.style.display=''; countEl.textContent = done + '/' + total; btn.classList.toggle('done', done === total); }
+    });
+  }
+  var form = document.getElementById('pkm-form');
+  form.addEventListener('input', updateCompletion);
+  form.addEventListener('change', updateCompletion);
+
+  // ---- component / incoterm row toggle ----
+  document.querySelectorAll('[data-pkm-row]').forEach(function (row) {
+    var cb = row.querySelector('[data-pkm-toggle]');
+    cb.addEventListener('change', function () { row.classList.toggle('open', cb.checked); });
+  });
+
+  // ---- Y1 / Y5 totals (Updated) ----
+  (function () {
+    function num(v) { var n = parseFloat(v); return Number.isFinite(n) ? n : 0; }
+    function recompute() {
+      var y1 = 0;
+      document.querySelectorAll('input[data-pkm-y1]').forEach(function (el) { y1 += num(el.value); });
+      var y1El = document.getElementById('pkm-total-y1');
+      if (y1El) y1El.value = y1 || '';
+      var rest = 0;
+      document.querySelectorAll('input[data-pkm-yN]').forEach(function (el) { rest += num(el.value); });
+      var y5El = document.getElementById('pkm-total-y5');
+      if (y5El) y5El.value = (y1 + rest) || '';
+    }
+    document.querySelectorAll('input[data-pkm-y1], input[data-pkm-yN]').forEach(function (el) { el.addEventListener('input', recompute); });
+    recompute();
+  })();
+
+  // ---- comparison rows: search + add/remove ----
+  function attachCmpRow(row) {
+    var input    = row.querySelector('.cmp-search-input');
+    var resultsE = row.querySelector('.cmp-results');
+    var skuHidden  = row.querySelector('input[name="pkm_cmp_sku"]');
+    var nameHidden = row.querySelector('input[name="pkm_cmp_name"]');
+    var marketSel  = row.querySelector('[data-cmp-market]');
+    var ccyInput   = row.querySelector('[data-cmp-ccy]');
+
+    function escHtml(s) { return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) { return { '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;' }[c]; }); }
+
+    var debounce = null;
+    input.addEventListener('input', function () {
+      var q = input.value.trim();
+      clearTimeout(debounce);
+      if (!q) { resultsE.classList.remove('open'); resultsE.innerHTML = ''; return; }
+      debounce = setTimeout(function () { runSearch(q); }, 180);
+    });
+    document.addEventListener('click', function (e) {
+      if (!resultsE.contains(e.target) && e.target !== input) { resultsE.classList.remove('open'); }
+    });
+
+    async function runSearch(q) {
+      try {
+        var resp = await fetch('/products/workflow/api/reference-search?q=' + encodeURIComponent(q));
+        var data = await resp.json();
+        if (!data.results || !data.results.length) {
+          resultsE.innerHTML = '<div class="cmp-row-result" style="color:#6b7280">No matches</div>';
+          resultsE.classList.add('open');
+          return;
+        }
+        resultsE.innerHTML = data.results.map(function (r) {
+          return '<div class="cmp-row-result" data-sku="' + escHtml(r.sku) + '" data-name="' + escHtml(r.name) + '">' +
+                 '<strong>' + escHtml(r.name) + '</strong>' +
+                 '<div style="font-family:monospace; font-size:11px; color:#6b7280;">' + escHtml(r.sku) + '</div></div>';
+        }).join('');
+        resultsE.classList.add('open');
+        Array.from(resultsE.querySelectorAll('.cmp-row-result[data-sku]')).forEach(function (rr) {
+          rr.addEventListener('click', function () {
+            input.value      = rr.dataset.name + ' (' + rr.dataset.sku + ')';
+            skuHidden.value  = rr.dataset.sku;
+            nameHidden.value = rr.dataset.name;
+            resultsE.classList.remove('open');
+          });
+        });
+      } catch (e) { resultsE.classList.remove('open'); }
+    }
+
+    marketSel.addEventListener('change', function () {
+      var opt = marketSel.options[marketSel.selectedIndex];
+      var ccy = opt && opt.dataset && opt.dataset.currency;
+      if (ccy && !ccyInput.value) ccyInput.value = ccy;
+    });
+
+    var rmBtn = row.querySelector('[data-cmp-remove]');
+    if (rmBtn) rmBtn.addEventListener('click', function () {
+      if (document.querySelectorAll('#pkm-cmp-rows .cmp-row').length > 1) row.remove();
+    });
+  }
+  document.querySelectorAll('#pkm-cmp-rows .cmp-row').forEach(attachCmpRow);
+  document.getElementById('pkm-cmp-add').addEventListener('click', function () {
+    var first = document.querySelector('#pkm-cmp-rows .cmp-row');
+    var clone = first.cloneNode(true);
+    clone.querySelectorAll('input').forEach(function (i) { if (i.type !== 'hidden') i.value = ''; else i.value = ''; });
+    var sel = clone.querySelector('select'); if (sel) sel.selectedIndex = 0;
+    document.getElementById('pkm-cmp-rows').appendChild(clone);
+    attachCmpRow(clone);
+  });
+
+  updateCompletion();
+})();
+</script>
+</div>
+</body></html>

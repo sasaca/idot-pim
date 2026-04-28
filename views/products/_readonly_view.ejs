@@ -21,6 +21,13 @@ var prodPkg  = (pr.production && pr.production.packaging) || {};
 var prodFrm  = (pr.production && pr.production.formula)   || {};
 var cmp      = pr.competitor || {};
 var atts     = (typeof attachments !== 'undefined' && attachments) ? attachments : [];
+var pkm      = pr.packaging || {};
+var pkmMat   = pkm.materials      || {};
+var pkmComps = pkm.components     || [];
+var pkmInco  = pkm.incoterms      || [];
+var pkmCost  = pkm.cost_updated   || {};
+var pkmVol   = pkm.volume_updated || {};
+var pkmComp  = pkm.comparisons    || [];
 
 function show(v, fallback) {
   if (v === null || v === undefined || v === '' ) return fallback || '—';
@@ -255,6 +262,124 @@ function fmt(n) {
           </li>
         <% }); %>
       </ul>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (pr.packaging_completed_at || pkmMat.material_type) { %>
+  <!-- 5b) Packaging Materials (R&D) -->
+  <div class="ro-card">
+    <h2>5b · Packaging Materials (R&amp;D)
+      <% if (pr.packaging_completed_at) { %>
+        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.packaging_completed_at %></span>
+      <% } else { %>
+        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
+      <% } %>
+    </h2>
+    <h3>Materials</h3>
+    <div class="ro-grid cols-3">
+      <div class="ro-row"><span class="ro-label">Status</span><span class="ro-value"><%= show(pkmMat.status) %></span></div>
+      <div class="ro-row"><span class="ro-label">Material type</span><span class="ro-value"><%= show(pkmMat.material_type) %></span></div>
+      <div class="ro-row"><span class="ro-label">Units per case</span><span class="ro-value"><%= show(pkmMat.units_per_case) %><% if (pkmMat.case_pack_label) { %> (<%= pkmMat.case_pack_label %>)<% } %></span></div>
+      <div class="ro-row"><span class="ro-label">Height × Width</span><span class="ro-value"><%= fmt(pkmMat.height) %> × <%= fmt(pkmMat.width) %> <%= pkmMat.dim_unit || '' %></span></div>
+      <div class="ro-row"><span class="ro-label">Volume</span><span class="ro-value"><%= fmt(pkmMat.volume) %> <%= pkmMat.volume_unit || '' %></span></div>
+    </div>
+    <% if (pkmMat.description) { %>
+      <div class="ro-row full"><span class="ro-label">Description</span><span class="ro-value"><%= pkmMat.description %></span></div>
+    <% } %>
+
+    <% if (pkmComps.length) { %>
+      <h3>Components</h3>
+      <table class="ro-fc-table">
+        <thead><tr><th>Component</th><th>Status</th><th>Description</th></tr></thead>
+        <tbody>
+          <% pkmComps.forEach(function (c) { %>
+            <tr>
+              <td style="text-align:left;"><%= c.code %></td>
+              <td><%= c.status %></td>
+              <td style="text-align:left;"><%= c.description || '—' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+
+    <% if (pkmInco.length) { %>
+      <h3>Incoterms</h3>
+      <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
+        <% pkmInco.forEach(function (i) { %>
+          <li><strong><%= i.code %></strong><% if (i.description) { %> — <em><%= i.description %></em><% } %></li>
+        <% }); %>
+      </ul>
+    <% } %>
+
+    <h3>Updated cost &amp; price</h3>
+    <div class="ro-grid cols-3">
+      <div class="ro-row"><span class="ro-label">Cost (Local)</span><span class="ro-value"><%= fmt(pkmCost.cost_local) %> <%= pkmCost.cost_local_ccy || '' %></span></div>
+      <div class="ro-row"><span class="ro-label">Cost (USD)</span> <span class="ro-value"><%= fmt(pkmCost.cost_usd) %> USD</span></div>
+      <div class="ro-row"></div>
+      <div class="ro-row"><span class="ro-label">Shelf (Local)</span><span class="ro-value"><%= fmt(pkmCost.shelf_local) %> <%= pkmCost.shelf_local_ccy || '' %></span></div>
+      <div class="ro-row"><span class="ro-label">Shelf (USD)</span> <span class="ro-value"><%= fmt(pkmCost.shelf_usd) %> USD</span></div>
+    </div>
+
+    <% if (pkmVol.total_y1 != null || pkmVol.total_y5 != null) { %>
+      <h3>Updated volumes (cases)</h3>
+      <table class="ro-fc-table">
+        <thead><tr><th>Period</th>
+          <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %><th><%= m %></th><% }); %>
+          <th>Total</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Year 1</strong></td>
+            <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
+              <td><%= fmt(pkmVol['y1_' + m]) %></td>
+            <% }); %>
+            <td class="ro-total"><%= fmt(pkmVol.total_y1) %></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="ro-grid cols-4" style="margin-top:8px;">
+        <div class="ro-row"><span class="ro-label">Year 2</span><span class="ro-value"><%= fmt(pkmVol.y2) %></span></div>
+        <div class="ro-row"><span class="ro-label">Year 3</span><span class="ro-value"><%= fmt(pkmVol.y3) %></span></div>
+        <div class="ro-row"><span class="ro-label">Year 4</span><span class="ro-value"><%= fmt(pkmVol.y4) %></span></div>
+        <div class="ro-row"><span class="ro-label">Year 5</span><span class="ro-value"><%= fmt(pkmVol.y5) %></span></div>
+        <div class="ro-row full"><span class="ro-label">5-Year Total</span><span class="ro-value"><strong style="font-size:15px;color:#1e3a8a;"><%= fmt(pkmVol.total_y5) %></strong></span></div>
+      </div>
+    <% } %>
+
+    <% if (pkm.inventory_agreement || pkm.rationale_price || pkm.rationale_volume) { %>
+      <h3>Inventory &amp; rationale</h3>
+      <% if (pkm.inventory_agreement) { %>
+        <div class="ro-row full"><span class="ro-label">Inventory agreement</span><span class="ro-value"><%= pkm.inventory_agreement %></span></div>
+      <% } %>
+      <% if (pkm.rationale_price) { %>
+        <div class="ro-row full"><span class="ro-label">Rationale — price</span><span class="ro-value"><%= pkm.rationale_price %></span></div>
+      <% } %>
+      <% if (pkm.rationale_volume) { %>
+        <div class="ro-row full"><span class="ro-label">Rationale — volume</span><span class="ro-value"><%= pkm.rationale_volume %></span></div>
+      <% } %>
+    <% } %>
+
+    <% if (pkmComp.length) { %>
+      <h3>Cross-market comparisons</h3>
+      <table class="ro-fc-table">
+        <thead><tr><th>SKU</th><th>Product</th><th>Market</th><th>Shelf (local)</th><th>CCY</th><th>Shelf (USD)</th></tr></thead>
+        <tbody>
+          <% pkmComp.forEach(function (c) {
+               var marketRow = (ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === c.market; });
+          %>
+            <tr>
+              <td style="text-align:left;"><%= show(c.sku) %></td>
+              <td style="text-align:left;"><%= show(c.name) %></td>
+              <td style="text-align:left;"><%= marketRow ? marketRow.name : (c.market || '—') %></td>
+              <td><%= fmt(c.shelf_local) %></td>
+              <td><%= show(c.shelf_local_ccy) %></td>
+              <td><%= fmt(c.shelf_usd) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
     <% } %>
   </div>
 <% } %>

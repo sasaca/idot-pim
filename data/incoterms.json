@@ -1,0 +1,13 @@
+[
+  { "code": "EXW", "label": "EXW — Ex Works" },
+  { "code": "FCA", "label": "FCA — Free Carrier" },
+  { "code": "FAS", "label": "FAS — Free Alongside Ship" },
+  { "code": "FOB", "label": "FOB — Free On Board" },
+  { "code": "CFR", "label": "CFR — Cost and Freight" },
+  { "code": "CIF", "label": "CIF — Cost, Insurance & Freight" },
+  { "code": "CPT", "label": "CPT — Carriage Paid To" },
+  { "code": "CIP", "label": "CIP — Carriage and Insurance Paid To" },
+  { "code": "DPU", "label": "DPU — Delivered at Place Unloaded" },
+  { "code": "DAP", "label": "DAP — Delivered at Place" },
+  { "code": "DDP", "label": "DDP — Delivered Duty Paid" }
+]

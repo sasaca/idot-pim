@@ -52,6 +52,9 @@ const LEGAL_CERTIFICATES     = loadJson('legal_certificates.json');
 const DISTRIBUTION_CHANNELS  = loadJson('distribution_channels.json');
 const TARGET_AGE_GROUPS      = loadJson('target_age_groups.json');
 const POSITIONING_TIERS      = loadJson('positioning_tiers.json');
+const PACKAGING_MATERIALS    = loadJson('packaging_materials.json');
+const PACKAGING_COMPONENTS   = loadJson('packaging_components.json');
+const INCOTERMS              = loadJson('incoterms.json');
 
 // Bundle reference data for views.
 function refData() {
@@ -67,6 +70,9 @@ function refData() {
     DISTRIBUTION_CHANNELS,
     TARGET_AGE_GROUPS,
     POSITIONING_TIERS,
+    PACKAGING_MATERIALS,
+    PACKAGING_COMPONENTS,
+    INCOTERMS,
     REJECT_REASONS: productWorkflow.REJECT_REASONS,
     INFO_REASONS:   productWorkflow.INFO_REASONS,
     STATE_LABELS:   productWorkflow.STATE_LABELS,
@@ -83,6 +89,7 @@ function decode(req) {
     forecast:         safeJson(req.forecast_json),
     referenceProduct: safeJson(req.reference_product_json),
     production:       safeJson(req.production_json),
+    packaging:        safeJson(req.packaging_json),
     competitor:       safeJson(req.competitor_json),
   });
 }
@@ -394,10 +401,11 @@ module.exports = function makeRouter(db) {
       }
 
       if (action === 'submit') {
-        const competitorDone = !!res.locals.productRequest.competitor_completed_at;
-        const transitionAction = competitorDone ? 'submit_production_final' : 'submit_production_partial';
+        // Production submit never confirms on its own — it always passes the
+        // baton to R&D's Packaging Materials form. The route handler for
+        // /packaging is what eventually closes R&D's track.
         const cur = res.locals.productRequest.workflow_state;
-        const result = productWorkflow.transition(cur, transitionAction);
+        const result = productWorkflow.transition(cur, 'submit_production');
         const tx = db.transaction(() => {
           db.prepare(`
             UPDATE product_requests
@@ -407,7 +415,7 @@ module.exports = function makeRouter(db) {
           applyTransition(reqId, result, u.id, u.role || 'RND_TEAM', null, b.note || null);
         });
         tx();
-        return res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+        return res.redirect(`/products/workflow/${reqId}/packaging`);
       }
 
       res.redirect(`/products/workflow/${reqId}/production`);
@@ -447,8 +455,13 @@ module.exports = function makeRouter(db) {
       `).run(JSON.stringify(competitor), now, reqId);
 
       if (action === 'submit') {
-        const productionDone = !!res.locals.productRequest.production_completed_at;
-        const transitionAction = productionDone ? 'submit_competitor_final' : 'submit_competitor_partial';
+        // Competitor submit confirms only when BOTH R&D forms (production
+        // and packaging) are already complete; otherwise the request stays
+        // in PENDING_PRODUCTION_AND_ANALYSIS until R&D finishes.
+        const rndDone =
+          !!res.locals.productRequest.production_completed_at &&
+          !!res.locals.productRequest.packaging_completed_at;
+        const transitionAction = rndDone ? 'submit_competitor_final' : 'submit_competitor_partial';
         const cur = res.locals.productRequest.workflow_state;
         const result = productWorkflow.transition(cur, transitionAction);
         const tx = db.transaction(() => {
@@ -464,6 +477,71 @@ module.exports = function makeRouter(db) {
       }
 
       res.redirect(`/products/workflow/${reqId}/competitor`);
+    });
+
+  // -------------------------------------------------------------------------
+  // Stage 5b — Packaging Materials (R&D, follows Production sequentially).
+  // Gated to RND_TEAM AND to production_completed_at being set.
+  // -------------------------------------------------------------------------
+  router.get('/:id/packaging',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS, productWorkflow.STATES.CONFIRMED),
+    (req, res) => {
+      const pr = res.locals.productRequest;
+      if (!pr.production_completed_at) {
+        return res.redirect(`/products/workflow/${pr.id}/production`);
+      }
+      const decoded = decode(pr);
+      res.render('products/workflow_packaging', {
+        ref: refData(),
+        productRequest: decoded,
+        history: loadHistory(decoded.id),
+        comments: loadComments(decoded.id),
+      });
+    });
+
+  router.post('/:id/packaging',
+    requireRole(productWorkflow.ROLES.RND_TEAM),
+    loadProductRequest(db),
+    requireState(productWorkflow.STATES.PENDING_PRODUCTION_AND_ANALYSIS),
+    (req, res) => {
+      const pr = res.locals.productRequest;
+      if (!pr.production_completed_at) {
+        return res.redirect(`/products/workflow/${pr.id}/production`);
+      }
+      const b = req.body || {};
+      const u = res.locals.currentUser || {};
+      const reqId = pr.id;
+      const action = String(b.action || 'save_draft');
+      const packaging = pickPackaging(b);
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE product_requests SET packaging_json = ?, updated_at = ? WHERE id = ?
+      `).run(JSON.stringify(packaging), now, reqId);
+
+      if (action === 'submit') {
+        // Packaging confirms only if Marketing's competitor analysis has
+        // already closed too — otherwise we just stay in the same state and
+        // wait on Marketing.
+        const competitorDone = !!pr.competitor_completed_at;
+        const transitionAction = competitorDone ? 'submit_packaging_final' : 'submit_packaging_partial';
+        const cur = pr.workflow_state;
+        const result = productWorkflow.transition(cur, transitionAction);
+        const tx = db.transaction(() => {
+          db.prepare(`
+            UPDATE product_requests
+               SET packaging_completed_at = ?, packaging_completed_by = ?
+             WHERE id = ?
+          `).run(now, u.id || null, reqId);
+          applyTransition(reqId, result, u.id, u.role || 'RND_TEAM', null, b.note || null);
+        });
+        tx();
+        return res.redirect(`/products/workflow/${reqId}/confirmation?from=${transitionAction}`);
+      }
+
+      res.redirect(`/products/workflow/${reqId}/packaging`);
     });
 
   // -------------------------------------------------------------------------
@@ -530,7 +608,9 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       states = ['PENDING_SC_DIRECTOR'];
     } else if (roles.includes('RND_TEAM')) {
       states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
-      extraWhere = ' AND production_completed_at IS NULL';
+      // R&D's track has TWO sequential forms — show anything where either
+      // production OR packaging is still incomplete.
+      extraWhere = ' AND (production_completed_at IS NULL OR packaging_completed_at IS NULL)';
     } else if (roles.includes('MARKETING_TEAM')) {
       states = ['PENDING_PRODUCTION_AND_ANALYSIS'];
       extraWhere = ' AND competitor_completed_at IS NULL';
@@ -682,6 +762,91 @@ function pickCertificateMeta(b) {
       comment: (b['cert_comment_' + code] || '').toString().trim(),
     }))
     .filter((c) => !!c.code);
+}
+
+// ---------- Stage 5b — Packaging Materials (R&D) ---------------------------
+
+function pickPackaging(b) {
+  // Components ship as:
+  //   pkm_component_selected[] = ['CAP','LABEL', ...]           (multi-select)
+  //   pkm_component_status_<CODE>  = 'NEW' | 'EXISTING' | 'MODIFICATION'
+  //   pkm_component_description_<CODE> = textarea
+  const codes = [].concat(b.pkm_component_selected || []);
+  const components = codes.map((code) => ({
+    code,
+    status:      b['pkm_component_status_'      + code] || '',
+    description: b['pkm_component_description_' + code] || '',
+  })).filter((c) => !!c.code);
+
+  // Incoterms: each selected term carries a description.
+  const incotermCodes = [].concat(b.pkm_incoterm_selected || []);
+  const incoterms = incotermCodes.map((code) => ({
+    code,
+    description: b['pkm_incoterm_description_' + code] || '',
+  })).filter((c) => !!c.code);
+
+  // Updated forecast volumes (mirrors pickForecast).
+  const volumeUpdated = {};
+  ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach((m) => {
+    volumeUpdated[`y1_${m}`] = num(b[`pkm_vol_y1_${m}`]);
+  });
+  for (let y = 2; y <= 5; y++) volumeUpdated[`y${y}`] = num(b[`pkm_vol_y${y}`]);
+  const y1Total = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+    .reduce((s, m) => s + (volumeUpdated[`y1_${m}`] || 0), 0);
+  volumeUpdated.total_y1 = y1Total;
+  volumeUpdated.total_y5 = y1Total
+    + (volumeUpdated.y2 || 0) + (volumeUpdated.y3 || 0)
+    + (volumeUpdated.y4 || 0) + (volumeUpdated.y5 || 0);
+
+  // Comparison rows: similar products in other markets.
+  const cmpSku    = [].concat(b.pkm_cmp_sku    || []);
+  const cmpName   = [].concat(b.pkm_cmp_name   || []);
+  const cmpMarket = [].concat(b.pkm_cmp_market || []);
+  const cmpCcy    = [].concat(b.pkm_cmp_shelf_local_ccy || []);
+  const cmpLocal  = [].concat(b.pkm_cmp_shelf_local || []);
+  const cmpUsd    = [].concat(b.pkm_cmp_shelf_usd   || []);
+  const comparisons = [];
+  for (let i = 0; i < Math.max(cmpSku.length, cmpName.length, cmpMarket.length); i++) {
+    if (!cmpSku[i] && !cmpName[i] && !cmpMarket[i]) continue;
+    comparisons.push({
+      sku:              cmpSku[i]    || '',
+      name:             cmpName[i]   || '',
+      market:           cmpMarket[i] || '',
+      shelf_local:      num(cmpLocal[i]),
+      shelf_local_ccy:  cmpCcy[i]    || '',
+      shelf_usd:        num(cmpUsd[i]),
+    });
+  }
+
+  return {
+    materials: {
+      status:         b.pkm_status        || '',   // EXISTING | NEW | MODIFICATION
+      material_type:  b.pkm_material_type || '',
+      height:         num(b.pkm_height),
+      width:          num(b.pkm_width),
+      volume:         num(b.pkm_volume),
+      dim_unit:       b.pkm_dim_unit      || '',
+      volume_unit:    b.pkm_volume_unit   || '',
+      description:    b.pkm_description   || '',
+      units_per_case: num(b.pkm_units_per_case),
+      case_pack_label:b.pkm_case_pack_label || '',  // free text e.g. "12-pack"
+    },
+    components,
+    incoterms,
+    cost_updated: {
+      cost_local:        num(b.pkm_cost_local),
+      cost_local_ccy:    b.pkm_cost_local_ccy   || '',
+      cost_usd:          num(b.pkm_cost_usd),
+      shelf_local:       num(b.pkm_shelf_local),
+      shelf_local_ccy:   b.pkm_shelf_local_ccy  || '',
+      shelf_usd:         num(b.pkm_shelf_usd),
+    },
+    volume_updated: volumeUpdated,
+    rationale_price:    b.pkm_rationale_price  || '',
+    rationale_volume:   b.pkm_rationale_volume || '',
+    inventory_agreement: b.pkm_inventory_agreement || '',
+    comparisons,
+  };
 }
 
 // ---------- Stage 6 — Competitor Analysis (Marketing) ----------------------

@@ -16,9 +16,10 @@
       sc_approve:                   'Supply Chain Director approved — Production & Competitor Analysis are now open',
       sc_reject:                    'Supply Chain Director rejection recorded',
       sc_request_info:              'Sent back to the requestor for more information',
-      submit_production_partial:    'Production submitted by R&D — waiting on Marketing competitor analysis',
-      submit_production_final:      'Production submitted by R&D — request confirmed',
-      submit_competitor_partial:    'Competitor analysis submitted — waiting on R&D production',
+      submit_production:            'Production submitted by R&D — Packaging Materials is now open',
+      submit_packaging_partial:     'Packaging Materials submitted by R&D — waiting on Marketing competitor analysis',
+      submit_packaging_final:       'Packaging Materials submitted by R&D — request confirmed',
+      submit_competitor_partial:    'Competitor analysis submitted — waiting on R&D',
       submit_competitor_final:      'Competitor analysis submitted — request confirmed',
     }[fromAction];
   %>
@@ -75,22 +76,24 @@
         This request is currently at stage <strong><%= stateLabel %></strong>.
       </p>
       <% if (productRequest.workflow_state === 'PENDING_PRODUCTION_AND_ANALYSIS') { %>
-        <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
           <div class="rounded border <%= productRequest.production_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
             <strong>Production (R&amp;D)</strong>
             <% if (productRequest.production_completed_at) { %>
               · ✓ submitted <%= productRequest.production_completed_at %>
-            <% } else { %>
-              · pending
-            <% } %>
+            <% } else { %>· pending<% } %>
+          </div>
+          <div class="rounded border <%= productRequest.packaging_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
+            <strong>Packaging Materials (R&amp;D)</strong>
+            <% if (productRequest.packaging_completed_at) { %>
+              · ✓ submitted <%= productRequest.packaging_completed_at %>
+            <% } else if (productRequest.production_completed_at) { %>· in progress<% } else { %>· waiting on Production<% } %>
           </div>
           <div class="rounded border <%= productRequest.competitor_completed_at ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' %> p-3">
             <strong>Competitor Analysis (Marketing)</strong>
             <% if (productRequest.competitor_completed_at) { %>
               · ✓ submitted <%= productRequest.competitor_completed_at %>
-            <% } else { %>
-              · pending
-            <% } %>
+            <% } else { %>· pending<% } %>
           </div>
         </div>
       <% } %>

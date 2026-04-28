@@ -1,0 +1,19 @@
+[
+  { "code": "PRIMARY_CONTAINER", "label": "Primary container (bottle / jar / can / pouch)" },
+  { "code": "CAP",               "label": "Cap / Closure" },
+  { "code": "LID",               "label": "Lid (foil / heat-seal / snap)" },
+  { "code": "LABEL",             "label": "Label" },
+  { "code": "NECK_BAND",         "label": "Neck band / shrink sleeve" },
+  { "code": "TAMPER_SEAL",       "label": "Tamper-evident seal" },
+  { "code": "STRAW",             "label": "Straw" },
+  { "code": "INSERT_LINER",      "label": "Insert / liner" },
+  { "code": "TRAY",              "label": "Tray" },
+  { "code": "DIVIDER",           "label": "Divider / separator" },
+  { "code": "MULTIPACK_WRAP",    "label": "Multipack wrap (shrink-wrap)" },
+  { "code": "OUTER_CARTON",      "label": "Outer / master carton" },
+  { "code": "BOX",               "label": "Display / retail box" },
+  { "code": "BAG_POUCH",         "label": "Bag / pouch (secondary)" },
+  { "code": "ZIPPER",            "label": "Zipper / resealable closure" },
+  { "code": "PALLET",            "label": "Pallet" },
+  { "code": "STRETCH_WRAP",      "label": "Stretch / pallet wrap" }
+]
