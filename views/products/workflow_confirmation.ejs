@@ -1,0 +1,77 @@
+<%- include('../partials/head', { pageTitle: 'Product Request — Confirmation' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Product Request', topSub: 'Final state and audit trail.' }) %>
+
+<main class="mx-auto max-w-5xl px-4 py-8">
+  <%- include('_workflow_shared', { productRequest: productRequest, stateLabel: stateLabel, history: history, comments: comments }) %>
+
+  <%
+    var fromAction = (typeof query !== 'undefined' && query && query.from) ? String(query.from) : '';
+    var actionLabel = {
+      submit_details:    'Submitted for Marketing Director approval',
+      mktg_approve:      'Marketing Director approval recorded',
+      mktg_reject:       'Marketing Director rejection recorded',
+      mktg_request_info: 'Sent back to the requestor for more information',
+      sc_approve:        'Supply Chain Director approval recorded — request confirmed',
+      sc_reject:         'Supply Chain Director rejection recorded',
+      sc_request_info:   'Sent back to the requestor for more information',
+    }[fromAction];
+  %>
+
+  <% if (productRequest.workflow_state === 'CONFIRMED') { %>
+    <section class="rounded-lg border border-green-200 bg-green-50 p-8 text-center shadow-sm">
+      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+        <svg viewBox="0 0 20 20" fill="#16a34a" class="h-8 w-8">
+          <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 111.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z" clip-rule="evenodd"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-semibold text-green-900">Product request confirmed</h2>
+      <p class="mt-2 text-green-800">
+        <strong><%= productRequest.product_name %></strong> has been approved by both
+        Marketing and Supply Chain Directors. The payload is now ready to be
+        sent to SAP S/4HANA for material master creation.
+      </p>
+      <div class="mt-6 flex justify-center gap-3">
+        <a href="/products/workflow/queue" class="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Back to queue</a>
+      </div>
+    </section>
+  <% } else if (productRequest.workflow_state === 'REJECTED') { %>
+    <section class="rounded-lg border border-red-200 bg-red-50 p-8 shadow-sm">
+      <h2 class="text-xl font-semibold text-red-900">Request rejected</h2>
+      <p class="mt-2 text-sm text-red-800">
+        This request was rejected. A new request must be started to try again.
+        Review the comments above for the reason.
+      </p>
+      <div class="mt-6">
+        <a href="/products/workflow/new" class="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Start a new request</a>
+      </div>
+    </section>
+  <% } else if (fromAction && actionLabel) { %>
+    <section class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+      <div class="flex items-start gap-3">
+        <span class="text-emerald-600 text-2xl">✓</span>
+        <div class="flex-1">
+          <h2 class="text-lg font-semibold text-emerald-900"><%= actionLabel %></h2>
+          <p class="mt-1 text-sm text-emerald-800">
+            <strong><%= productRequest.product_name || ('Request #' + productRequest.id) %></strong>
+            is now at stage
+            <span class="ml-1 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"><%= stateLabel %></span>.
+          </p>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a href="/products/workflow/queue" class="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Queue</a>
+      </div>
+    </section>
+  <% } else { %>
+    <section class="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+      <h2 class="text-lg font-semibold text-gray-900">Workflow in progress</h2>
+      <p class="mt-2 text-sm text-gray-600">
+        This request is currently at stage <strong><%= stateLabel %></strong>.
+      </p>
+    </section>
+  <% } %>
+</main>
+</div>
+</body></html>

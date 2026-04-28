@@ -1,0 +1,650 @@
+<%
+/*
+  views/products/new_details.ejs
+  ---------------------------------------------------------------------------
+  Stage 2 — multi-tab detail form for the product creation workflow.
+
+  Tabs:
+    1. Marketing
+    2. Brand
+    3. R&D
+    4. Forecast
+
+  Field names map to SAP S/4HANA Product Master columns (material_type,
+  base_uom, gross_weight, net_weight, dim_*, volume*, ean_upc, country_of_origin,
+  …) so the eventual outbound integration to SAP can map cleanly. The four
+  tabs are persisted as four JSON columns on product_requests; the route
+  handler decodes them on each render.
+*/
+%>
+<%- include('../partials/head', { pageTitle: 'New Product Request — Details' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'New Product Request', topSub: 'Stage 2 — provide marketing, brand, R&D, and forecast detail' }) %>
+
+<style>
+  .vob-nav { display:flex; flex-wrap:nowrap; gap:2px; padding:0 6px; margin:0 0 -1px 0; position:relative; z-index:2; overflow-x:auto; }
+  .vob-nav button { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; margin:0; border:1px solid #e5e7eb; border-radius:8px 8px 0 0; background:#f3f4f6; color:#4b5563; font-size:13px; cursor:pointer; white-space:nowrap; position:relative; }
+  .vob-nav button:hover { background:#e5e7eb; }
+  .vob-nav button.active { background:#fff; color:#111827; font-weight:600; border-bottom-color:#fff; z-index:3; }
+  .vob-nav .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:#e5e7eb; color:#374151; font-size:12px; font-weight:600; }
+  .vob-nav button.active .num { background:#1e3a8a; color:#fff; }
+  .vob-nav .vob-count { display:inline-block; padding:1px 7px; font-size:11px; border-radius:9999px; background:#d1d5db; color:#374151; font-weight:600; }
+  .vob-nav button.active .vob-count { background:#e5e7eb; color:#111827; }
+  .vob-nav button.done { background:#10b981; color:#fff; border-color:#10b981; }
+  .vob-nav button.done .num, .vob-nav button.done .vob-count { background:rgba(255,255,255,.35); color:#fff; }
+  .vob-nav button.done.active { border-bottom-color:#10b981; }
+
+  .vob-card { background:#fff; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; padding:24px; box-shadow:0 1px 2px rgba(0,0,0,.04); position:relative; z-index:1; }
+  .vob-card h2 { font-size:18px; font-weight:600; color:#111827; margin:0 0 4px; }
+  .vob-card .indicates-required { color:#dc2626; font-size:12px; margin-bottom:14px; }
+  .vob-card .section-title { font-size:15px; font-weight:600; color:#111827; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:18px 0 12px; }
+
+  .vob-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  .vob-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+  .vob-grid.cols-4 { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+  @media (max-width:700px) { .vob-grid, .vob-grid.cols-3, .vob-grid.cols-4 { grid-template-columns:1fr; } }
+
+  .vob-field label { display:block; font-size:13px; font-weight:500; color:#374151; margin-bottom:4px; }
+  .vob-field label .req { color:#dc2626; margin-right:3px; }
+  .vob-field input[type=text], .vob-field input[type=number], .vob-field input[type=date], .vob-field select, .vob-field textarea { width:100%; padding:8px 10px; font-size:14px; border:1px solid #d1d5db; border-radius:6px; background:#fff; box-sizing:border-box; }
+  .vob-field input:focus, .vob-field select:focus, .vob-field textarea:focus { outline:2px solid #2563eb; outline-offset:-1px; border-color:#2563eb; }
+  .vob-field textarea { min-height:90px; resize:vertical; }
+  .vob-field.full { grid-column:1 / -1; }
+
+  .radio-group { display:flex; flex-wrap:wrap; gap:10px 16px; padding:6px 0 2px; }
+  .radio-group label { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; font-size:14px; font-weight:400; color:#374151; border:1px solid #d1d5db; border-radius:999px; cursor:pointer; background:#fff; margin:0; user-select:none; }
+  .radio-group label:hover { background:#f3f4f6; }
+  .radio-group input[type=radio] { margin:0; accent-color:#1e3a8a; }
+  .radio-group label:has(input:checked) { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+
+  .vob-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid #e5e7eb; }
+  .vob-footer .right { display:flex; gap:8px; }
+  .btn { padding:8px 16px; font-size:14px; font-weight:500; border-radius:6px; border:none; cursor:pointer; }
+  .btn-default { background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .btn-default:hover { background:#f9fafb; }
+  .btn-primary { background:#1e3a8a; color:#fff; }
+  .btn-primary:hover { background:#1e40af; }
+
+  .vob-pane { display:none; }
+  .vob-pane.active { display:block; }
+
+  /* Forecast table */
+  .fc-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .fc-table th, .fc-table td { padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right; }
+  .fc-table th { background:#f9fafb; font-weight:600; color:#374151; text-align:center; }
+  .fc-table th:first-child, .fc-table td:first-child { text-align:left; }
+  .fc-table input { width:100%; padding:5px 7px; border:1px solid #d1d5db; border-radius:4px; text-align:right; font-size:13px; }
+  .fc-table .fc-total { background:#eff6ff; font-weight:600; color:#1e3a8a; }
+  .fc-table .fc-total input { background:#eff6ff; border-color:#bfdbfe; font-weight:600; color:#1e3a8a; }
+
+  /* FX widget */
+  .fx-row { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; padding:.5rem .75rem; background:#f9fafb; border:1px dashed #d1d5db; border-radius:.5rem; margin-top:.4rem; font-size:13px; }
+  .fx-row code { background:#fff; padding:1px 5px; border-radius:3px; border:1px solid #e5e7eb; }
+  .fx-status { font-size:12px; color:#6b7280; }
+
+  .ref-banner { background:#eff6ff; border:1px solid #bfdbfe; padding:.65rem .9rem; border-radius:.5rem; margin-bottom:1rem; font-size:13px; color:#1e3a8a; }
+  .ref-banner strong { color:#1e40af; }
+</style>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-4 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">New Product Request — Details</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        <strong><%= productRequest.product_name %></strong>
+        · <%= productRequest.request_type ? productRequest.request_type.replace(/_/g, ' ') : '' %>
+        · Request #<%= productRequest.id %>
+      </p>
+    </div>
+    <a href="/products/workflow/queue" class="text-sm text-blue-600 hover:underline">← Back to queue</a>
+  </div>
+
+  <% if (productRequest.referenceProduct && productRequest.referenceProduct.sku) { %>
+    <div class="ref-banner">
+      Using <strong><%= productRequest.referenceProduct.name %></strong>
+      (<%= productRequest.referenceProduct.sku %>) as a reference product.
+      Brand classification, dimensions, weights, EAN and BOM components have
+      been pre-filled where applicable — adjust as needed for the new
+      product / variation.
+    </div>
+  <% } %>
+
+  <% if (history && history.length) { %>
+    <%- include('_workflow_shared', { productRequest: productRequest, stateLabel: ref.STATE_LABELS[productRequest.workflow_state] || productRequest.workflow_state, history: history, comments: comments }) %>
+  <% } %>
+
+  <%
+    var ref = locals.ref;
+    var rp  = productRequest.referenceProduct || {};
+    var mk  = productRequest.marketing || {};
+    var br  = productRequest.brand     || {};
+    var rnd = productRequest.rnd       || {};
+    var fc  = productRequest.forecast  || {};
+    function v(obj, key, fallback) {
+      var x = obj && obj[key];
+      if (x === undefined || x === null || x === '') return (fallback === undefined ? '' : fallback);
+      return x;
+    }
+  %>
+
+  <div class="vob-shell">
+    <nav class="vob-nav">
+      <button type="button" class="vob-tab-btn active" data-tab="marketing"><span class="num">1</span><span class="vob-label">Marketing</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="brand"><span class="num">2</span><span class="vob-label">Brand</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="rnd"><span class="num">3</span><span class="vob-label">R&amp;D</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="forecast"><span class="num">4</span><span class="vob-label">Forecast</span><span class="vob-count"></span></button>
+    </nav>
+
+    <form id="pwf-form" method="post" action="/products/workflow/<%= productRequest.id %>/details">
+
+      <!-- ============================================== 1) Marketing -->
+      <section class="vob-pane active" data-pane="marketing">
+        <div class="vob-card">
+          <h2>Marketing</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <div class="section-title">Market &amp; Rationale</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Target Market</label>
+              <select name="mkt_market" required data-market-select>
+                <option value="">-- Select --</option>
+                <% ref.PRODUCT_MARKETS.forEach(function (m) { %>
+                  <option value="<%= m.code %>" data-currency="<%= m.currency %>" <%= (mk.market === m.code) ? 'selected' : '' %>>
+                    <%= m.name %> (<%= m.currency %>)
+                  </option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Rationale for product introduction</label>
+              <textarea name="mkt_rationale" required placeholder="Why is this product being introduced? Customer need, gap in portfolio, etc."><%= v(mk,'rationale') %></textarea>
+            </div>
+            <div class="vob-field full">
+              <label><span class="req">*</span>Competitor &amp; Market Positioning</label>
+              <textarea name="mkt_positioning" required placeholder="Key competitors, price tier, positioning strategy."><%= v(mk,'positioning') %></textarea>
+            </div>
+            <div class="vob-field full">
+              <label><span class="req">*</span>Launch Plan</label>
+              <textarea name="mkt_launch_plan" required placeholder="Channels, timing, marketing support, regions."><%= v(mk,'launch_plan') %></textarea>
+            </div>
+          </div>
+
+          <div class="section-title">Packaging &amp; Formula</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Packaging</label>
+              <div class="radio-group">
+                <label><input type="radio" name="mkt_packaging_status" value="NEW" required <%= (mk.packaging_status === 'NEW') ? 'checked' : '' %>>New</label>
+                <label><input type="radio" name="mkt_packaging_status" value="MODIFICATION" <%= (mk.packaging_status === 'MODIFICATION') ? 'checked' : '' %>>Modification of existing</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Formula</label>
+              <div class="radio-group">
+                <label><input type="radio" name="mkt_formula_status" value="NEW" required <%= (mk.formula_status === 'NEW') ? 'checked' : '' %>>New</label>
+                <label><input type="radio" name="mkt_formula_status" value="MODIFICATION" <%= (mk.formula_status === 'MODIFICATION') ? 'checked' : '' %>>Modification of existing</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== 2) Brand -->
+      <section class="vob-pane" data-pane="brand">
+        <div class="vob-card">
+          <h2>Brand</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <p class="text-sm text-gray-600 mb-2">
+            Pick the brand path top-down — each level filters the next.
+          </p>
+
+          <div class="vob-grid cols-3">
+            <div class="vob-field">
+              <label><span class="req">*</span>Category Grouper</label>
+              <select name="brand_category_grouper" required data-brand-l1>
+                <option value="">-- Select --</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Category</label>
+              <select name="brand_category" required data-brand-l2 disabled>
+                <option value="">-- Select category grouper first --</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Family Brand</label>
+              <select name="brand_family_brand" required data-brand-l3 disabled>
+                <option value="">-- Select category first --</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Brand</label>
+              <select name="brand_brand" required data-brand-l4 disabled>
+                <option value="">-- Select family brand first --</option>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Sub Brand</label>
+              <select name="brand_sub_brand" required data-brand-l5 disabled>
+                <option value="">-- Select brand first --</option>
+              </select>
+            </div>
+          </div>
+
+          <script id="brand-hierarchy-data" type="application/json"><%- JSON.stringify(ref.BRAND_HIERARCHY) %></script>
+          <script id="brand-initial" type="application/json"><%- JSON.stringify({
+            l1: br.category_grouper || rp.category_grouper || '',
+            l2: br.category         || rp.category         || '',
+            l3: br.family_brand     || rp.family_brand     || '',
+            l4: br.brand            || rp.brand            || '',
+            l5: br.sub_brand        || rp.sub_brand        || ''
+          }) %></script>
+        </div>
+      </section>
+
+      <!-- ============================================== 3) R&D -->
+      <section class="vob-pane" data-pane="rnd">
+        <div class="vob-card">
+          <h2>R&amp;D</h2>
+          <div class="indicates-required">* Indicates required</div>
+
+          <div class="section-title">SAP classification</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Material Type (SAP)</label>
+              <select name="rnd_material_type" required>
+                <option value="">-- Select --</option>
+                <% ref.SAP_MATERIAL_TYPES.forEach(function (mt) { %>
+                  <% var sel = (rnd.material_type || rp.material_type || 'FERT') === mt.code ? 'selected' : ''; %>
+                  <option value="<%= mt.code %>" title="<%= mt.description %>" <%= sel %>><%= mt.code %> — <%= mt.label %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Base Unit of Measure</label>
+              <select name="rnd_base_uom" required>
+                <option value="">-- Select --</option>
+                <% ['count','weight','volume','dimension'].forEach(function (g) { %>
+                  <optgroup label="<%= g.charAt(0).toUpperCase() + g.slice(1) %>">
+                    <% (ref.UOM[g] || []).forEach(function (u) { %>
+                      <% var sel = (rnd.base_uom || rp.base_uom || 'EA') === u[0] ? 'selected' : ''; %>
+                      <option value="<%= u[0] %>" <%= sel %>><%= u[0] %> — <%= u[1] %></option>
+                    <% }); %>
+                  </optgroup>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">Product dimensions</div>
+          <div class="vob-grid cols-4">
+            <div class="vob-field">
+              <label>Length</label>
+              <input type="number" name="rnd_length" step="0.01" min="0" value="<%= v(rnd,'length', rp.length) %>">
+            </div>
+            <div class="vob-field">
+              <label>Width</label>
+              <input type="number" name="rnd_width" step="0.01" min="0" value="<%= v(rnd,'width', rp.width) %>">
+            </div>
+            <div class="vob-field">
+              <label>Height</label>
+              <input type="number" name="rnd_height" step="0.01" min="0" value="<%= v(rnd,'height', rp.height) %>">
+            </div>
+            <div class="vob-field">
+              <label>Dimension Unit</label>
+              <select name="rnd_dim_unit">
+                <option value="">--</option>
+                <% (ref.UOM.dimension || []).forEach(function (u) { %>
+                  <% var sel = (rnd.dim_unit || rp.dim_unit || 'MM') === u[0] ? 'selected' : ''; %>
+                  <option value="<%= u[0] %>" <%= sel %>><%= u[0] %> — <%= u[1] %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label>Net Weight</label>
+              <input type="number" name="rnd_net_weight" step="0.01" min="0" value="<%= v(rnd,'net_weight', rp.net_weight) %>">
+            </div>
+            <div class="vob-field">
+              <label>Gross Weight</label>
+              <input type="number" name="rnd_gross_weight" step="0.01" min="0" value="<%= v(rnd,'gross_weight', rp.gross_weight) %>">
+            </div>
+            <div class="vob-field">
+              <label>Weight Unit</label>
+              <select name="rnd_weight_unit">
+                <option value="">--</option>
+                <% (ref.UOM.weight || []).forEach(function (u) { %>
+                  <% var sel = (rnd.weight_unit || rp.weight_unit || 'G') === u[0] ? 'selected' : ''; %>
+                  <option value="<%= u[0] %>" <%= sel %>><%= u[0] %> — <%= u[1] %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="vob-field">
+              <label>Volume</label>
+              <input type="number" name="rnd_volume" step="0.01" min="0" value="<%= v(rnd,'volume', rp.volume) %>">
+            </div>
+            <div class="vob-field">
+              <label>Volume Unit</label>
+              <select name="rnd_volume_unit">
+                <option value="">--</option>
+                <% (ref.UOM.volume || []).forEach(function (u) { %>
+                  <% var sel = (rnd.volume_unit || rp.volume_unit) === u[0] ? 'selected' : ''; %>
+                  <option value="<%= u[0] %>" <%= sel %>><%= u[0] %> — <%= u[1] %></option>
+                <% }); %>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-title">Pricing</div>
+          <div class="vob-grid cols-3">
+            <div class="vob-field">
+              <label><span class="req">*</span>Manufacturing Price</label>
+              <input type="number" name="rnd_mfg_price" step="0.0001" min="0" required value="<%= v(rnd,'mfg_price') %>">
+            </div>
+            <div class="vob-field">
+              <label>Mfg Price Currency</label>
+              <input type="text" name="rnd_mfg_price_ccy" maxlength="3" value="<%= v(rnd,'mfg_price_ccy','USD') %>">
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>Retail Price (USD)</label>
+              <input type="number" name="rnd_retail_price_usd" step="0.0001" min="0" required value="<%= v(rnd,'retail_price_usd') %>" data-retail-usd>
+            </div>
+            <div class="vob-field">
+              <label>Retail Price (Local Currency)</label>
+              <input type="number" name="rnd_retail_price_local" step="0.0001" min="0" value="<%= v(rnd,'retail_price_local') %>" data-retail-local>
+            </div>
+            <div class="vob-field">
+              <label>Local Currency Code</label>
+              <input type="text" name="rnd_retail_price_local_ccy" maxlength="3" value="<%= v(rnd,'retail_price_local_ccy') %>" data-local-ccy>
+            </div>
+            <div class="vob-field">
+              <label>FX Rate (1 USD = X)</label>
+              <input type="number" name="rnd_fx_rate" step="0.000001" min="0" value="<%= v(rnd,'fx_rate') %>" data-fx-rate>
+              <input type="hidden" name="rnd_fx_as_of"  value="<%= v(rnd,'fx_as_of') %>"  data-fx-asof>
+              <input type="hidden" name="rnd_fx_source" value="<%= v(rnd,'fx_source') %>" data-fx-source>
+            </div>
+          </div>
+          <div class="fx-row">
+            <button type="button" id="fx-btn" class="btn btn-default">⟲ Convert USD → Local</button>
+            <span id="fx-status" class="fx-status">
+              <% if (rnd.fx_rate) { %>
+                Last rate: <code><%= rnd.fx_rate %></code> · <%= rnd.fx_as_of || '' %> · <%= rnd.fx_source || '' %>
+              <% } else { %>
+                Pick a target market on the Marketing tab, enter a USD retail price, then click to fetch a live rate.
+              <% } %>
+            </span>
+          </div>
+
+          <div class="section-title">Contract</div>
+          <div class="vob-grid">
+            <div class="vob-field">
+              <label><span class="req">*</span>Contract Status</label>
+              <div class="radio-group">
+                <label><input type="radio" name="rnd_contract_status" value="EXISTING_VALID" required <%= (rnd.contract_status === 'EXISTING_VALID') ? 'checked' : '' %>>Existing &amp; valid</label>
+                <label><input type="radio" name="rnd_contract_status" value="NEW_NEEDED" <%= (rnd.contract_status === 'NEW_NEEDED') ? 'checked' : '' %>>New contract needed</label>
+              </div>
+            </div>
+            <div class="vob-field">
+              <label>Supplier (if known)</label>
+              <input type="text" name="rnd_contract_supplier" value="<%= v(rnd,'contract_supplier') %>" placeholder="Supplier or co-manufacturer name">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== 4) Forecast -->
+      <section class="vob-pane" data-pane="forecast">
+        <div class="vob-card">
+          <h2>Projected Volume / Sales</h2>
+          <div class="indicates-required">* Indicates required</div>
+          <p class="text-sm text-gray-600 mb-2">
+            Enter Year 1 by month, then total annual volumes for Years 2–5.
+            Year 1 and 5-Year totals calculate automatically.
+          </p>
+
+          <table class="fc-table">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %>
+                  <th><%= m %></th>
+                <% }); %>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Year 1</strong></td>
+                <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
+                  <td><input type="number" name="fc_y1_<%= m %>" min="0" step="1" value="<%= v(fc,'y1_'+m) %>" data-y1></td>
+                <% }); %>
+                <td class="fc-total"><input type="number" id="fc-total-y1" readonly value="<%= v(fc,'total_y1') %>"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="vob-grid cols-4" style="margin-top:14px;">
+            <div class="vob-field">
+              <label>Year 2 (annual)</label>
+              <input type="number" name="fc_y2" min="0" step="1" value="<%= v(fc,'y2') %>" data-yN>
+            </div>
+            <div class="vob-field">
+              <label>Year 3 (annual)</label>
+              <input type="number" name="fc_y3" min="0" step="1" value="<%= v(fc,'y3') %>" data-yN>
+            </div>
+            <div class="vob-field">
+              <label>Year 4 (annual)</label>
+              <input type="number" name="fc_y4" min="0" step="1" value="<%= v(fc,'y4') %>" data-yN>
+            </div>
+            <div class="vob-field">
+              <label>Year 5 (annual)</label>
+              <input type="number" name="fc_y5" min="0" step="1" value="<%= v(fc,'y5') %>" data-yN>
+            </div>
+          </div>
+
+          <div class="vob-grid" style="margin-top:14px;">
+            <div class="vob-field">
+              <label>Total Year 1 (auto)</label>
+              <input type="text" id="fc-total-y1-mirror" readonly value="<%= v(fc,'total_y1') %>" style="background:#eff6ff;">
+            </div>
+            <div class="vob-field">
+              <label>Total 5-Year (auto)</label>
+              <input type="text" id="fc-total-y5" readonly value="<%= v(fc,'total_y5') %>" style="background:#eff6ff; font-weight:600; color:#1e3a8a;">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== Footer -->
+      <div class="vob-footer">
+        <button type="button" id="pwf-prev" class="btn btn-default">← Previous</button>
+        <div class="right">
+          <button type="submit" name="action" value="save_draft" class="btn btn-default">💾 Save as Draft</button>
+          <button type="button" id="pwf-next" class="btn btn-default">Next →</button>
+          <button type="submit" name="action" value="submit" class="btn btn-primary">Submit for Marketing Director</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</main>
+
+<script>
+(function () {
+  // ---------- Tab switching ----------
+  var TABS = ['marketing','brand','rnd','forecast'];
+  var current = 0;
+  function show(idx) {
+    current = Math.max(0, Math.min(TABS.length - 1, idx));
+    document.querySelectorAll('.vob-pane').forEach(function (p) {
+      p.classList.toggle('active', p.dataset.pane === TABS[current]);
+    });
+    document.querySelectorAll('.vob-tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === TABS[current]);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('.vob-tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { show(TABS.indexOf(btn.dataset.tab)); });
+  });
+  document.getElementById('pwf-prev').addEventListener('click', function () { show(current - 1); });
+  document.getElementById('pwf-next').addEventListener('click', function () { show(current + 1); });
+
+  // ---------- Per-tab completion counter ----------
+  function updateCompletion() {
+    TABS.forEach(function (key) {
+      var pane = document.querySelector('.vob-pane[data-pane="' + key + '"]');
+      var btn  = document.querySelector('.vob-tab-btn[data-tab="' + key + '"]');
+      if (!pane || !btn) return;
+      var countEl = btn.querySelector('.vob-count');
+      var required = Array.prototype.slice.call(pane.querySelectorAll('[required]'));
+      var nameGroups = {}, nonGroup = [];
+      required.forEach(function (el) {
+        if ((el.type === 'radio' || el.type === 'checkbox') && el.name) {
+          (nameGroups[el.name] = nameGroups[el.name] || []).push(el);
+        } else { nonGroup.push(el); }
+      });
+      var total = nonGroup.length + Object.keys(nameGroups).length;
+      var done = 0;
+      nonGroup.forEach(function (el) {
+        var v = (el.value != null ? String(el.value) : '').trim();
+        if (v !== '') done++;
+      });
+      Object.keys(nameGroups).forEach(function (name) {
+        var siblings = pane.querySelectorAll('[name="' + name.replace(/"/g, '\\"') + '"]');
+        for (var i = 0; i < siblings.length; i++) { if (siblings[i].checked) { done++; break; } }
+      });
+      if (total === 0) { countEl.style.display = 'none'; countEl.textContent = ''; btn.classList.remove('done'); }
+      else { countEl.style.display = ''; countEl.textContent = done + '/' + total; btn.classList.toggle('done', done === total); }
+    });
+  }
+  var form = document.getElementById('pwf-form');
+  form.addEventListener('input', updateCompletion);
+  form.addEventListener('change', updateCompletion);
+
+  // ---------- Brand cascade ----------
+  (function () {
+    var DATA    = JSON.parse(document.getElementById('brand-hierarchy-data').textContent || '{}');
+    var INITIAL = JSON.parse(document.getElementById('brand-initial').textContent || '{}');
+    var L1 = document.querySelector('[data-brand-l1]');
+    var L2 = document.querySelector('[data-brand-l2]');
+    var L3 = document.querySelector('[data-brand-l3]');
+    var L4 = document.querySelector('[data-brand-l4]');
+    var L5 = document.querySelector('[data-brand-l5]');
+
+    function fill(sel, options, placeholder) {
+      sel.innerHTML = '';
+      var opt = document.createElement('option');
+      opt.value = ''; opt.textContent = placeholder || '-- Select --';
+      sel.appendChild(opt);
+      options.forEach(function (o) {
+        var x = document.createElement('option'); x.value = o; x.textContent = o; sel.appendChild(x);
+      });
+      sel.disabled = options.length === 0;
+    }
+    function clear(sel, placeholder) { fill(sel, [], placeholder); }
+
+    fill(L1, Object.keys(DATA), '-- Select --');
+    L1.value = INITIAL.l1 || ''; if (L1.value) onL1();
+    function onL1() {
+      var node = DATA[L1.value] || {};
+      fill(L2, Object.keys(node), node && Object.keys(node).length ? '-- Select --' : '-- None --');
+      L2.value = INITIAL.l2 || ''; clear(L3, '-- Select category first --'); clear(L4, '-- Select family brand first --'); clear(L5, '-- Select brand first --');
+      if (L2.value) onL2();
+    }
+    function onL2() {
+      var node = (DATA[L1.value] || {})[L2.value] || {};
+      fill(L3, Object.keys(node), '-- Select --');
+      L3.value = INITIAL.l3 || ''; clear(L4, '-- Select family brand first --'); clear(L5, '-- Select brand first --');
+      if (L3.value) onL3();
+    }
+    function onL3() {
+      var node = ((DATA[L1.value] || {})[L2.value] || {})[L3.value] || {};
+      fill(L4, Object.keys(node), '-- Select --');
+      L4.value = INITIAL.l4 || ''; clear(L5, '-- Select brand first --');
+      if (L4.value) onL4();
+    }
+    function onL4() {
+      var arr = (((DATA[L1.value] || {})[L2.value] || {})[L3.value] || {})[L4.value] || [];
+      fill(L5, arr, '-- Select --');
+      L5.value = INITIAL.l5 || '';
+    }
+    L1.addEventListener('change', function () { INITIAL.l2=INITIAL.l3=INITIAL.l4=INITIAL.l5=''; onL1(); updateCompletion(); });
+    L2.addEventListener('change', function () { INITIAL.l3=INITIAL.l4=INITIAL.l5=''; onL2(); updateCompletion(); });
+    L3.addEventListener('change', function () { INITIAL.l4=INITIAL.l5=''; onL3(); updateCompletion(); });
+    L4.addEventListener('change', function () { INITIAL.l5=''; onL4(); updateCompletion(); });
+  })();
+
+  // ---------- Auto-fill local currency from selected market ----------
+  (function () {
+    var marketSel = document.querySelector('[data-market-select]');
+    var ccyInput  = document.querySelector('[data-local-ccy]');
+    if (!marketSel || !ccyInput) return;
+    function syncCcy() {
+      var opt = marketSel.options[marketSel.selectedIndex];
+      var ccy = opt && opt.dataset && opt.dataset.currency;
+      if (ccy && !ccyInput.value) ccyInput.value = ccy;
+    }
+    marketSel.addEventListener('change', syncCcy);
+    syncCcy();
+  })();
+
+  // ---------- FX conversion (Claude + web_search) ----------
+  document.getElementById('fx-btn').addEventListener('click', async function () {
+    var usdInput   = document.querySelector('[data-retail-usd]');
+    var localInput = document.querySelector('[data-retail-local]');
+    var ccyInput   = document.querySelector('[data-local-ccy]');
+    var rateInput  = document.querySelector('[data-fx-rate]');
+    var asofInput  = document.querySelector('[data-fx-asof]');
+    var srcInput   = document.querySelector('[data-fx-source]');
+    var status     = document.getElementById('fx-status');
+    var to = (ccyInput.value || '').trim().toUpperCase();
+    var amount = Number(usdInput.value || 0);
+    if (!to)      { status.textContent = 'Pick a target market first.'; status.style.color = '#b91c1c'; return; }
+    if (to === 'USD') { status.textContent = 'Local currency is USD — no conversion needed.'; localInput.value = usdInput.value; rateInput.value = 1; return; }
+    status.textContent = 'Looking up live rate…'; status.style.color = '#6b7280';
+    try {
+      var resp = await fetch('/products/workflow/api/fx', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: 'USD', to: to, amount: amount }),
+      });
+      var data = await resp.json();
+      if (!data.ok) throw new Error(data.error || 'Lookup failed');
+      rateInput.value = data.rate;
+      asofInput.value = data.asOf;
+      srcInput.value  = data.source;
+      if (data.converted != null) localInput.value = Number(data.converted.toFixed(4));
+      status.innerHTML = '✓ 1 USD = <code>' + data.rate + '</code> ' + to +
+                         ' · ' + (data.asOf || '') + ' · ' + (data.source || '');
+      status.style.color = '#065f46';
+      updateCompletion();
+    } catch (e) {
+      status.textContent = '⚠ ' + (e.message || e);
+      status.style.color = '#b91c1c';
+    }
+  });
+
+  // ---------- Forecast totals ----------
+  (function () {
+    function num(v) { var n = parseFloat(v); return Number.isFinite(n) ? n : 0; }
+    function recompute() {
+      var y1Total = 0;
+      document.querySelectorAll('input[data-y1]').forEach(function (el) { y1Total += num(el.value); });
+      document.getElementById('fc-total-y1').value = y1Total || '';
+      document.getElementById('fc-total-y1-mirror').value = y1Total || '';
+      var rest = 0;
+      document.querySelectorAll('input[data-yN]').forEach(function (el) { rest += num(el.value); });
+      document.getElementById('fc-total-y5').value = (y1Total + rest) || '';
+    }
+    document.querySelectorAll('input[data-y1], input[data-yN]').forEach(function (el) {
+      el.addEventListener('input', recompute);
+    });
+    recompute();
+  })();
+
+  updateCompletion();
+})();
+</script>
+</div>
+</body></html>

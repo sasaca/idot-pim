@@ -1,0 +1,19 @@
+<%- include('../partials/head', { pageTitle: 'Product Request — Supply Chain Director Approval' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Supply Chain Director Approval', topSub: 'Final approval before SAP creation.' }) %>
+
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <%- include('_workflow_shared', { productRequest: productRequest, stateLabel: ref.STATE_LABELS[productRequest.workflow_state] || productRequest.workflow_state, history: history, comments: comments }) %>
+
+  <%- include('_readonly_view', { productRequest: productRequest, ref: ref }) %>
+
+  <%- include('_approval_form', {
+    formAction: '/products/workflow/' + productRequest.id + '/sc-director',
+    actionPrefix: 'sc',
+    rejectReasons: ref.REJECT_REASONS,
+    infoReasons: ref.INFO_REASONS
+  }) %>
+</main>
+</div>
+</body></html>

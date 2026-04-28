@@ -1,0 +1,11 @@
+[
+  { "code": "FERT", "label": "Finished Product",            "description": "Goods produced for sale to customers" },
+  { "code": "HALB", "label": "Semi-finished Product",       "description": "In-process goods consumed by higher-level FERT" },
+  { "code": "ROH",  "label": "Raw Material",                "description": "Procured for production; not for sale" },
+  { "code": "VERP", "label": "Packaging Material",          "description": "Cartons, films, labels and shipping packaging" },
+  { "code": "HAWA", "label": "Trading Good",                "description": "Procured and resold without further processing" },
+  { "code": "DIEN", "label": "Service",                     "description": "Non-stockable service rendered to customers" },
+  { "code": "UNBW", "label": "Non-valuated Material",       "description": "Tracked in stock but not financially valued" },
+  { "code": "NLAG", "label": "Non-stock Material",          "description": "Consumed directly to a cost object, no inventory" },
+  { "code": "WERB", "label": "Promotional / Advertising",   "description": "POS displays, samples and marketing materials" }
+]

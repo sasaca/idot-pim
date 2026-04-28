@@ -99,6 +99,12 @@ app.use('/vendors/queue',        requireAuth, vendorWorkflow.makeQueueRouter(db)
 app.use('/vendors/:id/workflow', requireAuth, vendorWorkflow(db));
 app.use('/vendors/forms',        requireAuth, require('./routes/vendor_forms'));
 
+// Product creation workflow. Mounted BEFORE /products so the queue and
+// detail routes don't get swallowed by the generic /products/:id handler.
+const productWorkflow = require('./routes/product_workflow');
+app.use('/products/workflow/queue', requireAuth, productWorkflow.makeQueueRouter(db));
+app.use('/products/workflow',       requireAuth, productWorkflow(db));
+
 // Routes
 app.use('/', require('./routes/auth'));
 app.use('/dashboard', requireAuth, require('./routes/dashboard'));

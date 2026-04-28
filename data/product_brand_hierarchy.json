@@ -1,0 +1,162 @@
+{
+  "_comment": "Generic F&B / supermarket brand hierarchy. Five levels: Category Grouper -> Category -> Family Brand -> Brand -> Sub Brand. Replace with real taxonomy when available.",
+
+  "Snacks & Confectionery": {
+    "Salty Snacks": {
+      "CrispCo": {
+        "GoldenChips": ["Original", "BBQ", "Sour Cream & Onion", "Salt & Vinegar", "Lime & Chilli"],
+        "VeggieCrunch": ["Beet & Carrot", "Sweet Potato", "Kale Crisps"]
+      },
+      "PopJoy": {
+        "PopJoy Classic": ["Butter", "Sea Salt", "Caramel", "Cheddar"],
+        "PopJoy Lite": ["Lightly Salted", "No Salt"]
+      },
+      "NuttyHabit": {
+        "NuttyHabit Mixed": ["Roasted Salted Mix", "Honey Roasted", "Spicy Cajun"],
+        "NuttyHabit Single": ["Almonds", "Cashews", "Pistachios"]
+      }
+    },
+    "Sweet Snacks & Confectionery": {
+      "ChocoMoco": {
+        "MocoBars": ["Milk Chocolate", "Dark 70%", "Hazelnut", "Caramel & Sea Salt"],
+        "MocoBites": ["Truffle Bites", "Cookie Bites"]
+      },
+      "GummyTown": {
+        "GummyTown Classic": ["Worms", "Bears", "Sour Mix"],
+        "GummyTown Sugar Free": ["Sugar Free Bears", "Sugar Free Worms"]
+      },
+      "Cookieland": {
+        "CrunchCookies": ["Choc Chip", "Double Chocolate", "Oatmeal Raisin"],
+        "SoftCookies": ["Vanilla Soft Bake", "Peanut Butter"]
+      }
+    },
+    "Cereal Bars & Granola": {
+      "MorningCo": {
+        "OatBoost": ["Honey & Oats", "Berry Burst", "Chocolate Chip", "Peanut Butter"],
+        "ProteinBoost": ["Vanilla 15g", "Cookies & Cream 15g", "Chocolate 20g"]
+      }
+    }
+  },
+
+  "Beverages": {
+    "Carbonated Soft Drinks": {
+      "FizzPop": {
+        "FizzPop Cola": ["Original", "Diet", "Zero Sugar", "Cherry"],
+        "FizzPop Citrus": ["Lemon-Lime", "Orange", "Grapefruit"]
+      },
+      "BubbleBerry": {
+        "BubbleBerry Sparkling": ["Raspberry", "Blueberry", "Mixed Berry"]
+      }
+    },
+    "Juices & Nectars": {
+      "GardenSqueeze": {
+        "GardenSqueeze 100%": ["Orange", "Apple", "Grape", "Pineapple"],
+        "GardenSqueeze Smoothie": ["Mango", "Berry Blend", "Tropical"]
+      },
+      "ValleyPress": {
+        "ValleyPress Cold-Pressed": ["Green", "Beet & Apple", "Carrot Ginger"]
+      }
+    },
+    "Water": {
+      "PureSource": {
+        "PureSource Still": ["500ml", "1L", "1.5L"],
+        "PureSource Sparkling": ["Plain", "Lemon", "Lime"]
+      }
+    },
+    "Coffee & Tea (RTD)": {
+      "BrewLab": {
+        "BrewLab Cold Brew": ["Black", "Vanilla", "Caramel", "Mocha"],
+        "BrewLab Latte": ["Classic Latte", "Oat Latte"]
+      },
+      "TeaGarden": {
+        "TeaGarden Iced": ["Lemon", "Peach", "Green Tea", "Hibiscus"]
+      }
+    },
+    "Energy & Sports": {
+      "ZapFuel": {
+        "ZapFuel Energy": ["Original", "Sugar Free", "Tropical", "Berry"],
+        "ZapFuel Hydrate": ["Lemon Electrolyte", "Berry Electrolyte"]
+      }
+    }
+  },
+
+  "Breakfast & Cereals": {
+    "Cold Cereal": {
+      "GrainHaus": {
+        "MorningFlakes": ["Corn Flakes", "Bran Flakes", "Frosted Flakes"],
+        "MuesliMix": ["Original Muesli", "Tropical Muesli", "Nut & Seed"]
+      },
+      "OatPro": {
+        "OatPro Crunch": ["Honey Almond", "Maple Pecan", "Berry Crisp"]
+      }
+    },
+    "Hot Cereal": {
+      "OatPro": {
+        "OatPro Instant": ["Original", "Apple Cinnamon", "Maple Brown Sugar"],
+        "OatPro Steel-Cut": ["Plain Steel-Cut", "Vanilla Steel-Cut"]
+      }
+    },
+    "Breakfast Pastries": {
+      "MorningCo": {
+        "Toasties": ["Strawberry", "Brown Sugar", "Blueberry", "S'mores"]
+      }
+    }
+  },
+
+  "Dairy & Cheese": {
+    "Cheese": {
+      "AlpenFarm": {
+        "AlpenFarm Block": ["Cheddar Mild", "Cheddar Sharp", "Mozzarella", "Pepper Jack", "Swiss"],
+        "AlpenFarm Shred": ["Mexican Blend", "Italian Blend", "Cheddar Shred"],
+        "AlpenFarm Slices": ["American", "Provolone", "Cheddar Slices"]
+      },
+      "ArtisanBoard": {
+        "ArtisanBoard Specialty": ["Brie", "Goat Cheese", "Blue Cheese", "Camembert"]
+      }
+    },
+    "Yogurt & Dairy Snacks": {
+      "DairyMoo": {
+        "MooCup": ["Strawberry", "Vanilla", "Blueberry", "Peach", "Plain"],
+        "MooGreek": ["Greek Plain", "Greek Honey", "Greek Vanilla"]
+      },
+      "PlantPlus": {
+        "PlantPlus Almond Yogurt": ["Plain Almond", "Vanilla Almond"],
+        "PlantPlus Coconut Yogurt": ["Plain Coconut", "Strawberry Coconut"]
+      }
+    },
+    "Milk & Cream": {
+      "DairyMoo": {
+        "MooMilk": ["Whole", "2% Reduced Fat", "Skim", "Lactose Free"],
+        "MooCream": ["Heavy Cream", "Half & Half", "Whipping Cream"]
+      }
+    }
+  },
+
+  "Sauces, Condiments & Dressings": {
+    "Cooking Sauces": {
+      "PastaPrince": {
+        "PastaPrince Marinara": ["Classic Marinara", "Garlic Marinara", "Spicy Arrabbiata"],
+        "PastaPrince Alfredo": ["Classic Alfredo", "Roasted Garlic Alfredo"]
+      },
+      "WokStar": {
+        "WokStar Asian": ["Teriyaki", "Sweet & Sour", "Kung Pao", "Soy Sauce"]
+      }
+    },
+    "Condiments": {
+      "DipDeluxe": {
+        "DipDeluxe Ketchup": ["Original Ketchup", "Organic Ketchup", "Spicy Ketchup"],
+        "DipDeluxe Mustard": ["Yellow Mustard", "Dijon", "Honey Mustard"],
+        "DipDeluxe Mayo": ["Classic Mayo", "Avocado Oil Mayo", "Garlic Aioli"]
+      },
+      "FireRoast": {
+        "FireRoast Hot Sauce": ["Original", "Habanero", "Ghost Pepper", "Smoked Chipotle"],
+        "FireRoast BBQ": ["Sweet & Smoky", "Honey BBQ", "Carolina Gold"]
+      }
+    },
+    "Salad Dressings": {
+      "GardenSqueeze": {
+        "GardenSqueeze Dressing": ["Ranch", "Caesar", "Italian", "Balsamic Vinaigrette", "Honey Mustard"]
+      }
+    }
+  }
+}

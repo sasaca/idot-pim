@@ -1,0 +1,6 @@
+{
+  "weight":     [["G",  "Gram"],   ["KG", "Kilogram"], ["OZ", "Ounce"], ["LB", "Pound"]],
+  "dimension":  [["MM", "Millimeter"], ["CM", "Centimeter"], ["M", "Meter"], ["IN", "Inch"], ["FT", "Foot"]],
+  "volume":     [["ML", "Milliliter"], ["L", "Liter"], ["FLOZ", "Fluid Ounce"], ["GAL", "Gallon"]],
+  "count":      [["EA", "Each"], ["PC", "Piece"], ["CS", "Case"], ["PK", "Pack"], ["BX", "Box"], ["PAL", "Pallet"]]
+}
