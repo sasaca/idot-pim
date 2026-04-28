@@ -1757,6 +1757,7 @@ function pickRnd(b) {
     volume_unit:          b.rnd_volume_unit          || '',
     mfg_price:            num(b.rnd_mfg_price),
     mfg_price_ccy:        b.rnd_mfg_price_ccy        || 'USD',
+    mfg_price_local:      num(b.rnd_mfg_price_local),
     retail_price_usd:     num(b.rnd_retail_price_usd),
     retail_price_local:   num(b.rnd_retail_price_local),
     retail_price_local_ccy: b.rnd_retail_price_local_ccy || '',

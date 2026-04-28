@@ -167,7 +167,9 @@ function fmt(n) {
 
   <h3>Pricing</h3>
   <div class="ro-grid cols-3">
-    <div class="ro-row"><span class="ro-label">Manufacturing Price</span><span class="ro-value"><%= fmt(rnd.mfg_price) %> <%= rnd.mfg_price_ccy || '' %></span></div>
+    <div class="ro-row"><span class="ro-label">Manufacturing Price (USD)</span><span class="ro-value"><%= fmt(rnd.mfg_price) %> USD</span></div>
+    <div class="ro-row"><span class="ro-label">Manufacturing Price (Local)</span><span class="ro-value"><%= fmt(rnd.mfg_price_local) %> <%= rnd.retail_price_local_ccy || '' %></span></div>
+    <div class="ro-row"></div>
     <div class="ro-row"><span class="ro-label">Retail Price (USD)</span><span class="ro-value"><%= fmt(rnd.retail_price_usd) %> USD</span></div>
     <div class="ro-row"><span class="ro-label">Retail Price (Local)</span><span class="ro-value"><%= fmt(rnd.retail_price_local) %> <%= rnd.retail_price_local_ccy || '' %></span></div>
     <% if (rnd.fx_rate) { %>

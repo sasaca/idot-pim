@@ -340,25 +340,32 @@
           <div class="section-title">Pricing</div>
           <div class="vob-grid cols-3">
             <div class="vob-field">
-              <label><span class="req">*</span>Manufacturing Price</label>
-              <input type="number" name="rnd_mfg_price" step="0.0001" min="0" required value="<%= v(rnd,'mfg_price') %>">
-            </div>
-            <div class="vob-field">
-              <label>Mfg Price Currency</label>
-              <input type="text" name="rnd_mfg_price_ccy" maxlength="3" value="<%= v(rnd,'mfg_price_ccy','USD') %>">
-            </div>
-            <div class="vob-field">
-              <label><span class="req">*</span>Retail Price (USD)</label>
-              <input type="number" name="rnd_retail_price_usd" step="0.0001" min="0" required value="<%= v(rnd,'retail_price_usd') %>" data-retail-usd>
-            </div>
-            <div class="vob-field">
-              <label>Retail Price (Local Currency)</label>
-              <input type="number" name="rnd_retail_price_local" step="0.0001" min="0" value="<%= v(rnd,'retail_price_local') %>" data-retail-local>
+              <label><span class="req">*</span>Manufacturing Price (USD)</label>
+              <input type="number" name="rnd_mfg_price" step="0.0001" min="0" required value="<%= v(rnd,'mfg_price') %>" data-mfg-usd>
+              <input type="hidden" name="rnd_mfg_price_ccy" value="USD">
             </div>
             <div class="vob-field">
               <label>Local Currency Code</label>
               <input type="text" name="rnd_retail_price_local_ccy" maxlength="3" value="<%= v(rnd,'retail_price_local_ccy') %>" data-local-ccy>
             </div>
+            <div class="vob-field">
+              <label>Manufacturing Price (Local)</label>
+              <input type="number" name="rnd_mfg_price_local" step="0.0001" min="0" value="<%= v(rnd,'mfg_price_local') %>" data-mfg-local>
+            </div>
+
+            <div class="vob-field">
+              <label><span class="req">*</span>Retail Price (USD)</label>
+              <input type="number" name="rnd_retail_price_usd" step="0.0001" min="0" required value="<%= v(rnd,'retail_price_usd') %>" data-retail-usd>
+            </div>
+            <div class="vob-field">
+              <label>Local Currency Code</label>
+              <input type="text" value="<%= v(rnd,'retail_price_local_ccy') %>" data-local-ccy-mirror readonly style="background:#f3f4f6; color:#374151;">
+            </div>
+            <div class="vob-field">
+              <label>Retail Price (Local)</label>
+              <input type="number" name="rnd_retail_price_local" step="0.0001" min="0" value="<%= v(rnd,'retail_price_local') %>" data-retail-local>
+            </div>
+
             <div class="vob-field">
               <label>FX Rate (1 USD = X)</label>
               <input type="number" name="rnd_fx_rate" step="0.000001" min="0" value="<%= v(rnd,'fx_rate') %>" data-fx-rate>
@@ -372,7 +379,7 @@
               <% if (rnd.fx_rate) { %>
                 Last rate: <code><%= rnd.fx_rate %></code> · <%= rnd.fx_as_of || '' %> · <%= rnd.fx_source || '' %>
               <% } else { %>
-                Pick a target market on the Marketing tab, enter a USD retail price, then click to fetch a live rate.
+                Pick a target market on the Marketing tab, enter USD prices, then click to fetch a live rate. Both Manufacturing and Retail Local prices fill in automatically.
               <% } %>
             </span>
           </div>
@@ -586,35 +593,67 @@
       var ccy = opt && opt.dataset && opt.dataset.currency;
       if (ccy && !ccyInput.value) ccyInput.value = ccy;
     }
-    marketSel.addEventListener('change', syncCcy);
+    marketSel.addEventListener('change', function () { syncCcy(); syncCcyMirror(); });
     syncCcy();
+    syncCcyMirror();
+  })();
+
+  // Keep the read-only "Local Currency Code" cell on the Retail row in sync
+  // with the editable one above it. Both drive off the same column so the
+  // user only edits in one place.
+  function syncCcyMirror() {
+    var src = document.querySelector('[data-local-ccy]');
+    var dst = document.querySelector('[data-local-ccy-mirror]');
+    if (src && dst) dst.value = src.value;
+  }
+  (function () {
+    var src = document.querySelector('[data-local-ccy]');
+    if (src) src.addEventListener('input', syncCcyMirror);
   })();
 
   // ---------- FX conversion (Claude + web_search) ----------
   document.getElementById('fx-btn').addEventListener('click', async function () {
-    var usdInput   = document.querySelector('[data-retail-usd]');
-    var localInput = document.querySelector('[data-retail-local]');
-    var ccyInput   = document.querySelector('[data-local-ccy]');
-    var rateInput  = document.querySelector('[data-fx-rate]');
-    var asofInput  = document.querySelector('[data-fx-asof]');
-    var srcInput   = document.querySelector('[data-fx-source]');
-    var status     = document.getElementById('fx-status');
+    var mfgUsdInput    = document.querySelector('[data-mfg-usd]');
+    var mfgLocalInput  = document.querySelector('[data-mfg-local]');
+    var retailUsdInput = document.querySelector('[data-retail-usd]');
+    var retailLocalIn  = document.querySelector('[data-retail-local]');
+    var ccyInput       = document.querySelector('[data-local-ccy]');
+    var rateInput      = document.querySelector('[data-fx-rate]');
+    var asofInput      = document.querySelector('[data-fx-asof]');
+    var srcInput       = document.querySelector('[data-fx-source]');
+    var status         = document.getElementById('fx-status');
+
     var to = (ccyInput.value || '').trim().toUpperCase();
-    var amount = Number(usdInput.value || 0);
-    if (!to)      { status.textContent = 'Pick a target market first.'; status.style.color = '#b91c1c'; return; }
-    if (to === 'USD') { status.textContent = 'Local currency is USD — no conversion needed.'; localInput.value = usdInput.value; rateInput.value = 1; return; }
+    if (!to) { status.textContent = 'Pick a target market first.'; status.style.color = '#b91c1c'; return; }
+
+    function convert(rate) {
+      if (mfgUsdInput.value)    mfgLocalInput.value = Number((Number(mfgUsdInput.value)    * rate).toFixed(4));
+      if (retailUsdInput.value) retailLocalIn.value = Number((Number(retailUsdInput.value) * rate).toFixed(4));
+    }
+
+    if (to === 'USD') {
+      status.textContent = 'Local currency is USD — no conversion needed.';
+      status.style.color = '#475569';
+      rateInput.value = 1;
+      convert(1);
+      syncCcyMirror();
+      updateCompletion();
+      return;
+    }
+
     status.textContent = 'Looking up live rate…'; status.style.color = '#6b7280';
     try {
       var resp = await fetch('/products/workflow/api/fx', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'USD', to: to, amount: amount }),
+        body: JSON.stringify({ from: 'USD', to: to, amount: 0 }),
       });
       var data = await resp.json();
       if (!data.ok) throw new Error(data.error || 'Lookup failed');
       rateInput.value = data.rate;
       asofInput.value = data.asOf;
       srcInput.value  = data.source;
-      if (data.converted != null) localInput.value = Number(data.converted.toFixed(4));
+      convert(data.rate);
+      syncCcyMirror();
       status.innerHTML = '✓ 1 USD = <code>' + data.rate + '</code> ' + to +
                          ' · ' + (data.asOf || '') + ' · ' + (data.source || '');
       status.style.color = '#065f46';
