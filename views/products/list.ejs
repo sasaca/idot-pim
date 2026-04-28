@@ -5,6 +5,8 @@
 
 <main class="p-6">
 
+<%- include('_product_tabs', { activeTab: activeTab || 'requests' }) %>
+
 <form method="get" class="flex flex-wrap gap-2 mb-4">
   <input type="text" name="q" placeholder="Search ID, product name, type…" value="<%= query.q || '' %>" class="input max-w-xs">
 

@@ -1,0 +1,207 @@
+<%- include('../partials/head', { pageTitle: 'Product Dashboard' }) %>
+<%- include('../partials/nav') %>
+<div class="main-content">
+<%- include('../partials/topbar', { topTitle: 'Product Dashboard', topSub: 'Live metrics across every product creation request.' }) %>
+
+<main class="p-6">
+
+<%- include('_product_tabs', { activeTab: 'dashboard' }) %>
+
+<!-- KPI Cards -->
+<section class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+  <%
+    var k = [
+      { label: 'Open requests',         v: kpi.open,         color: 'text-blue-600'    },
+      { label: 'Confirmed',             v: kpi.confirmed,    color: 'text-emerald-600' },
+      { label: 'Awaiting director',     v: kpi.awaiting_dir, color: 'text-amber-600'   },
+      { label: 'In R&D',                v: kpi.in_rnd,       color: 'text-violet-600'  },
+      { label: 'In Legal / MDM',        v: kpi.in_legal_mdm, color: 'text-indigo-600'  },
+      { label: 'Avg cycle (days)',      v: kpi.avg_cycle_days, color: 'text-slate-700' },
+    ];
+  %>
+  <% k.forEach(function (x) { %>
+    <div class="card card-body">
+      <div class="text-xs uppercase tracking-wider text-slate-500 mb-1"><%= x.label %></div>
+      <div class="text-3xl font-bold <%= x.color %>"><%= x.v %></div>
+    </div>
+  <% }); %>
+</section>
+
+<!-- My tasks + Quick actions -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card lg:col-span-2">
+    <div class="card-header">
+      <h3 class="font-semibold">Tasks waiting on my role
+        <% if (currentUser) { %>(<%= currentUser.role.replace(/_/g,' ') %>)<% } %>
+      </h3>
+      <span class="ml-auto text-xs text-slate-400"><%= myTasks.length %> open</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="data">
+        <thead><tr><th>Request #</th><th>Product</th><th>Type</th><th>Stage</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+          <% if (!myTasks.length) { %>
+            <tr><td colspan="6" class="text-center text-slate-500 p-6">🎉 Nothing waiting — you're all caught up!</td></tr>
+          <% } %>
+          <% myTasks.forEach(function (t) { %>
+            <tr>
+              <td class="font-mono text-xs">PR-<%= t.id %></td>
+              <td><%= t.product_name || '—' %></td>
+              <td class="text-xs text-slate-600"><%= (t.request_type || '').replace(/_/g,' ') %></td>
+              <td><span class="chip bg-amber-100 text-amber-700"><%= t.state_label %></span></td>
+              <td class="text-xs text-slate-500"><%= t.updated_at %></td>
+              <td><a href="<%= t.open_url %>" class="text-brand-600 hover:underline text-sm">Open →</a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Quick actions</h3></div>
+    <div class="card-body space-y-2">
+      <a href="/products/workflow/new" class="btn btn-primary w-full justify-center">+ New Product Request</a>
+      <a href="/products?mine=1" class="btn btn-ghost w-full justify-center">My product requests</a>
+      <a href="/products" class="btn btn-ghost w-full justify-center">All product requests</a>
+    </div>
+    <div class="card-body" style="border-top:1px solid #e5e7eb; padding-top:14px;">
+      <div class="text-xs uppercase tracking-wider text-slate-500 mb-2">My pipeline</div>
+      <div class="text-sm text-slate-600"><span class="font-semibold text-slate-900"><%= kpi.mine_open %></span> open request<%= kpi.mine_open === 1 ? '' : 's' %> as requestor.</div>
+      <div class="text-sm text-slate-600 mt-1">Total in system: <span class="font-semibold text-slate-900"><%= kpi.total %></span> · Rejected: <span class="font-semibold text-red-600"><%= kpi.rejected %></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Charts row -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Open requests by stage</h3></div>
+    <div class="card-body"><canvas id="chartStage"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Requests by type</h3></div>
+    <div class="card-body"><canvas id="chartType"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Submissions — last 30 days</h3></div>
+    <div class="card-body"><canvas id="chartVelocity"></canvas></div>
+  </div>
+</section>
+
+<!-- My submitted + Recent activity -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card lg:col-span-2">
+    <div class="card-header"><h3 class="font-semibold">Requests I submitted</h3></div>
+    <div class="overflow-x-auto">
+      <table class="data">
+        <thead><tr><th>Request #</th><th>Product</th><th>Type</th><th>Stage</th><th>Created</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+          <% if (!mySubmitted.length) { %>
+            <tr><td colspan="7" class="text-center text-slate-500 p-6">No requests submitted yet. Use <em>+ New Product Request</em> to start one.</td></tr>
+          <% } %>
+          <% mySubmitted.forEach(function (t) {
+              var chip = 'bg-slate-100 text-slate-700';
+              if (t.workflow_state === 'CONFIRMED')      chip = 'bg-emerald-100 text-emerald-700';
+              else if (t.workflow_state === 'REJECTED')  chip = 'bg-red-100 text-red-700';
+              else if (t.workflow_state === 'NEEDS_INFO')chip = 'bg-orange-100 text-orange-700';
+              else                                        chip = 'bg-blue-100 text-blue-700';
+          %>
+            <tr>
+              <td class="font-mono text-xs">PR-<%= t.id %></td>
+              <td><%= t.product_name || '—' %></td>
+              <td class="text-xs"><%= (t.request_type || '').replace(/_/g,' ') %></td>
+              <td><span class="chip <%= chip %>"><%= t.state_label %></span></td>
+              <td class="text-xs text-slate-500"><%= t.created_at %></td>
+              <td class="text-xs text-slate-500"><%= t.updated_at %></td>
+              <td><a href="/products/workflow/<%= t.id %>/confirmation" class="text-brand-600 hover:underline text-sm">View →</a></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3 class="font-semibold">Recent activity</h3></div>
+    <div class="card-body">
+      <% if (!recent.length) { %>
+        <p class="text-slate-500 text-sm">No activity yet.</p>
+      <% } %>
+      <ul class="space-y-3 text-sm">
+        <% recent.forEach(function (h) { %>
+          <li class="flex items-start gap-2">
+            <span class="mt-1 w-2 h-2 rounded-full bg-brand-500 flex-shrink-0"></span>
+            <div class="flex-1">
+              <div>
+                <a class="text-brand-600 hover:underline font-medium" href="/products/workflow/<%= h.product_req_id %>/confirmation">PR-<%= h.product_req_id %></a>
+                <span class="text-slate-700"> · <%= h.action.replace(/_/g,' ') %></span>
+              </div>
+              <div class="text-xs text-slate-400">
+                <%= h.from_state %> → <%= h.to_state %>
+                <% if (h.actor_role) { %>· <%= h.actor_role.replace(/_/g,' ') %><% } %>
+                <% if (h.actor_name) { %>(<%= h.actor_name %>)<% } %>
+                · <%= h.created_at %>
+              </div>
+            </div>
+          </li>
+        <% }); %>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main></div>
+
+<script>
+  // Pulled in from the server-side queries.
+  const byStage  = <%- JSON.stringify(byStage) %>;
+  const byType   = <%- JSON.stringify(byType) %>;
+  const velocity = <%- JSON.stringify(velocity) %>;
+
+  // 1) Open requests by stage — horizontal bar.
+  new Chart(document.getElementById('chartStage'), {
+    type: 'bar',
+    data: {
+      labels: byStage.map(function (x) { return x.label; }),
+      datasets: [{ data: byStage.map(function (x) { return x.n; }), backgroundColor: '#3b82f6' }],
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales:  { x: { ticks: { precision: 0 } } },
+    },
+  });
+
+  // 2) Requests by type — doughnut.
+  new Chart(document.getElementById('chartType'), {
+    type: 'doughnut',
+    data: {
+      labels: byType.map(function (x) { return (x.type || 'UNKNOWN').replace(/_/g, ' '); }),
+      datasets: [{
+        data: byType.map(function (x) { return x.n; }),
+        backgroundColor: ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4'],
+      }],
+    },
+    options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%' },
+  });
+
+  // 3) Submission velocity — line over the last 30 days.
+  new Chart(document.getElementById('chartVelocity'), {
+    type: 'line',
+    data: {
+      labels: velocity.map(function (x) { return x.day.slice(5); }),
+      datasets: [{
+        data: velocity.map(function (x) { return x.n; }),
+        borderColor: '#1e3a8a',
+        backgroundColor: 'rgba(30,58,138,0.1)',
+        tension: 0.3, fill: true, pointRadius: 2,
+      }],
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales:  { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 10 } } } },
+    },
+  });
+</script>
+</body></html>

@@ -1250,6 +1250,154 @@ module.exports.makeQueueRouter = function makeQueueRouter(db) {
       stateLabels: productWorkflow.STATE_LABELS,
       query:       { q, status: stateF, mine: mine ? '1' : '' },
       viewerRoles: roles,
+      activeTab:   'requests',
+    });
+  });
+
+  // ---- Product Dashboard ---------------------------------------------------
+  // Mirrors the main /dashboard layout but every metric is scoped to the
+  // product creation workflow (product_requests + product_workflow_history).
+  router.get('/dashboard', (req, res) => {
+    const u = res.locals.currentUser || {};
+    const userId = u.id || null;
+    const roles = getUserRoles(req);
+
+    const open    = "workflow_state IN ('DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM','PENDING_RND_AND_QUALITY_DIRECTORS','PENDING_LEGAL_AND_MDM','NEEDS_INFO')";
+    const closed  = "workflow_state IN ('CONFIRMED','REJECTED')";
+    const onlyOne = (s) => `workflow_state = '${s}'`;
+
+    const cnt = (whereClause, ...args) =>
+      db.prepare(`SELECT COUNT(*) c FROM product_requests WHERE ${whereClause}`).get(...args).c;
+
+    const kpi = {
+      total:        cnt('1'),
+      open:         cnt(open),
+      confirmed:    cnt("workflow_state='CONFIRMED'"),
+      rejected:     cnt("workflow_state='REJECTED'"),
+      awaiting_dir: cnt("workflow_state IN ('PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR','PENDING_RND_AND_QUALITY_DIRECTORS')"),
+      in_rnd:       cnt("workflow_state IN ('PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM')"),
+      in_legal_mdm: cnt(onlyOne('PENDING_LEGAL_AND_MDM')),
+      mine_open:    userId ? cnt(`requestor_user_id = ? AND ${open}`, userId) : 0,
+    };
+
+    // Average cycle time (days) for confirmed requests in the last 90 days.
+    const cycleRows = db.prepare(`
+      SELECT julianday(workflow_updated_at) - julianday(created_at) AS days
+        FROM product_requests
+       WHERE workflow_state = 'CONFIRMED'
+         AND workflow_updated_at IS NOT NULL
+         AND created_at > datetime('now', '-90 days')
+    `).all();
+    kpi.avg_cycle_days = cycleRows.length
+      ? Math.round((cycleRows.reduce((s, r) => s + r.days, 0) / cycleRows.length) * 10) / 10
+      : 0;
+
+    // By-stage counts (only OPEN states are interesting on a chart).
+    const byStage = db.prepare(`
+      SELECT workflow_state AS state, COUNT(*) n
+        FROM product_requests
+       WHERE ${open}
+       GROUP BY workflow_state
+    `).all().map((r) => ({
+      state: r.state,
+      label: productWorkflow.STATE_LABELS[r.state] || r.state,
+      n:     r.n,
+    }));
+
+    const byType = db.prepare(`
+      SELECT request_type AS type, COUNT(*) n
+        FROM product_requests
+       GROUP BY request_type
+    `).all();
+
+    // Submissions per day for the last 30 days (driven by created_at).
+    const velocity = db.prepare(`
+      SELECT date(created_at) AS day, COUNT(*) n
+        FROM product_requests
+       WHERE created_at > datetime('now', '-30 days')
+       GROUP BY date(created_at)
+       ORDER BY day ASC
+    `).all();
+    // Backfill missing days so the chart renders a continuous x-axis.
+    const fullVelocity = (function () {
+      const m = velocity.reduce((acc, r) => { acc[r.day] = r.n; return acc; }, {});
+      const out = [];
+      const today = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today); d.setDate(today.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        out.push({ day: key, n: m[key] || 0 });
+      }
+      return out;
+    })();
+
+    // Tasks the viewer's role can act on right now.
+    let myTasks = [];
+    const stateForRole = (() => {
+      if (roles.includes('ADMIN')) {
+        return [
+          'DRAFT','PENDING_MKTG_DIRECTOR','PENDING_SC_DIRECTOR',
+          'PENDING_PRODUCTION_AND_ANALYSIS','PENDING_BOM',
+          'PENDING_RND_AND_QUALITY_DIRECTORS','PENDING_LEGAL_AND_MDM','NEEDS_INFO',
+        ];
+      }
+      if (roles.includes('MKTG_DIRECTOR'))    return ['PENDING_MKTG_DIRECTOR'];
+      if (roles.includes('SC_DIRECTOR'))      return ['PENDING_SC_DIRECTOR'];
+      if (roles.includes('RND_DIRECTOR'))     return ['PENDING_RND_AND_QUALITY_DIRECTORS'];
+      if (roles.includes('QUALITY_DIRECTOR')) return ['PENDING_RND_AND_QUALITY_DIRECTORS'];
+      if (roles.includes('LEGAL'))            return ['PENDING_LEGAL_AND_MDM'];
+      if (roles.includes('MDM_TEAM'))         return ['PENDING_LEGAL_AND_MDM'];
+      if (roles.includes('RND_TEAM'))         return ['PENDING_PRODUCTION_AND_ANALYSIS', 'PENDING_BOM'];
+      if (roles.includes('MARKETING_TEAM'))   return ['PENDING_PRODUCTION_AND_ANALYSIS'];
+      return [];
+    })();
+    if (stateForRole.length) {
+      const placeholders = stateForRole.map(() => '?').join(',');
+      myTasks = db.prepare(`
+        SELECT pr.*, u.name AS requestor_full_name
+          FROM product_requests pr
+          LEFT JOIN users u ON u.id = pr.requestor_user_id
+         WHERE pr.workflow_state IN (${placeholders})
+         ORDER BY pr.updated_at DESC
+         LIMIT 12
+      `).all(...stateForRole).map((r) => Object.assign(r, {
+        state_label: productWorkflow.STATE_LABELS[r.workflow_state] || r.workflow_state,
+        open_url:    deepLinkFor(r, roles),
+      }));
+    }
+
+    // Things this user submitted, most recent first.
+    const mySubmitted = userId
+      ? db.prepare(`
+          SELECT id, product_name, request_type, workflow_state, created_at, updated_at
+            FROM product_requests
+           WHERE requestor_user_id = ?
+           ORDER BY id DESC LIMIT 10
+        `).all(userId).map((r) => Object.assign(r, {
+          state_label: productWorkflow.STATE_LABELS[r.workflow_state] || r.workflow_state,
+        }))
+      : [];
+
+    // Recent activity feed across all product requests.
+    const recent = db.prepare(`
+      SELECT h.*, pr.product_name, u.name AS actor_name
+        FROM product_workflow_history h
+        JOIN product_requests pr ON pr.id = h.product_req_id
+        LEFT JOIN users u ON u.id = h.actor_user_id
+       ORDER BY h.id DESC
+       LIMIT 12
+    `).all();
+
+    res.render('products/dashboard', {
+      kpi,
+      byStage,
+      byType,
+      velocity: fullVelocity,
+      myTasks,
+      mySubmitted,
+      recent,
+      stateLabels: productWorkflow.STATE_LABELS,
+      activeTab:   'dashboard',
     });
   });
 
