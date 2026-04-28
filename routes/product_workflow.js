@@ -248,31 +248,24 @@ module.exports = function makeRouter(db) {
   //
   // Always limited to material_type='FERT' (Finished Goods) per requirement.
   // -------------------------------------------------------------------------
-  router.get('/api/reference-search', (req, res) => {
-    const q       = String(req.query.q       || '').trim();
-    const matNum  = String(req.query.material_number || '').trim();
-    const matDesc = String(req.query.material_description || '').trim();
-    const cat     = String(req.query.category || '').trim();
-    const brand   = String(req.query.brand    || '').trim();
-    const matType = String(req.query.material_type || '').toUpperCase().trim();
+  // ----- Finished-good search backend -------------------------------------
+  // Today: in-memory filter against REFERENCE_PRODUCTS (19 rows).
+  // Tomorrow: swap this single function for a SAP Product Master API call
+  // (or a SQL query against an indexed product_master table). The route
+  // handler, response shape and pagination contract are unchanged so the
+  // UI keeps working untouched.
+  function tokenMatch(haystack, needle) {
+    if (!needle) return true;
+    const h = String(haystack || '').toLowerCase();
+    const toks = needle.toLowerCase().split(/\s+/).filter(Boolean);
+    return toks.every((t) => h.includes(t));
+  }
 
-    // Tokenized, case-insensitive partial match. The needle is split on
-    // whitespace; every token must appear as a substring somewhere in the
-    // haystack. So "golden chips" (with space) still matches "GoldenChips
-    // Original 150g" because both "golden" and "chips" are substrings.
-    function tokenMatch(haystack, needle) {
-      if (!needle) return true;
-      const h = String(haystack || '').toLowerCase();
-      const toks = needle.toLowerCase().split(/\s+/).filter(Boolean);
-      return toks.every((t) => h.includes(t));
-    }
-
+  function searchFinishedGoods(filters, page, pageSize) {
     const matches = REFERENCE_PRODUCTS.filter((p) => {
       // Hard requirement — Finished Goods only.
       if ((p.material_type || '').toUpperCase() !== 'FERT') return false;
 
-      // Wide haystacks per field so e.g. typing a brand name in the
-      // Material Description box still finds the product.
       const descHaystack  = [p.name, p.family_brand, p.brand, p.sub_brand].filter(Boolean).join(' ');
       const catHaystack   = [p.category, p.category_grouper, p.material_group].filter(Boolean).join(' ');
       const brandHaystack = [p.brand, p.family_brand, p.sub_brand].filter(Boolean).join(' ');
@@ -281,37 +274,67 @@ module.exports = function makeRouter(db) {
         p.category, p.category_grouper, p.material_group, p.material_type,
       ].filter(Boolean).join(' ');
 
-      // Legacy free-text mode (used by the BOM tabs).
-      if (q && !tokenMatch(allHaystack, q)) return false;
+      if (filters.q && !tokenMatch(allHaystack, filters.q)) return false;
 
-      // Multi-field — every filled field must match.
-      if (matNum  && !tokenMatch(p.sku,         matNum))  return false;
-      if (matDesc && !tokenMatch(descHaystack,  matDesc)) return false;
-      if (cat     && !tokenMatch(catHaystack,   cat))     return false;
-      if (brand   && !tokenMatch(brandHaystack, brand))   return false;
-      if (matType && (p.material_type || '').toUpperCase() !== matType) return false;
+      if (filters.material_number      && !tokenMatch(p.sku,         filters.material_number))      return false;
+      if (filters.material_description && !tokenMatch(descHaystack,  filters.material_description)) return false;
+      if (filters.category             && !tokenMatch(catHaystack,   filters.category))             return false;
+      if (filters.brand                && !tokenMatch(brandHaystack, filters.brand))                return false;
+      if (filters.material_type        && (p.material_type || '').toUpperCase() !== filters.material_type) return false;
       return true;
     });
 
-    const results = matches.slice(0, 50).map((p) => ({
-      sku:               p.sku,
-      name:              p.name,
-      category_grouper:  p.category_grouper,
-      category:          p.category,
-      family_brand:      p.family_brand,
-      brand:             p.brand,
-      sub_brand:         p.sub_brand,
-      material_type:     p.material_type,
-      material_group:    p.material_group,
-      industry_sector:   p.industry_sector,
-      division:          p.division,
-      base_uom:          p.base_uom,
-      net_weight:        p.net_weight,
-      weight_unit:       p.weight_unit,
-      country_of_origin: p.country_of_origin,
-    }));
+    const total       = matches.length;
+    const totalPages  = Math.max(1, Math.ceil(total / pageSize));
+    const safePage    = Math.max(1, Math.min(page, totalPages));
+    const offset      = (safePage - 1) * pageSize;
+    const slice       = matches.slice(offset, offset + pageSize);
 
-    res.json({ results, total: matches.length });
+    return {
+      results: slice.map((p) => ({
+        sku:               p.sku,
+        name:              p.name,
+        category_grouper:  p.category_grouper,
+        category:          p.category,
+        family_brand:      p.family_brand,
+        brand:             p.brand,
+        sub_brand:         p.sub_brand,
+        material_type:     p.material_type,
+        material_group:    p.material_group,
+        industry_sector:   p.industry_sector,
+        division:          p.division,
+        base_uom:          p.base_uom,
+        net_weight:        p.net_weight,
+        weight_unit:       p.weight_unit,
+        country_of_origin: p.country_of_origin,
+      })),
+      total, totalPages, page: safePage, pageSize,
+    };
+  }
+
+  router.get('/api/reference-search', (req, res) => {
+    const filters = {
+      q:                    String(req.query.q                    || '').trim(),
+      material_number:      String(req.query.material_number      || '').trim(),
+      material_description: String(req.query.material_description || '').trim(),
+      category:             String(req.query.category             || '').trim(),
+      brand:                String(req.query.brand                || '').trim(),
+      material_type:        String(req.query.material_type        || '').toUpperCase().trim(),
+    };
+    // material_type=FERT is set by default in the UI but doesn't count as a
+    // user-supplied filter; the page should stay empty until they actually
+    // search by something narrower than "all finished goods".
+    const filtered = !!(filters.q || filters.material_number || filters.material_description ||
+                        filters.category || filters.brand);
+
+    const page     = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = 15;
+
+    if (!filtered) {
+      return res.json({ results: [], total: 0, page: 1, pageSize, totalPages: 0, filtered: false });
+    }
+    const out = searchFinishedGoods(filters, page, pageSize);
+    res.json(Object.assign({ filtered: true }, out));
   });
 
   // -------------------------------------------------------------------------

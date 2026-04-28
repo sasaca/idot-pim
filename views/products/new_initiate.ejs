@@ -60,6 +60,16 @@
   }
   .ms-banner strong { color:#1e40af; }
   .ms-clear-link { color:#1d4ed8; text-decoration:underline; cursor:pointer; }
+  .ms-page-info { font-size: 12px; color: #475569; }
+  .ms-page-buttons { display: inline-flex; gap: 4px; }
+  .ms-page-buttons button {
+    background: white; border: 1px solid #cbd5e1; padding: 4px 10px;
+    font-size: 12px; border-radius: 5px; cursor: pointer; color: #475569;
+    min-width: 32px;
+  }
+  .ms-page-buttons button:hover:not(:disabled) { background: #f1f5f9; }
+  .ms-page-buttons button.active { background: #1e3a8a; color: white; border-color: #1e3a8a; font-weight: 600; }
+  .ms-page-buttons button:disabled { opacity: .4; cursor: not-allowed; }
 </style>
 
 <main class="mx-auto max-w-6xl px-4 py-8">
@@ -133,6 +143,10 @@
         <span id="ms-status" class="ms-meta" style="margin-top:0;"></span>
       </div>
 
+      <div id="ms-empty" class="ms-meta" style="margin-top:1rem; padding:1.25rem; border:1px dashed #cbd5e1; border-radius:8px; text-align:center; color:#64748b;">
+        Type into any field above (or pick a Category / Brand) to search the Finished Goods catalog. Designed to scale to thousands of SKUs — results paginate 15 at a time.
+      </div>
+
       <div id="ms-results-wrap" style="display:none;">
         <table class="ms-table" id="ms-table">
           <thead>
@@ -150,6 +164,7 @@
           </thead>
           <tbody id="ms-results"></tbody>
         </table>
+        <div id="ms-pagination" class="ms-pagination" style="display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-top:.6rem; flex-wrap:wrap;"></div>
       </div>
 
       <input id="reference_sku" type="hidden" name="reference_sku">
@@ -195,38 +210,50 @@
   var status      = document.getElementById('ms-status');
   var resultsWrap = document.getElementById('ms-results-wrap');
   var resultsBody = document.getElementById('ms-results');
+  var emptyState  = document.getElementById('ms-empty');
+  var pagination  = document.getElementById('ms-pagination');
   var skuInput    = document.getElementById('reference_sku');
   var selected    = document.getElementById('ms-selected');
+  var currentPage = 1;
 
   // Submit on enter from any input.
   Object.values(inputs).forEach(function (el) {
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
   });
 
-  document.getElementById('ms-search').addEventListener('click', function () { runSearch(); });
+  document.getElementById('ms-search').addEventListener('click', function () { currentPage = 1; runSearch(); });
   document.getElementById('ms-reset').addEventListener('click', function () {
     Object.keys(inputs).forEach(function (k) {
       if (k === 'material_type') inputs[k].value = 'FERT';
       else inputs[k].value = '';
     });
     clearSelection();
-    runSearch();           // re-render with all FERTs
+    currentPage = 1;
+    showEmpty();        // back to the "type to search" placeholder
   });
 
   // Live search — fires 150ms after the user stops typing in any text field,
-  // immediately on a dropdown change. With no filters set the API returns the
-  // full FERT catalog, so the user always sees something to scroll through.
+  // immediately on a dropdown change. Resets to page 1 whenever filters
+  // change.
   var debounce = null;
   Object.values(inputs).forEach(function (el) {
     if (el.tagName === 'SELECT') {
-      el.addEventListener('change', function () { runSearch(); });
+      el.addEventListener('change', function () { currentPage = 1; runSearch(); });
     } else {
       el.addEventListener('input', function () {
         clearTimeout(debounce);
-        debounce = setTimeout(runSearch, 150);
+        debounce = setTimeout(function () { currentPage = 1; runSearch(); }, 150);
       });
     }
   });
+
+  function showEmpty() {
+    emptyState.style.display = '';
+    resultsWrap.style.display = 'none';
+    resultsBody.innerHTML = '';
+    pagination.innerHTML = '';
+    status.textContent = '';
+  }
 
   async function runSearch() {
     var params = new URLSearchParams();
@@ -234,30 +261,39 @@
       var v = (inputs[k].value || '').trim();
       if (v) params.append(k, v);
     });
+    params.set('page', String(currentPage));
     status.textContent = 'Searching…'; status.style.color = '#475569';
     try {
       var resp = await fetch('/products/workflow/api/reference-search?' + params.toString());
       var data = await resp.json();
-      render(data.results || [], data.total || 0);
+      if (!data.filtered) { showEmpty(); return; }
+      emptyState.style.display = 'none';
+      render(data);
     } catch (e) {
       console.error(e);
       status.textContent = '⚠ Search failed.'; status.style.color = '#b91c1c';
     }
   }
 
-  // Auto-run on page load so users immediately see the full FERT catalog.
-  runSearch();
-
-  function render(rows, total) {
+  function render(data) {
     resultsWrap.style.display = '';
+    var rows  = data.results || [];
+    var total = data.total || 0;
+    var page  = data.page || 1;
+    var pages = data.totalPages || 0;
+    var size  = data.pageSize || 15;
+
     if (!rows.length) {
       resultsBody.innerHTML = '<tr><td colspan="9" style="padding:18px; text-align:center; color:#94a3b8;">No matching finished goods.</td></tr>';
+      pagination.innerHTML = '';
       status.textContent = '0 results.'; status.style.color = '#475569';
       return;
     }
-    var capped = total > rows.length ? ' (showing ' + rows.length + ' of ' + total + ')' : '';
-    status.innerHTML = '<strong>' + rows.length + ' result' + (rows.length === 1 ? '' : 's') + '</strong>' + capped;
+    var first = (page - 1) * size + 1;
+    var last  = Math.min(page * size, total);
+    status.innerHTML = '<strong>' + total + ' result' + (total === 1 ? '' : 's') + '</strong> · showing ' + first + '–' + last;
     status.style.color = '#065f46';
+
     resultsBody.innerHTML = rows.map(function (r) {
       var brand = [r.brand, r.sub_brand].filter(Boolean).join(' / ');
       return '<tr data-sku="' + escAttr(r.sku) + '" data-name="' + escAttr(r.name) + '">' +
@@ -275,11 +311,56 @@
     Array.from(resultsBody.querySelectorAll('tr[data-sku]')).forEach(function (row) {
       row.addEventListener('click', function () { pick(row.dataset.sku, row.dataset.name, row); });
     });
-    // Re-mark selection if the previously chosen sku is in the current page.
     if (skuInput.value) {
       var prior = resultsBody.querySelector('tr[data-sku="' + skuInput.value.replace(/"/g, '\\"') + '"]');
       if (prior) prior.classList.add('selected');
     }
+
+    renderPagination(page, pages, first, last, total);
+  }
+
+  // Window of page numbers around the current page. Keeps the strip compact
+  // even with hundreds/thousands of pages.
+  function pageWindow(page, total) {
+    if (total <= 7) {
+      var arr = [];
+      for (var i = 1; i <= total; i++) arr.push(i);
+      return arr;
+    }
+    var s = new Set([1, total, page - 1, page, page + 1]);
+    if (page <= 3) { s.add(2); s.add(3); s.add(4); }
+    if (page >= total - 2) { s.add(total - 1); s.add(total - 2); s.add(total - 3); }
+    return [...s].filter(function (n) { return n >= 1 && n <= total; }).sort(function (a, b) { return a - b; });
+  }
+
+  function renderPagination(page, totalPages, first, last, total) {
+    if (totalPages <= 1) {
+      pagination.innerHTML = '<span class="ms-page-info">' + first + '–' + last + ' of ' + total + '</span>';
+      return;
+    }
+    var win = pageWindow(page, totalPages);
+    var html = '<span class="ms-page-info">' + first + '–' + last + ' of ' + total + '</span><div class="ms-page-buttons">';
+    html += '<button data-page="' + (page - 1) + '" ' + (page === 1 ? 'disabled' : '') + '>‹ Prev</button>';
+    var prev = 0;
+    win.forEach(function (n) {
+      if (prev && n - prev > 1) html += '<button disabled>…</button>';
+      html += '<button data-page="' + n + '" class="' + (n === page ? 'active' : '') + '">' + n + '</button>';
+      prev = n;
+    });
+    html += '<button data-page="' + (page + 1) + '" ' + (page === totalPages ? 'disabled' : '') + '>Next ›</button>';
+    html += '</div>';
+    pagination.innerHTML = html;
+    Array.from(pagination.querySelectorAll('button[data-page]')).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = parseInt(btn.dataset.page, 10);
+        if (Number.isFinite(p) && p >= 1 && p <= totalPages && p !== page) {
+          currentPage = p;
+          runSearch();
+          // Scroll the results into view so the user sees the new page.
+          resultsWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    });
   }
 
   function pick(sku, name, row) {
