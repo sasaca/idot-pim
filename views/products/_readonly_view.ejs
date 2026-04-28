@@ -186,7 +186,8 @@ function fmt(n) {
   <h3>Contract</h3>
   <div class="ro-grid">
     <div class="ro-row"><span class="ro-label">Status</span><span class="ro-value"><%= show(rnd.contract_status && rnd.contract_status.replace(/_/g,' ')) %></span></div>
-    <div class="ro-row"><span class="ro-label">Supplier</span><span class="ro-value"><%= show(rnd.contract_supplier) %></span></div>
+    <div class="ro-row"><span class="ro-label">Existing supplier?</span><span class="ro-value"><%= show(rnd.existing_supplier) %></span></div>
+    <div class="ro-row full"><span class="ro-label">Supplier name</span><span class="ro-value"><%= show(rnd.contract_supplier) %></span></div>
   </div>
 </div>
 

@@ -394,8 +394,15 @@
               </div>
             </div>
             <div class="vob-field">
-              <label>Supplier (if known)</label>
-              <input type="text" name="rnd_contract_supplier" value="<%= v(rnd,'contract_supplier') %>" placeholder="Supplier or co-manufacturer name">
+              <label><span class="req">*</span>Existing supplier?</label>
+              <div class="radio-group">
+                <label><input type="radio" name="rnd_existing_supplier" value="YES" required <%= (rnd.existing_supplier === 'YES') ? 'checked' : '' %>>Yes</label>
+                <label><input type="radio" name="rnd_existing_supplier" value="NO" <%= (rnd.existing_supplier === 'NO') ? 'checked' : '' %>>No</label>
+              </div>
+            </div>
+            <div class="vob-field full">
+              <label>Supplier name</label>
+              <input type="text" name="rnd_contract_supplier" value="<%= v(rnd,'contract_supplier') %>" placeholder="Name of the supplier or co-manufacturer">
             </div>
           </div>
         </div>

@@ -1765,6 +1765,7 @@ function pickRnd(b) {
     fx_as_of:             b.rnd_fx_as_of             || '',
     fx_source:            b.rnd_fx_source            || '',
     contract_status:      b.rnd_contract_status      || '',  // EXISTING_VALID | NEW_NEEDED
+    existing_supplier:    b.rnd_existing_supplier    || '',  // YES | NO
     contract_supplier:    b.rnd_contract_supplier    || '',
   };
 }
