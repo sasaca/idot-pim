@@ -2,13 +2,15 @@
 /*
   views/products/_readonly_view.ejs
   ---------------------------------------------------------------------------
-  Renders every Stage 1 + Stage 2 field that the requestor populated, as
-  view-only sections that mirror the layout of new_details.ejs (4 tabs:
-  Marketing, Brand, R&D, Forecast — plus an "Initiate" header). Used by
-  every approval view.
+  Read-only data viewer used by every approval screen + the confirmation
+  page. Each submitted form gets its own item in the LEFT NAV; clicking
+  switches the right pane. Forms with multiple tabs (Stage 2, Production,
+  Packaging Materials, Design, Competitor Analysis, BOM, Legal) render
+  their internal tabs as folder tabs at the top of the form pane, exactly
+  the way users see them when filling the form.
 
   Usage:
-    include('_readonly_view', { productRequest, ref })
+    include('_readonly_view', { productRequest, ref, attachments, designAttachments, legalAttachments })
 */
 var pr  = productRequest;
 var mk  = pr.marketing || {};
@@ -37,7 +39,7 @@ var legalRO  = pr.legal || {};
 var legalAtts = (typeof legalAttachments !== 'undefined' && legalAttachments) ? legalAttachments : [];
 
 function show(v, fallback) {
-  if (v === null || v === undefined || v === '' ) return fallback || '—';
+  if (v === null || v === undefined || v === '') return fallback || '—';
   return v;
 }
 function fmt(n) {
@@ -45,632 +47,792 @@ function fmt(n) {
   if (typeof n === 'number') return n.toLocaleString();
   return n;
 }
+
+// Determine which forms exist on this request, in workflow order. The left
+// nav only shows forms that actually have data.
+var hasStage2     = !!(mk.market || br.brand || rnd.material_type || fc.total_y1 != null);
+var hasProduction = !!(pr.production_completed_at || prodPlan.launch_start_date);
+var hasPackaging  = !!(pr.packaging_completed_at  || pkmMat.material_type);
+var hasDesign     = !!(pr.design_completed_at     || (dsn.agency && dsn.agency.name) || dsnAtts.length);
+var hasCompetitor = !!(pr.competitor_completed_at || cmp.market_type);
+var hasBom        = !!(pr.bom_completed_at || bomPkgRO.length || bomFrmRO.length);
+var hasLegal      = !!(pr.legal_completed_at || (legalRO.certifications || []).length || (legalRO.registrations || []).length);
+var hasMdm        = !!pr.mdm_completed_at;
+
+var formList = [
+  { id:'initiate',  label:'Initiate',                show:true },
+  { id:'stage2',    label:'Marketing & R&D Details', show:hasStage2 },
+  { id:'production',label:'Production',              show:hasProduction },
+  { id:'packaging', label:'Packaging Materials',     show:hasPackaging },
+  { id:'design',    label:'Design',                  show:hasDesign },
+  { id:'competitor',label:'Competitor Analysis',     show:hasCompetitor },
+  { id:'bom',       label:'BOM Selection',           show:hasBom },
+  { id:'legal',     label:'Legal Task',              show:hasLegal },
+  { id:'mdm',       label:'MDM Material Review',     show:hasMdm },
+].filter(function (f) { return f.show; });
 %>
 
 <style>
-  .ro-card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:18px 22px; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-bottom:14px; }
-  .ro-card h2 { font-size:16px; font-weight:600; color:#111827; margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid #e5e7eb; }
-  .ro-card h3 { font-size:13px; font-weight:600; color:#374151; margin:14px 0 6px; text-transform:uppercase; letter-spacing:.04em; }
-  .ro-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px 28px; font-size:13px; }
-  .ro-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
-  .ro-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
-  .ro-row { display:flex; flex-direction:column; gap:1px; padding:4px 0; border-bottom:1px dashed #f3f4f6; }
-  .ro-row.full { grid-column:1 / -1; }
-  .ro-row .ro-label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
-  .ro-row .ro-value { font-size:14px; color:#111827; white-space:pre-wrap; }
-  .ro-pill { display:inline-block; padding:.1rem .55rem; border-radius:9999px; background:#eef2ff; color:#3730a3; font-size:11px; font-weight:600; }
-  .ro-fc-table { width:100%; border-collapse:collapse; font-size:12px; }
-  .ro-fc-table th, .ro-fc-table td { padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right; }
-  .ro-fc-table th { background:#f9fafb; color:#374151; text-align:center; font-weight:600; }
-  .ro-fc-table th:first-child, .ro-fc-table td:first-child { text-align:left; }
-  .ro-fc-table .ro-total { background:#eff6ff; font-weight:600; color:#1e3a8a; }
+  /* ---------- left-nav layout ---------- */
+  .rv-layout { display:flex; gap:14px; align-items:flex-start; margin-bottom:18px; }
+  @media (max-width: 900px) { .rv-layout { flex-direction:column; } .rv-leftnav { position:relative !important; width:100%; flex:0 0 auto; } }
+
+  .rv-leftnav {
+    flex:0 0 220px;
+    background:white; border:1px solid #e2e8f0; border-radius:10px;
+    padding:8px;
+    position:sticky; top:1rem; align-self:flex-start;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .rv-leftnav h4 {
+    font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+    color:#94a3b8; font-weight:700; margin:6px 8px 6px;
+  }
+  .rv-leftnav button {
+    text-align:left; padding:9px 12px;
+    background:transparent; border:1px solid transparent;
+    border-radius:7px; cursor:pointer;
+    font-size:13px; color:#475569; font-weight:500;
+    display:flex; align-items:center; gap:8px;
+  }
+  .rv-leftnav button .rv-num {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:20px; height:20px; padding:0 6px; border-radius:6px;
+    background:#e2e8f0; color:#475569; font-size:11px; font-weight:700;
+  }
+  .rv-leftnav button:hover { background:#f1f5f9; color:#0f172a; }
+  .rv-leftnav button.active { background:#1e3a8a; color:white; font-weight:600; }
+  .rv-leftnav button.active .rv-num { background:rgba(255,255,255,0.25); color:white; }
+
+  /* ---------- right pane ---------- */
+  .rv-content { flex:1; min-width:0; }
+  .rv-form    { display:none; }
+  .rv-form.active { display:block; }
+
+  /* ---------- folder tabs (per form) ---------- */
+  .rv-folder-nav {
+    display:flex; flex-wrap:wrap; gap:2px; padding:0 6px;
+    margin:0 0 -1px 0; position:relative; z-index:2;
+  }
+  .rv-folder-nav button {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 16px; border:1px solid #e5e7eb;
+    border-radius:8px 8px 0 0;
+    background:#f3f4f6; color:#4b5563;
+    font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .rv-folder-nav button:hover { background:#e5e7eb; }
+  .rv-folder-nav button.active {
+    background:white; color:#111827; font-weight:600;
+    border-bottom-color:white; z-index:3;
+  }
+  .rv-folder-pane { display:none; }
+  .rv-folder-pane.active { display:block; }
+
+  /* ---------- card styling — applied to each pane ---------- */
+  .rv-card {
+    background:white; border:1px solid #e5e7eb;
+    border-radius:0 8px 8px 8px;
+    padding:18px 22px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+    position:relative; z-index:1;
+  }
+  /* When a form has only one pane, the top corners need rounding too. */
+  .rv-card.rv-card-flat { border-radius:8px; }
+  .rv-card h2 { font-size:16px; font-weight:600; color:#111827; margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid #e5e7eb; display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+  .rv-card h3 { font-size:12.5px; font-weight:700; color:#374151; margin:14px 0 6px; text-transform:uppercase; letter-spacing:.05em; }
+
+  /* ---------- shared row / table ---------- */
+  .rv-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px 28px; font-size:13px; }
+  .rv-grid.cols-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+  .rv-grid.cols-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+  .rv-row { display:flex; flex-direction:column; gap:1px; padding:4px 0; border-bottom:1px dashed #f3f4f6; }
+  .rv-row.full { grid-column:1 / -1; }
+  .rv-row .rv-label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+  .rv-row .rv-value { font-size:14px; color:#111827; white-space:pre-wrap; }
+  .rv-pill { display:inline-block; padding:.1rem .55rem; border-radius:9999px; background:#eef2ff; color:#3730a3; font-size:11px; font-weight:600; }
+  .rv-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+  .rv-table th, .rv-table td { padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right; }
+  .rv-table th { background:#f9fafb; color:#374151; text-align:center; font-weight:600; }
+  .rv-table th:first-child, .rv-table td:first-child { text-align:left; }
+  .rv-table .rv-total { background:#eff6ff; font-weight:600; color:#1e3a8a; }
+  .rv-banner { background:#eff6ff; border:1px solid #bfdbfe; padding:.65rem .9rem; border-radius:.5rem; font-size:13px; color:#1e3a8a; margin-bottom:.6rem; }
 </style>
 
-<!-- Initiate / project header -->
-<div class="ro-card">
-  <h2>Initiate</h2>
-  <div class="ro-grid">
-    <div class="ro-row">
-      <span class="ro-label">Request type</span>
-      <span class="ro-value"><%= pr.request_type ? pr.request_type.replace(/_/g,' ') : '—' %></span>
-    </div>
-    <div class="ro-row">
-      <span class="ro-label">Request date</span>
-      <span class="ro-value"><%= show(pr.request_date) %></span>
-    </div>
-    <div class="ro-row">
-      <span class="ro-label">Requestor</span>
-      <span class="ro-value"><%= show(pr.requestor_name) %><% if (pr.requestor_email) { %> &lt;<%= pr.requestor_email %>&gt;<% } %></span>
-    </div>
-    <div class="ro-row">
-      <span class="ro-label">Product name</span>
-      <span class="ro-value"><%= show(pr.product_name) %></span>
-    </div>
-    <% if (rp.sku) { %>
-      <div class="ro-row full">
-        <span class="ro-label">Reference product</span>
-        <span class="ro-value">
-          <span class="ro-pill"><%= rp.sku %></span> <%= rp.name %>
-          <% if (rp.brand) { %> · <%= rp.brand %><% } %>
-          <% if (rp.bom && rp.bom.length) { %>
-            · <%= rp.bom.length %>-line BOM available for reuse
+<div class="rv-layout">
+  <!-- ===================== LEFT NAV ===================== -->
+  <nav class="rv-leftnav" data-rv-leftnav>
+    <h4>Submitted forms</h4>
+    <% formList.forEach(function (f, i) { %>
+      <button type="button" data-rv-form-btn="<%= f.id %>" class="<%= i === 0 ? 'active' : '' %>">
+        <span class="rv-num"><%= i + 1 %></span>
+        <span><%= f.label %></span>
+      </button>
+    <% }); %>
+  </nav>
+
+  <!-- ===================== RIGHT PANE — FORMS ===================== -->
+  <div class="rv-content">
+
+    <!-- ============== Initiate (no internal tabs) ============== -->
+    <section class="rv-form active" data-form="initiate">
+      <div class="rv-card rv-card-flat">
+        <h2>Initiate</h2>
+        <div class="rv-grid">
+          <div class="rv-row"><span class="rv-label">Request type</span><span class="rv-value"><%= pr.request_type ? pr.request_type.replace(/_/g,' ') : '—' %></span></div>
+          <div class="rv-row"><span class="rv-label">Request date</span><span class="rv-value"><%= show(pr.request_date) %></span></div>
+          <div class="rv-row"><span class="rv-label">Requestor</span><span class="rv-value"><%= show(pr.requestor_name) %><% if (pr.requestor_email) { %> &lt;<%= pr.requestor_email %>&gt;<% } %></span></div>
+          <div class="rv-row"><span class="rv-label">Product name</span><span class="rv-value"><%= show(pr.product_name) %></span></div>
+          <% if (rp.sku) { %>
+            <div class="rv-row full">
+              <span class="rv-label">Reference product</span>
+              <span class="rv-value">
+                <span class="rv-pill"><%= rp.sku %></span> <%= rp.name %>
+                <% if (rp.brand) { %> · <%= rp.brand %><% } %>
+                <% if (rp.bom && rp.bom.length) { %> · <%= rp.bom.length %>-line BOM available for reuse<% } %>
+              </span>
+            </div>
           <% } %>
-        </span>
+        </div>
       </div>
-    <% } %>
-  </div>
-</div>
+    </section>
 
-<!-- 1) Marketing -->
-<div class="ro-card">
-  <h2>1 · Marketing</h2>
-  <div class="ro-grid">
-    <div class="ro-row">
-      <span class="ro-label">Target market</span>
-      <span class="ro-value">
-        <% var marketRow = (ref && ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === mk.market; }); %>
-        <%= marketRow ? (marketRow.name + ' (' + marketRow.currency + ')') : show(mk.market) %>
-      </span>
-    </div>
-    <div class="ro-row">
-      <span class="ro-label">Packaging / Formula</span>
-      <span class="ro-value">
-        Packaging: <strong><%= show(mk.packaging_status) %></strong>
-        · Formula: <strong><%= show(mk.formula_status) %></strong>
-      </span>
-    </div>
-    <div class="ro-row full">
-      <span class="ro-label">Rationale</span>
-      <span class="ro-value"><%= show(mk.rationale) %></span>
-    </div>
-    <div class="ro-row full">
-      <span class="ro-label">Competitor &amp; Market Positioning</span>
-      <span class="ro-value"><%= show(mk.positioning) %></span>
-    </div>
-    <div class="ro-row full">
-      <span class="ro-label">Launch Plan</span>
-      <span class="ro-value"><%= show(mk.launch_plan) %></span>
-    </div>
-  </div>
-</div>
+    <!-- ============== Stage 2 — 4 internal folder tabs ============== -->
+    <% if (hasStage2) { %>
+      <section class="rv-form" data-form="stage2">
+        <nav class="rv-folder-nav">
+          <button class="active" data-folder-group="stage2" data-folder-tab="stage2-mk">Marketing</button>
+          <button                data-folder-group="stage2" data-folder-tab="stage2-br">Brand</button>
+          <button                data-folder-group="stage2" data-folder-tab="stage2-rd">R&amp;D</button>
+          <button                data-folder-group="stage2" data-folder-tab="stage2-fc">Forecast</button>
+        </nav>
 
-<!-- 2) Brand -->
-<div class="ro-card">
-  <h2>2 · Brand</h2>
-  <div class="ro-grid cols-3">
-    <div class="ro-row"><span class="ro-label">Category Grouper</span><span class="ro-value"><%= show(br.category_grouper) %></span></div>
-    <div class="ro-row"><span class="ro-label">Category</span><span class="ro-value"><%= show(br.category) %></span></div>
-    <div class="ro-row"><span class="ro-label">Family Brand</span><span class="ro-value"><%= show(br.family_brand) %></span></div>
-    <div class="ro-row"><span class="ro-label">Brand</span><span class="ro-value"><%= show(br.brand) %></span></div>
-    <div class="ro-row"><span class="ro-label">Sub Brand</span><span class="ro-value"><%= show(br.sub_brand) %></span></div>
-  </div>
-</div>
+        <div class="rv-folder-pane active" data-folder-pane-group="stage2" data-folder-pane="stage2-mk">
+          <div class="rv-card">
+            <h2>Marketing</h2>
+            <div class="rv-grid">
+              <div class="rv-row"><span class="rv-label">Target market</span><span class="rv-value">
+                <% var marketRow = (ref && ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === mk.market; }); %>
+                <%= marketRow ? (marketRow.name + ' (' + marketRow.currency + ')') : show(mk.market) %>
+              </span></div>
+              <div class="rv-row"><span class="rv-label">Packaging / Formula</span><span class="rv-value">
+                Packaging: <strong><%= show(mk.packaging_status) %></strong>
+                · Formula: <strong><%= show(mk.formula_status) %></strong>
+              </span></div>
+              <div class="rv-row full"><span class="rv-label">Rationale</span><span class="rv-value"><%= show(mk.rationale) %></span></div>
+              <div class="rv-row full"><span class="rv-label">Competitor &amp; Market Positioning</span><span class="rv-value"><%= show(mk.positioning) %></span></div>
+              <div class="rv-row full"><span class="rv-label">Launch Plan</span><span class="rv-value"><%= show(mk.launch_plan) %></span></div>
+            </div>
+          </div>
+        </div>
 
-<!-- 3) R&D -->
-<div class="ro-card">
-  <h2>3 · R&amp;D</h2>
-  <h3>SAP classification</h3>
-  <div class="ro-grid">
-    <div class="ro-row"><span class="ro-label">Material Type (SAP)</span><span class="ro-value"><%= show(rnd.material_type) %></span></div>
-    <div class="ro-row"><span class="ro-label">Base UoM</span><span class="ro-value"><%= show(rnd.base_uom) %></span></div>
-  </div>
+        <div class="rv-folder-pane" data-folder-pane-group="stage2" data-folder-pane="stage2-br">
+          <div class="rv-card">
+            <h2>Brand</h2>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Category Grouper</span><span class="rv-value"><%= show(br.category_grouper) %></span></div>
+              <div class="rv-row"><span class="rv-label">Category</span><span class="rv-value"><%= show(br.category) %></span></div>
+              <div class="rv-row"><span class="rv-label">Family Brand</span><span class="rv-value"><%= show(br.family_brand) %></span></div>
+              <div class="rv-row"><span class="rv-label">Brand</span><span class="rv-value"><%= show(br.brand) %></span></div>
+              <div class="rv-row"><span class="rv-label">Sub Brand</span><span class="rv-value"><%= show(br.sub_brand) %></span></div>
+            </div>
+          </div>
+        </div>
 
-  <h3>Dimensions</h3>
-  <div class="ro-grid cols-4">
-    <div class="ro-row"><span class="ro-label">Length</span><span class="ro-value"><%= fmt(rnd.length) %> <%= rnd.dim_unit || '' %></span></div>
-    <div class="ro-row"><span class="ro-label">Width</span><span class="ro-value"><%= fmt(rnd.width) %> <%= rnd.dim_unit || '' %></span></div>
-    <div class="ro-row"><span class="ro-label">Height</span><span class="ro-value"><%= fmt(rnd.height) %> <%= rnd.dim_unit || '' %></span></div>
-    <div class="ro-row"><span class="ro-label">Volume</span><span class="ro-value"><%= fmt(rnd.volume) %> <%= rnd.volume_unit || '' %></span></div>
-    <div class="ro-row"><span class="ro-label">Net Weight</span><span class="ro-value"><%= fmt(rnd.net_weight) %> <%= rnd.weight_unit || '' %></span></div>
-    <div class="ro-row"><span class="ro-label">Gross Weight</span><span class="ro-value"><%= fmt(rnd.gross_weight) %> <%= rnd.weight_unit || '' %></span></div>
-  </div>
-
-  <h3>Pricing</h3>
-  <div class="ro-grid cols-3">
-    <div class="ro-row"><span class="ro-label">Manufacturing Price (USD)</span><span class="ro-value"><%= fmt(rnd.mfg_price) %> USD</span></div>
-    <div class="ro-row"><span class="ro-label">Manufacturing Price (Local)</span><span class="ro-value"><%= fmt(rnd.mfg_price_local) %> <%= rnd.retail_price_local_ccy || '' %></span></div>
-    <div class="ro-row"></div>
-    <div class="ro-row"><span class="ro-label">Retail Price (USD)</span><span class="ro-value"><%= fmt(rnd.retail_price_usd) %> USD</span></div>
-    <div class="ro-row"><span class="ro-label">Retail Price (Local)</span><span class="ro-value"><%= fmt(rnd.retail_price_local) %> <%= rnd.retail_price_local_ccy || '' %></span></div>
-    <% if (rnd.fx_rate) { %>
-      <div class="ro-row full">
-        <span class="ro-label">FX Rate captured at submit</span>
-        <span class="ro-value">1 USD = <strong><%= rnd.fx_rate %></strong> <%= rnd.retail_price_local_ccy || '' %>
-          · <%= rnd.fx_as_of || '' %>
-          <% if (rnd.fx_source) { %> · <em><%= rnd.fx_source %></em><% } %>
-        </span>
-      </div>
-    <% } %>
-  </div>
-
-  <h3>Contract</h3>
-  <div class="ro-grid">
-    <div class="ro-row"><span class="ro-label">Status</span><span class="ro-value"><%= show(rnd.contract_status && rnd.contract_status.replace(/_/g,' ')) %></span></div>
-    <div class="ro-row"><span class="ro-label">Existing supplier?</span><span class="ro-value"><%= show(rnd.existing_supplier) %></span></div>
-    <div class="ro-row full"><span class="ro-label">Supplier name</span><span class="ro-value"><%= show(rnd.contract_supplier) %></span></div>
-  </div>
-</div>
-
-<!-- 4) Forecast -->
-<div class="ro-card">
-  <h2>4 · Forecast</h2>
-  <table class="ro-fc-table">
-    <thead>
-      <tr>
-        <th>Period</th>
-        <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %><th><%= m %></th><% }); %>
-        <th>Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>Year 1</strong></td>
-        <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
-          <td><%= fmt(fc['y1_' + m]) %></td>
-        <% }); %>
-        <td class="ro-total"><%= fmt(fc.total_y1) %></td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="ro-grid cols-4" style="margin-top:10px;">
-    <div class="ro-row"><span class="ro-label">Year 2</span><span class="ro-value"><%= fmt(fc.y2) %></span></div>
-    <div class="ro-row"><span class="ro-label">Year 3</span><span class="ro-value"><%= fmt(fc.y3) %></span></div>
-    <div class="ro-row"><span class="ro-label">Year 4</span><span class="ro-value"><%= fmt(fc.y4) %></span></div>
-    <div class="ro-row"><span class="ro-label">Year 5</span><span class="ro-value"><%= fmt(fc.y5) %></span></div>
-    <div class="ro-row full"><span class="ro-label">5-Year Total</span><span class="ro-value"><strong style="font-size:16px;color:#1e3a8a;"><%= fmt(fc.total_y5) %></strong></span></div>
-  </div>
-</div>
-
-<% if (pr.production_completed_at || prodPlan.launch_start_date) { %>
-  <!-- 5) Production (R&D) -->
-  <div class="ro-card">
-    <h2>5 · Production (R&amp;D)
-      <% if (pr.production_completed_at) { %>
-        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.production_completed_at %></span>
-      <% } else { %>
-        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
-      <% } %>
-    </h2>
-    <h3>Production plan</h3>
-    <div class="ro-grid cols-3">
-      <div class="ro-row"><span class="ro-label">Launch start</span><span class="ro-value"><%= show(prodPlan.launch_start_date) %></span></div>
-      <div class="ro-row"><span class="ro-label">Launch target</span><span class="ro-value"><%= show(prodPlan.launch_target_date) %></span></div>
-      <div class="ro-row"><span class="ro-label">Lead time</span><span class="ro-value"><%= prodPlan.lead_time_weeks != null ? (prodPlan.lead_time_weeks + ' weeks') : '—' %></span></div>
-    </div>
-    <h3>Packaging</h3>
-    <div class="ro-grid cols-3">
-      <div class="ro-row"><span class="ro-label">Origin</span><span class="ro-value"><%= show(prodPkg.origin) %></span></div>
-      <div class="ro-row"><span class="ro-label">Launch type</span><span class="ro-value"><%= show(prodPkg.launch_type && prodPkg.launch_type.replace(/_/g,' ')) %></span></div>
-      <div class="ro-row"><span class="ro-label">Region / Country</span><span class="ro-value"><%= show(prodPkg.region) %><% if (prodPkg.country) { %> · <%= prodPkg.country %><% } %></span></div>
-      <div class="ro-row full"><span class="ro-label">Site</span><span class="ro-value"><%= show(prodPkg.site) %></span></div>
-    </div>
-    <h3>Formula</h3>
-    <div class="ro-grid cols-3">
-      <div class="ro-row"><span class="ro-label">Origin</span><span class="ro-value"><%= show(prodFrm.origin) %></span></div>
-      <div class="ro-row"><span class="ro-label">Category</span><span class="ro-value"><%= show(prodFrm.category) %></span></div>
-      <div class="ro-row"><span class="ro-label">Class</span><span class="ro-value"><%= show(prodFrm.class) %></span></div>
-      <div class="ro-row"><span class="ro-label">Brand</span><span class="ro-value"><%= show(prodFrm.brand_tier) %></span></div>
-      <div class="ro-row"><span class="ro-label">Formula type</span><span class="ro-value"><%= show(prodFrm.formula_type) %></span></div>
-      <div class="ro-row"><span class="ro-label">Flavor</span><span class="ro-value"><%= show(prodFrm.flavor) %></span></div>
-      <div class="ro-row"><span class="ro-label">Color</span><span class="ro-value"><%= show(prodFrm.color) %></span></div>
-      <div class="ro-row"><span class="ro-label">Appearance</span><span class="ro-value"><%= show(prodFrm.appearance) %></span></div>
-      <div class="ro-row"><span class="ro-label">Cold storage</span><span class="ro-value"><%= show(prodFrm.cold_storage) %></span></div>
-      <div class="ro-row"><span class="ro-label">Carbonated</span><span class="ro-value"><%= show(prodFrm.carbonated) %></span></div>
-    </div>
-    <% if (prodFrm.certificates && prodFrm.certificates.length) { %>
-      <h3>Legal certificates</h3>
-      <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
-        <% prodFrm.certificates.forEach(function (c) { %>
-          <li>
-            <strong><%= c.code %></strong>
-            <% if (c.comment) { %> — <em><%= c.comment %></em><% } %>
-            <%
-              var fileMatches = atts.filter(function (a) { return a.certificate_type === c.code; });
-              fileMatches.forEach(function (f) { %>
-              · <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
-            <% }); %>
-          </li>
-        <% }); %>
-      </ul>
-    <% } %>
-  </div>
-<% } %>
-
-<% if (pr.packaging_completed_at || pkmMat.material_type) { %>
-  <!-- 5b) Packaging Materials (R&D) -->
-  <div class="ro-card">
-    <h2>5b · Packaging Materials (R&amp;D)
-      <% if (pr.packaging_completed_at) { %>
-        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.packaging_completed_at %></span>
-      <% } else { %>
-        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
-      <% } %>
-    </h2>
-    <h3>Materials</h3>
-    <div class="ro-grid cols-3">
-      <div class="ro-row"><span class="ro-label">Status</span><span class="ro-value"><%= show(pkmMat.status) %></span></div>
-      <div class="ro-row"><span class="ro-label">Material type</span><span class="ro-value"><%= show(pkmMat.material_type) %></span></div>
-      <div class="ro-row"><span class="ro-label">Units per case</span><span class="ro-value"><%= show(pkmMat.units_per_case) %><% if (pkmMat.case_pack_label) { %> (<%= pkmMat.case_pack_label %>)<% } %></span></div>
-      <div class="ro-row"><span class="ro-label">Height × Width</span><span class="ro-value"><%= fmt(pkmMat.height) %> × <%= fmt(pkmMat.width) %> <%= pkmMat.dim_unit || '' %></span></div>
-      <div class="ro-row"><span class="ro-label">Volume</span><span class="ro-value"><%= fmt(pkmMat.volume) %> <%= pkmMat.volume_unit || '' %></span></div>
-    </div>
-    <% if (pkmMat.description) { %>
-      <div class="ro-row full"><span class="ro-label">Description</span><span class="ro-value"><%= pkmMat.description %></span></div>
-    <% } %>
-
-    <% if (pkmComps.length) { %>
-      <h3>Components</h3>
-      <table class="ro-fc-table">
-        <thead><tr><th>Component</th><th>Status</th><th>Description</th></tr></thead>
-        <tbody>
-          <% pkmComps.forEach(function (c) { %>
-            <tr>
-              <td style="text-align:left;"><%= c.code %></td>
-              <td><%= c.status %></td>
-              <td style="text-align:left;"><%= c.description || '—' %></td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    <% } %>
-
-    <% if (pkmInco.length) { %>
-      <h3>Incoterms</h3>
-      <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
-        <% pkmInco.forEach(function (i) { %>
-          <li><strong><%= i.code %></strong><% if (i.description) { %> — <em><%= i.description %></em><% } %></li>
-        <% }); %>
-      </ul>
-    <% } %>
-
-    <h3>Updated cost &amp; price</h3>
-    <div class="ro-grid cols-3">
-      <div class="ro-row"><span class="ro-label">Cost (Local)</span><span class="ro-value"><%= fmt(pkmCost.cost_local) %> <%= pkmCost.cost_local_ccy || '' %></span></div>
-      <div class="ro-row"><span class="ro-label">Cost (USD)</span> <span class="ro-value"><%= fmt(pkmCost.cost_usd) %> USD</span></div>
-      <div class="ro-row"></div>
-      <div class="ro-row"><span class="ro-label">Shelf (Local)</span><span class="ro-value"><%= fmt(pkmCost.shelf_local) %> <%= pkmCost.shelf_local_ccy || '' %></span></div>
-      <div class="ro-row"><span class="ro-label">Shelf (USD)</span> <span class="ro-value"><%= fmt(pkmCost.shelf_usd) %> USD</span></div>
-    </div>
-
-    <% if (pkmVol.total_y1 != null || pkmVol.total_y5 != null) { %>
-      <h3>Updated volumes (cases)</h3>
-      <table class="ro-fc-table">
-        <thead><tr><th>Period</th>
-          <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %><th><%= m %></th><% }); %>
-          <th>Total</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Year 1</strong></td>
-            <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
-              <td><%= fmt(pkmVol['y1_' + m]) %></td>
-            <% }); %>
-            <td class="ro-total"><%= fmt(pkmVol.total_y1) %></td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="ro-grid cols-4" style="margin-top:8px;">
-        <div class="ro-row"><span class="ro-label">Year 2</span><span class="ro-value"><%= fmt(pkmVol.y2) %></span></div>
-        <div class="ro-row"><span class="ro-label">Year 3</span><span class="ro-value"><%= fmt(pkmVol.y3) %></span></div>
-        <div class="ro-row"><span class="ro-label">Year 4</span><span class="ro-value"><%= fmt(pkmVol.y4) %></span></div>
-        <div class="ro-row"><span class="ro-label">Year 5</span><span class="ro-value"><%= fmt(pkmVol.y5) %></span></div>
-        <div class="ro-row full"><span class="ro-label">5-Year Total</span><span class="ro-value"><strong style="font-size:15px;color:#1e3a8a;"><%= fmt(pkmVol.total_y5) %></strong></span></div>
-      </div>
-    <% } %>
-
-    <% if (pkm.inventory_agreement || pkm.rationale_price || pkm.rationale_volume) { %>
-      <h3>Inventory &amp; rationale</h3>
-      <% if (pkm.inventory_agreement) { %>
-        <div class="ro-row full"><span class="ro-label">Inventory agreement</span><span class="ro-value"><%= pkm.inventory_agreement %></span></div>
-      <% } %>
-      <% if (pkm.rationale_price) { %>
-        <div class="ro-row full"><span class="ro-label">Rationale — price</span><span class="ro-value"><%= pkm.rationale_price %></span></div>
-      <% } %>
-      <% if (pkm.rationale_volume) { %>
-        <div class="ro-row full"><span class="ro-label">Rationale — volume</span><span class="ro-value"><%= pkm.rationale_volume %></span></div>
-      <% } %>
-    <% } %>
-
-    <% if (pkmComp.length) { %>
-      <h3>Cross-market comparisons</h3>
-      <table class="ro-fc-table">
-        <thead><tr><th>SKU</th><th>Product</th><th>Market</th><th>Shelf (local)</th><th>CCY</th><th>Shelf (USD)</th></tr></thead>
-        <tbody>
-          <% pkmComp.forEach(function (c) {
-               var marketRow = (ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === c.market; });
-          %>
-            <tr>
-              <td style="text-align:left;"><%= show(c.sku) %></td>
-              <td style="text-align:left;"><%= show(c.name) %></td>
-              <td style="text-align:left;"><%= marketRow ? marketRow.name : (c.market || '—') %></td>
-              <td><%= fmt(c.shelf_local) %></td>
-              <td><%= show(c.shelf_local_ccy) %></td>
-              <td><%= fmt(c.shelf_usd) %></td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    <% } %>
-  </div>
-<% } %>
-
-<% if (pr.design_completed_at || (dsn.agency && dsn.agency.name) || dsnAtts.length) { %>
-  <!-- 5c) Design (R&D, parallel with Packaging) -->
-  <div class="ro-card">
-    <h2>5c · Design (R&amp;D)
-      <% if (pr.design_completed_at) { %>
-        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.design_completed_at %></span>
-      <% } else { %>
-        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
-      <% } %>
-    </h2>
-    <h3>Brief</h3>
-    <div class="ro-grid">
-      <div class="ro-row full"><span class="ro-label">Required languages</span><span class="ro-value">
-        <%= ((dsn.brief && dsn.brief.languages) || []).map(function (c) {
-          var m = (ref.LANGUAGES || []).find(function (x) { return x.code === c; });
-          return m ? m.label : c;
-        }).join(', ') || '—' %>
-      </span></div>
-      <% if (dsn.brief && dsn.brief.notes) { %>
-        <div class="ro-row full"><span class="ro-label">Brief notes</span><span class="ro-value"><%= dsn.brief.notes %></span></div>
-      <% } %>
-      <% if ((dsnByCat.design_brief || [])[0]) { var f = dsnByCat.design_brief[0]; %>
-        <div class="ro-row full"><span class="ro-label">Design brief file</span><span class="ro-value">
-          <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
-        </span></div>
-      <% } %>
-      <% if ((dsnByCat.design_translation || [])[0]) { var f = dsnByCat.design_translation[0]; %>
-        <div class="ro-row full"><span class="ro-label">Translation file</span><span class="ro-value">
-          <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
-        </span></div>
-      <% } %>
-    </div>
-
-    <h3>Agency</h3>
-    <div class="ro-grid cols-3">
-      <div class="ro-row"><span class="ro-label">Name</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.name) %></span></div>
-      <div class="ro-row"><span class="ro-label">Vendor code</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.vendor_code) %></span></div>
-      <div class="ro-row"><span class="ro-label">Contact</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.contact) %></span></div>
-      <div class="ro-row"><span class="ro-label">Email</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.email) %></span></div>
-      <div class="ro-row"><span class="ro-label">Phone</span><span class="ro-value"><%= show(dsn.agency && dsn.agency.phone) %></span></div>
-    </div>
-
-    <% if (dsn.label) { var L = dsn.label; if (L.marketing_text || L.claims || L.legal_claims || L.environmental_claims || L.nutritional_claims || L.dietary_claims || L.contacts) { %>
-      <h3>Label content</h3>
-      <% [
-        ['Marketing text',       L.marketing_text],
-        ['Claims',               L.claims],
-        ['Legal claims',         L.legal_claims],
-        ['Environmental claims', L.environmental_claims],
-        ['Nutritional claims',   L.nutritional_claims],
-        ['Dietary claims',       L.dietary_claims],
-        ['Contacts',             L.contacts],
-      ].forEach(function (pair) { if (pair[1]) { %>
-        <div class="ro-row full"><span class="ro-label"><%= pair[0] %></span><span class="ro-value"><%= pair[1] %></span></div>
-      <% }}); %>
-    <% }} %>
-
-    <% if ((dsnByCat.design_label || []).length || (dsnByCat.design_logo || []).length || (dsnByCat.design_pictogram || []).length || (dsnByCat.design_symbol || []).length) { %>
-      <h3>Visual assets</h3>
-      <% [
-        ['Label image', dsnByCat.design_label || []],
-        ['Logos',       dsnByCat.design_logo  || []],
-        ['Pictograms',  dsnByCat.design_pictogram || []],
-        ['Symbols',     dsnByCat.design_symbol || []],
-      ].forEach(function (pair) { if (pair[1].length) { %>
-        <div class="ro-row full"><span class="ro-label"><%= pair[0] %> (<%= pair[1].length %>)</span><span class="ro-value">
-          <% pair[1].forEach(function (a) { %>
-            <a href="/products/workflow/<%= pr.id %>/attachments/<%= a.id %>" class="text-blue-600 hover:underline" target="_blank" style="margin-right:8px;"><%= a.original_name %></a>
-          <% }); %>
-        </span></div>
-      <% }}); %>
-    <% } %>
-  </div>
-<% } %>
-
-<% if (pr.competitor_completed_at || cmp.market_type) { %>
-  <!-- 6) Competitor Analysis -->
-  <div class="ro-card">
-    <h2>6 · Competitor Analysis (Marketing)
-      <% if (pr.competitor_completed_at) { %>
-        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.competitor_completed_at %></span>
-      <% } else { %>
-        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
-      <% } %>
-    </h2>
-    <div class="ro-grid">
-      <div class="ro-row"><span class="ro-label">Market type</span><span class="ro-value"><%= show(cmp.market_type) %></span></div>
-      <div class="ro-row"><span class="ro-label">Positioning</span><span class="ro-value"><%= show(cmp.positioning) %></span></div>
-      <div class="ro-row full"><span class="ro-label">Destination countries</span><span class="ro-value">
-        <%= (cmp.countries || []).map(function (c) {
-          var m = (ref.PRODUCT_MARKETS || []).find(function (x) { return x.code === c; });
-          return m ? m.name : c;
-        }).join(', ') || '—' %>
-      </span></div>
-      <div class="ro-row full"><span class="ro-label">Distribution channels</span><span class="ro-value">
-        <%= (cmp.channels || []).map(function (c) {
-          var m = (ref.DISTRIBUTION_CHANNELS || []).find(function (x) { return x.code === c; });
-          return m ? m.label : c;
-        }).join(', ') || '—' %>
-      </span></div>
-      <div class="ro-row full"><span class="ro-label">Target ages</span><span class="ro-value">
-        <%= (cmp.target_ages || []).map(function (c) {
-          var m = (ref.TARGET_AGE_GROUPS || []).find(function (x) { return x.code === c; });
-          return m ? m.label : c;
-        }).join(', ') || '—' %>
-      </span></div>
-    </div>
-    <% if (cmp.competitors && cmp.competitors.length) { %>
-      <h3>Competitor pricing</h3>
-      <table class="ro-fc-table">
-        <thead><tr><th>Competitor</th><th>Product</th><th>Price (local)</th><th>Local CCY</th><th>Price (USD)</th></tr></thead>
-        <tbody>
-          <% cmp.competitors.forEach(function (c) { %>
-            <tr>
-              <td style="text-align:left;"><%= show(c.name) %></td>
-              <td style="text-align:left;"><%= show(c.product) %></td>
-              <td><%= fmt(c.price_local) %></td>
-              <td><%= show(c.price_local_ccy) %></td>
-              <td><%= fmt(c.price_usd) %></td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    <% } %>
-    <% if (cmp.market_trends) { %>
-      <h3>Market trends</h3>
-      <div class="ro-row full" style="border-bottom:none;"><span class="ro-value"><%= cmp.market_trends %></span></div>
-    <% } %>
-  </div>
-<% } %>
-
-<% if (pr.bom_completed_at || bomPkgRO.length || bomFrmRO.length) { %>
-  <!-- 7) BOM Selection -->
-  <div class="ro-card">
-    <h2>7 · BOM Selection (R&amp;D)
-      <% if (pr.bom_completed_at) { %>
-        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.bom_completed_at %></span>
-      <% } else { %>
-        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
-      <% } %>
-    </h2>
-
-    <% function bomRoTable(label, rows) { %>
-      <h3><%= label %> (<%= rows.length %>)</h3>
-      <% if (!rows.length) { %>
-        <div style="padding:8px 0;color:#6b7280;font-size:12px;">No components.</div>
-      <% } else { %>
-        <table class="ro-fc-table">
-          <thead><tr>
-            <th style="text-align:left;">Source</th>
-            <th style="text-align:left;">Material #</th>
-            <th style="text-align:left;">Description</th>
-            <th style="text-align:left;">Category</th>
-            <th style="text-align:left;">Brand</th>
-            <th style="text-align:left;">Mat. Group</th>
-            <th>Type</th><th>UoM</th><th>Div.</th><th>Volume</th><th>Quantity</th>
-          </tr></thead>
-          <tbody>
-            <% rows.forEach(function (r) { %>
-              <tr>
-                <td style="text-align:left;">
-                  <span class="ro-pill" style="background:<%= r.source === 'NEW' ? '#fde68a' : (r.source === 'MASTER' ? '#dbeafe' : '#bbf7d0') %>; color:<%= r.source === 'NEW' ? '#92400e' : (r.source === 'MASTER' ? '#1e40af' : '#166534') %>;">
-                    <%= r.source %>
+        <div class="rv-folder-pane" data-folder-pane-group="stage2" data-folder-pane="stage2-rd">
+          <div class="rv-card">
+            <h2>R&amp;D</h2>
+            <h3>SAP classification</h3>
+            <div class="rv-grid">
+              <div class="rv-row"><span class="rv-label">Material Type (SAP)</span><span class="rv-value"><%= show(rnd.material_type) %></span></div>
+              <div class="rv-row"><span class="rv-label">Base UoM</span><span class="rv-value"><%= show(rnd.base_uom) %></span></div>
+            </div>
+            <h3>Dimensions</h3>
+            <div class="rv-grid cols-4">
+              <div class="rv-row"><span class="rv-label">Length</span><span class="rv-value"><%= fmt(rnd.length) %> <%= rnd.dim_unit || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Width</span><span class="rv-value"><%= fmt(rnd.width) %> <%= rnd.dim_unit || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Height</span><span class="rv-value"><%= fmt(rnd.height) %> <%= rnd.dim_unit || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Volume</span><span class="rv-value"><%= fmt(rnd.volume) %> <%= rnd.volume_unit || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Net Weight</span><span class="rv-value"><%= fmt(rnd.net_weight) %> <%= rnd.weight_unit || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Gross Weight</span><span class="rv-value"><%= fmt(rnd.gross_weight) %> <%= rnd.weight_unit || '' %></span></div>
+            </div>
+            <h3>Pricing</h3>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Manufacturing Price (USD)</span><span class="rv-value"><%= fmt(rnd.mfg_price) %> USD</span></div>
+              <div class="rv-row"><span class="rv-label">Manufacturing Price (Local)</span><span class="rv-value"><%= fmt(rnd.mfg_price_local) %> <%= rnd.retail_price_local_ccy || '' %></span></div>
+              <div class="rv-row"></div>
+              <div class="rv-row"><span class="rv-label">Retail Price (USD)</span><span class="rv-value"><%= fmt(rnd.retail_price_usd) %> USD</span></div>
+              <div class="rv-row"><span class="rv-label">Retail Price (Local)</span><span class="rv-value"><%= fmt(rnd.retail_price_local) %> <%= rnd.retail_price_local_ccy || '' %></span></div>
+              <% if (rnd.fx_rate) { %>
+                <div class="rv-row full"><span class="rv-label">FX Rate captured at submit</span>
+                  <span class="rv-value">1 USD = <strong><%= rnd.fx_rate %></strong> <%= rnd.retail_price_local_ccy || '' %>
+                    · <%= rnd.fx_as_of || '' %>
+                    <% if (rnd.fx_source) { %> · <em><%= rnd.fx_source %></em><% } %>
                   </span>
-                </td>
-                <td style="text-align:left;font-family:ui-monospace,monospace;"><%= show(r.material_number) %></td>
-                <td style="text-align:left;"><%= show(r.material_description) %></td>
-                <td style="text-align:left;"><%= show(r.category_name) %></td>
-                <td style="text-align:left;"><%= show(r.brand) %></td>
-                <td style="text-align:left;"><%= show(r.material_group) %></td>
-                <td><%= show(r.material_type) %></td>
-                <td><%= show(r.base_uom) %></td>
-                <td><%= show(r.division) %></td>
-                <td><%= fmt(r.volume) %></td>
-                <td><%= fmt(r.quantity) %></td>
-              </tr>
-              <% if (r.source === 'NEW' && r.vendor) { %>
-                <tr>
-                  <td colspan="11" style="text-align:left;background:#fffbeb;font-size:11px;color:#92400e;padding:4px 10px;">
-                    Vendor: <strong><%= r.vendor.type %></strong>
-                    <% if (r.vendor.type === 'EXISTING') { %>
-                      · code <%= show(r.vendor.vendor_code) %>
-                    <% } else { %>
-                      · <%= show(r.vendor.name) %>
-                      <% if (r.vendor.contact) { %> · <%= r.vendor.contact %><% } %>
-                      <% if (r.vendor.email)   { %> · <%= r.vendor.email %><% } %>
-                      <% if (r.vendor.phone)   { %> · <%= r.vendor.phone %><% } %>
-                    <% } %>
-                  </td>
-                </tr>
+                </div>
               <% } %>
-            <% }); %>
-          </tbody>
-        </table>
-      <% } %>
-    <% } %>
+            </div>
+            <h3>Contract</h3>
+            <div class="rv-grid">
+              <div class="rv-row"><span class="rv-label">Status</span><span class="rv-value"><%= show(rnd.contract_status && rnd.contract_status.replace(/_/g,' ')) %></span></div>
+              <div class="rv-row"><span class="rv-label">Existing supplier?</span><span class="rv-value"><%= show(rnd.existing_supplier) %></span></div>
+              <div class="rv-row full"><span class="rv-label">Supplier name</span><span class="rv-value"><%= show(rnd.contract_supplier) %></span></div>
+            </div>
+          </div>
+        </div>
 
-    <%- bomRoTable('Packaging BOM', bomPkgRO) %>
-    <%- bomRoTable('Formula BOM',   bomFrmRO) %>
-  </div>
-<% } %>
-
-<% if (pr.legal_completed_at || (legalRO.certifications || []).length || (legalRO.registrations || []).length) { %>
-  <!-- 8) Legal Task -->
-  <div class="ro-card">
-    <h2>8 · Legal Task
-      <% if (pr.legal_completed_at) { %>
-        <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.legal_completed_at %></span>
-      <% } else { %>
-        <span class="ro-pill" style="background:#fef3c7;color:#92400e;">In progress</span>
-      <% } %>
-    </h2>
-    <% var certAttsByCode = legalAtts.filter(function (a) { return a.category === 'legal_cert'; })
-         .reduce(function (m, a) { (m[a.certificate_type] = m[a.certificate_type] || []).push(a); return m; }, {}); %>
-    <% var regAttsByCountry = legalAtts.filter(function (a) { return a.category === 'legal_reg'; })
-         .reduce(function (m, a) { (m[a.certificate_type] = m[a.certificate_type] || []).push(a); return m; }, {}); %>
-
-    <% if ((legalRO.certifications || []).length) { %>
-      <h3>Legal certifications</h3>
-      <table class="ro-fc-table">
-        <thead><tr><th style="text-align:left;">Certification</th><th>Status</th><th style="text-align:left;">Comment</th><th style="text-align:left;">File</th></tr></thead>
-        <tbody>
-          <% legalRO.certifications.forEach(function (c) {
-              var match = (ref.LEGAL_CERTIFICATES || []).find(function (x) { return x.code === c.code; });
-              var label = match ? match.label : c.code;
-              var files = certAttsByCode[c.code] || [];
-          %>
-            <tr>
-              <td style="text-align:left;"><%= label %></td>
-              <td><%= show(c.status && c.status.replace(/_/g,' ')) %></td>
-              <td style="text-align:left;"><%= show(c.comment) %></td>
-              <td style="text-align:left;">
-                <% files.forEach(function (f) { %>
-                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="text-blue-600 hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+        <div class="rv-folder-pane" data-folder-pane-group="stage2" data-folder-pane="stage2-fc">
+          <div class="rv-card">
+            <h2>Forecast</h2>
+            <table class="rv-table">
+              <thead><tr><th>Period</th>
+                <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %><th><%= m %></th><% }); %>
+                <th>Total</th></tr>
+              </thead>
+              <tbody><tr>
+                <td><strong>Year 1</strong></td>
+                <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
+                  <td><%= fmt(fc['y1_' + m]) %></td>
                 <% }); %>
-                <% if (!files.length) { %>—<% } %>
-              </td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
+                <td class="rv-total"><%= fmt(fc.total_y1) %></td>
+              </tr></tbody>
+            </table>
+            <div class="rv-grid cols-4" style="margin-top:10px;">
+              <div class="rv-row"><span class="rv-label">Year 2</span><span class="rv-value"><%= fmt(fc.y2) %></span></div>
+              <div class="rv-row"><span class="rv-label">Year 3</span><span class="rv-value"><%= fmt(fc.y3) %></span></div>
+              <div class="rv-row"><span class="rv-label">Year 4</span><span class="rv-value"><%= fmt(fc.y4) %></span></div>
+              <div class="rv-row"><span class="rv-label">Year 5</span><span class="rv-value"><%= fmt(fc.y5) %></span></div>
+              <div class="rv-row full"><span class="rv-label">5-Year Total</span><span class="rv-value"><strong style="font-size:16px;color:#1e3a8a;"><%= fmt(fc.total_y5) %></strong></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
     <% } %>
 
-    <% if ((legalRO.registrations || []).length) { %>
-      <h3>Packaging country registration</h3>
-      <table class="ro-fc-table">
-        <thead><tr><th style="text-align:left;">Country</th><th>Status</th><th style="text-align:left;">Reg. #</th><th style="text-align:left;">Comment</th><th style="text-align:left;">File</th></tr></thead>
-        <tbody>
-          <% legalRO.registrations.forEach(function (r) {
-              var match = (ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === r.country; });
-              var label = match ? match.name : r.country;
-              var files = regAttsByCountry[r.country] || [];
-          %>
-            <tr>
-              <td style="text-align:left;"><%= label %></td>
-              <td><%= show(r.status && r.status.replace(/_/g,' ')) %></td>
-              <td style="text-align:left;font-family:ui-monospace,monospace;"><%= show(r.registration_number) %></td>
-              <td style="text-align:left;"><%= show(r.comment) %></td>
-              <td style="text-align:left;">
-                <% files.forEach(function (f) { %>
-                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="text-blue-600 hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+    <!-- ============== Production — 3 internal folder tabs ============== -->
+    <% if (hasProduction) { %>
+      <section class="rv-form" data-form="production">
+        <nav class="rv-folder-nav">
+          <button class="active" data-folder-group="production" data-folder-tab="prd-plan">Production Plan</button>
+          <button                data-folder-group="production" data-folder-tab="prd-pkg">Packaging</button>
+          <button                data-folder-group="production" data-folder-tab="prd-frm">Formula</button>
+        </nav>
+        <div class="rv-folder-pane active" data-folder-pane-group="production" data-folder-pane="prd-plan">
+          <div class="rv-card">
+            <h2>Production Plan
+              <% if (pr.production_completed_at) { %><span class="rv-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.production_completed_at %></span><% } else { %><span class="rv-pill" style="background:#fef3c7;color:#92400e;">In progress</span><% } %>
+            </h2>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Launch start</span><span class="rv-value"><%= show(prodPlan.launch_start_date) %></span></div>
+              <div class="rv-row"><span class="rv-label">Launch target</span><span class="rv-value"><%= show(prodPlan.launch_target_date) %></span></div>
+              <div class="rv-row"><span class="rv-label">Lead time</span><span class="rv-value"><%= prodPlan.lead_time_weeks != null ? (prodPlan.lead_time_weeks + ' weeks') : '—' %></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="production" data-folder-pane="prd-pkg">
+          <div class="rv-card">
+            <h2>Packaging</h2>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Origin</span><span class="rv-value"><%= show(prodPkg.origin) %></span></div>
+              <div class="rv-row"><span class="rv-label">Launch type</span><span class="rv-value"><%= show(prodPkg.launch_type && prodPkg.launch_type.replace(/_/g,' ')) %></span></div>
+              <div class="rv-row"><span class="rv-label">Region / Country</span><span class="rv-value"><%= show(prodPkg.region) %><% if (prodPkg.country) { %> · <%= prodPkg.country %><% } %></span></div>
+              <div class="rv-row full"><span class="rv-label">Site</span><span class="rv-value"><%= show(prodPkg.site) %></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="production" data-folder-pane="prd-frm">
+          <div class="rv-card">
+            <h2>Formula</h2>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Origin</span><span class="rv-value"><%= show(prodFrm.origin) %></span></div>
+              <div class="rv-row"><span class="rv-label">Category</span><span class="rv-value"><%= show(prodFrm.category) %></span></div>
+              <div class="rv-row"><span class="rv-label">Class</span><span class="rv-value"><%= show(prodFrm.class) %></span></div>
+              <div class="rv-row"><span class="rv-label">Brand</span><span class="rv-value"><%= show(prodFrm.brand_tier) %></span></div>
+              <div class="rv-row"><span class="rv-label">Formula type</span><span class="rv-value"><%= show(prodFrm.formula_type) %></span></div>
+              <div class="rv-row"><span class="rv-label">Flavor</span><span class="rv-value"><%= show(prodFrm.flavor) %></span></div>
+              <div class="rv-row"><span class="rv-label">Color</span><span class="rv-value"><%= show(prodFrm.color) %></span></div>
+              <div class="rv-row"><span class="rv-label">Appearance</span><span class="rv-value"><%= show(prodFrm.appearance) %></span></div>
+              <div class="rv-row"><span class="rv-label">Cold storage</span><span class="rv-value"><%= show(prodFrm.cold_storage) %></span></div>
+              <div class="rv-row"><span class="rv-label">Carbonated</span><span class="rv-value"><%= show(prodFrm.carbonated) %></span></div>
+            </div>
+            <% if (prodFrm.certificates && prodFrm.certificates.length) { %>
+              <h3>Legal certificates</h3>
+              <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
+                <% prodFrm.certificates.forEach(function (c) { %>
+                  <li><strong><%= c.code %></strong>
+                    <% if (c.comment) { %> — <em><%= c.comment %></em><% } %>
+                    <% var fileMatches = atts.filter(function (a) { return a.certificate_type === c.code; });
+                       fileMatches.forEach(function (f) { %>
+                       · <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
+                    <% }); %>
+                  </li>
                 <% }); %>
-                <% if (!files.length) { %>—<% } %>
-              </td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
+              </ul>
+            <% } %>
+          </div>
+        </div>
+      </section>
     <% } %>
-  </div>
-<% } %>
 
-<% if (pr.mdm_completed_at) { %>
-  <div class="ro-card">
-    <h2>9 · MDM Material Review
-      <span class="ro-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.mdm_completed_at %></span>
-    </h2>
-    <p style="font-size:13px;color:#4b5563;">MDM has reviewed and refined the BOM components above to align with SAP material-master conventions.</p>
+    <!-- ============== Packaging Materials — 5 internal folder tabs ============== -->
+    <% if (hasPackaging) { %>
+      <section class="rv-form" data-form="packaging">
+        <nav class="rv-folder-nav">
+          <button class="active" data-folder-group="packaging" data-folder-tab="pkm-mat">Materials &amp; Components</button>
+          <button                data-folder-group="packaging" data-folder-tab="pkm-inco">Incoterms</button>
+          <button                data-folder-group="packaging" data-folder-tab="pkm-cost">Cost &amp; Price</button>
+          <button                data-folder-group="packaging" data-folder-tab="pkm-vol">Volumes</button>
+          <button                data-folder-group="packaging" data-folder-tab="pkm-extras">Inventory &amp; Comparison</button>
+        </nav>
+        <div class="rv-folder-pane active" data-folder-pane-group="packaging" data-folder-pane="pkm-mat">
+          <div class="rv-card">
+            <h2>Materials &amp; Components
+              <% if (pr.packaging_completed_at) { %><span class="rv-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.packaging_completed_at %></span><% } else { %><span class="rv-pill" style="background:#fef3c7;color:#92400e;">In progress</span><% } %>
+            </h2>
+            <h3>Materials</h3>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Status</span><span class="rv-value"><%= show(pkmMat.status) %></span></div>
+              <div class="rv-row"><span class="rv-label">Material type</span><span class="rv-value"><%= show(pkmMat.material_type) %></span></div>
+              <div class="rv-row"><span class="rv-label">Units per case</span><span class="rv-value"><%= show(pkmMat.units_per_case) %><% if (pkmMat.case_pack_label) { %> (<%= pkmMat.case_pack_label %>)<% } %></span></div>
+              <div class="rv-row"><span class="rv-label">Height × Width</span><span class="rv-value"><%= fmt(pkmMat.height) %> × <%= fmt(pkmMat.width) %> <%= pkmMat.dim_unit || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Volume</span><span class="rv-value"><%= fmt(pkmMat.volume) %> <%= pkmMat.volume_unit || '' %></span></div>
+            </div>
+            <% if (pkmMat.description) { %>
+              <div class="rv-row full"><span class="rv-label">Description</span><span class="rv-value"><%= pkmMat.description %></span></div>
+            <% } %>
+            <% if (pkmComps.length) { %>
+              <h3>Components</h3>
+              <table class="rv-table">
+                <thead><tr><th>Component</th><th>Status</th><th>Description</th></tr></thead>
+                <tbody>
+                  <% pkmComps.forEach(function (c) { %>
+                    <tr><td style="text-align:left;"><%= c.code %></td><td><%= c.status %></td><td style="text-align:left;"><%= c.description || '—' %></td></tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } %>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="packaging" data-folder-pane="pkm-inco">
+          <div class="rv-card">
+            <h2>Incoterms</h2>
+            <% if (pkmInco.length) { %>
+              <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
+                <% pkmInco.forEach(function (i) { %>
+                  <li><strong><%= i.code %></strong><% if (i.description) { %> — <em><%= i.description %></em><% } %></li>
+                <% }); %>
+              </ul>
+            <% } else { %><p style="color:#94a3b8;font-size:13px;">No incoterms recorded.</p><% } %>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="packaging" data-folder-pane="pkm-cost">
+          <div class="rv-card">
+            <h2>Updated cost &amp; price</h2>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Cost (Local)</span><span class="rv-value"><%= fmt(pkmCost.cost_local) %> <%= pkmCost.cost_local_ccy || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Cost (USD)</span><span class="rv-value"><%= fmt(pkmCost.cost_usd) %> USD</span></div>
+              <div class="rv-row"></div>
+              <div class="rv-row"><span class="rv-label">Shelf (Local)</span><span class="rv-value"><%= fmt(pkmCost.shelf_local) %> <%= pkmCost.shelf_local_ccy || '' %></span></div>
+              <div class="rv-row"><span class="rv-label">Shelf (USD)</span><span class="rv-value"><%= fmt(pkmCost.shelf_usd) %> USD</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="packaging" data-folder-pane="pkm-vol">
+          <div class="rv-card">
+            <h2>Updated volumes (cases)</h2>
+            <% if (pkmVol.total_y1 != null || pkmVol.total_y5 != null) { %>
+              <table class="rv-table">
+                <thead><tr><th>Period</th>
+                  <% ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(function (m) { %><th><%= m %></th><% }); %>
+                  <th>Total</th></tr>
+                </thead>
+                <tbody><tr>
+                  <td><strong>Year 1</strong></td>
+                  <% ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].forEach(function (m) { %>
+                    <td><%= fmt(pkmVol['y1_' + m]) %></td>
+                  <% }); %>
+                  <td class="rv-total"><%= fmt(pkmVol.total_y1) %></td>
+                </tr></tbody>
+              </table>
+              <div class="rv-grid cols-4" style="margin-top:8px;">
+                <div class="rv-row"><span class="rv-label">Year 2</span><span class="rv-value"><%= fmt(pkmVol.y2) %></span></div>
+                <div class="rv-row"><span class="rv-label">Year 3</span><span class="rv-value"><%= fmt(pkmVol.y3) %></span></div>
+                <div class="rv-row"><span class="rv-label">Year 4</span><span class="rv-value"><%= fmt(pkmVol.y4) %></span></div>
+                <div class="rv-row"><span class="rv-label">Year 5</span><span class="rv-value"><%= fmt(pkmVol.y5) %></span></div>
+                <div class="rv-row full"><span class="rv-label">5-Year Total</span><span class="rv-value"><strong style="font-size:15px;color:#1e3a8a;"><%= fmt(pkmVol.total_y5) %></strong></span></div>
+              </div>
+            <% } else { %><p style="color:#94a3b8;font-size:13px;">No updated volume figures recorded.</p><% } %>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="packaging" data-folder-pane="pkm-extras">
+          <div class="rv-card">
+            <h2>Inventory &amp; comparison</h2>
+            <% if (pkm.inventory_agreement || pkm.rationale_price || pkm.rationale_volume) { %>
+              <% if (pkm.inventory_agreement) { %>
+                <div class="rv-row full"><span class="rv-label">Inventory agreement</span><span class="rv-value"><%= pkm.inventory_agreement %></span></div>
+              <% } %>
+              <% if (pkm.rationale_price) { %>
+                <div class="rv-row full"><span class="rv-label">Rationale — price</span><span class="rv-value"><%= pkm.rationale_price %></span></div>
+              <% } %>
+              <% if (pkm.rationale_volume) { %>
+                <div class="rv-row full"><span class="rv-label">Rationale — volume</span><span class="rv-value"><%= pkm.rationale_volume %></span></div>
+              <% } %>
+            <% } %>
+            <% if (pkmComp.length) { %>
+              <h3>Cross-market comparisons</h3>
+              <table class="rv-table">
+                <thead><tr><th>SKU</th><th>Product</th><th>Market</th><th>Shelf (local)</th><th>CCY</th><th>Shelf (USD)</th></tr></thead>
+                <tbody>
+                  <% pkmComp.forEach(function (c) {
+                       var marketRow = (ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === c.market; });
+                  %>
+                    <tr>
+                      <td style="text-align:left;"><%= show(c.sku) %></td>
+                      <td style="text-align:left;"><%= show(c.name) %></td>
+                      <td style="text-align:left;"><%= marketRow ? marketRow.name : (c.market || '—') %></td>
+                      <td><%= fmt(c.shelf_local) %></td>
+                      <td><%= show(c.shelf_local_ccy) %></td>
+                      <td><%= fmt(c.shelf_usd) %></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <!-- ============== Design — 3 internal folder tabs ============== -->
+    <% if (hasDesign) { %>
+      <section class="rv-form" data-form="design">
+        <nav class="rv-folder-nav">
+          <button class="active" data-folder-group="design" data-folder-tab="dsn-brief">Brief</button>
+          <button                data-folder-group="design" data-folder-tab="dsn-agency">Agency</button>
+          <button                data-folder-group="design" data-folder-tab="dsn-labels">Labels &amp; Assets</button>
+        </nav>
+        <div class="rv-folder-pane active" data-folder-pane-group="design" data-folder-pane="dsn-brief">
+          <div class="rv-card">
+            <h2>Design Brief
+              <% if (pr.design_completed_at) { %><span class="rv-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.design_completed_at %></span><% } else { %><span class="rv-pill" style="background:#fef3c7;color:#92400e;">In progress</span><% } %>
+            </h2>
+            <div class="rv-grid">
+              <div class="rv-row full"><span class="rv-label">Required languages</span><span class="rv-value">
+                <%= ((dsn.brief && dsn.brief.languages) || []).map(function (c) {
+                  var m = (ref.LANGUAGES || []).find(function (x) { return x.code === c; });
+                  return m ? m.label : c;
+                }).join(', ') || '—' %>
+              </span></div>
+              <% if (dsn.brief && dsn.brief.notes) { %>
+                <div class="rv-row full"><span class="rv-label">Brief notes</span><span class="rv-value"><%= dsn.brief.notes %></span></div>
+              <% } %>
+              <% if ((dsnByCat.design_brief || [])[0]) { var f = dsnByCat.design_brief[0]; %>
+                <div class="rv-row full"><span class="rv-label">Design brief file</span><span class="rv-value">
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
+                </span></div>
+              <% } %>
+              <% if ((dsnByCat.design_translation || [])[0]) { var f = dsnByCat.design_translation[0]; %>
+                <div class="rv-row full"><span class="rv-label">Translation file</span><span class="rv-value">
+                  <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" class="text-blue-600 hover:underline" target="_blank"><%= f.original_name %></a>
+                </span></div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="design" data-folder-pane="dsn-agency">
+          <div class="rv-card">
+            <h2>Design Agency</h2>
+            <div class="rv-grid cols-3">
+              <div class="rv-row"><span class="rv-label">Name</span><span class="rv-value"><%= show(dsn.agency && dsn.agency.name) %></span></div>
+              <div class="rv-row"><span class="rv-label">Vendor code</span><span class="rv-value"><%= show(dsn.agency && dsn.agency.vendor_code) %></span></div>
+              <div class="rv-row"><span class="rv-label">Contact</span><span class="rv-value"><%= show(dsn.agency && dsn.agency.contact) %></span></div>
+              <div class="rv-row"><span class="rv-label">Email</span><span class="rv-value"><%= show(dsn.agency && dsn.agency.email) %></span></div>
+              <div class="rv-row"><span class="rv-label">Phone</span><span class="rv-value"><%= show(dsn.agency && dsn.agency.phone) %></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="design" data-folder-pane="dsn-labels">
+          <div class="rv-card">
+            <h2>Labels &amp; Assets</h2>
+            <% if (dsn.label) { var L = dsn.label; if (L.marketing_text || L.claims || L.legal_claims || L.environmental_claims || L.nutritional_claims || L.dietary_claims || L.contacts) { %>
+              <h3>Label content</h3>
+              <% [
+                ['Marketing text',       L.marketing_text],
+                ['Claims',               L.claims],
+                ['Legal claims',         L.legal_claims],
+                ['Environmental claims', L.environmental_claims],
+                ['Nutritional claims',   L.nutritional_claims],
+                ['Dietary claims',       L.dietary_claims],
+                ['Contacts',             L.contacts],
+              ].forEach(function (pair) { if (pair[1]) { %>
+                <div class="rv-row full"><span class="rv-label"><%= pair[0] %></span><span class="rv-value"><%= pair[1] %></span></div>
+              <% }}); %>
+            <% }} %>
+            <% if ((dsnByCat.design_label || []).length || (dsnByCat.design_logo || []).length || (dsnByCat.design_pictogram || []).length || (dsnByCat.design_symbol || []).length) { %>
+              <h3>Visual assets</h3>
+              <% [
+                ['Label image', dsnByCat.design_label || []],
+                ['Logos',       dsnByCat.design_logo  || []],
+                ['Pictograms',  dsnByCat.design_pictogram || []],
+                ['Symbols',     dsnByCat.design_symbol || []],
+              ].forEach(function (pair) { if (pair[1].length) { %>
+                <div class="rv-row full"><span class="rv-label"><%= pair[0] %> (<%= pair[1].length %>)</span><span class="rv-value">
+                  <% pair[1].forEach(function (a) { %>
+                    <a href="/products/workflow/<%= pr.id %>/attachments/<%= a.id %>" class="text-blue-600 hover:underline" target="_blank" style="margin-right:8px;"><%= a.original_name %></a>
+                  <% }); %>
+                </span></div>
+              <% }}); %>
+            <% } %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <!-- ============== Competitor Analysis — 2 internal folder tabs ============== -->
+    <% if (hasCompetitor) { %>
+      <section class="rv-form" data-form="competitor">
+        <nav class="rv-folder-nav">
+          <button class="active" data-folder-group="competitor" data-folder-tab="cmp-market">Market &amp; Channels</button>
+          <button                data-folder-group="competitor" data-folder-tab="cmp-comp">Competitors</button>
+        </nav>
+        <div class="rv-folder-pane active" data-folder-pane-group="competitor" data-folder-pane="cmp-market">
+          <div class="rv-card">
+            <h2>Market &amp; Channels
+              <% if (pr.competitor_completed_at) { %><span class="rv-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.competitor_completed_at %></span><% } else { %><span class="rv-pill" style="background:#fef3c7;color:#92400e;">In progress</span><% } %>
+            </h2>
+            <div class="rv-grid">
+              <div class="rv-row"><span class="rv-label">Market type</span><span class="rv-value"><%= show(cmp.market_type) %></span></div>
+              <div class="rv-row"><span class="rv-label">Positioning</span><span class="rv-value"><%= show(cmp.positioning) %></span></div>
+              <div class="rv-row full"><span class="rv-label">Destination countries</span><span class="rv-value">
+                <%= (cmp.countries || []).map(function (c) {
+                  var m = (ref.PRODUCT_MARKETS || []).find(function (x) { return x.code === c; });
+                  return m ? m.name : c;
+                }).join(', ') || '—' %>
+              </span></div>
+              <div class="rv-row full"><span class="rv-label">Distribution channels</span><span class="rv-value">
+                <%= (cmp.channels || []).map(function (c) {
+                  var m = (ref.DISTRIBUTION_CHANNELS || []).find(function (x) { return x.code === c; });
+                  return m ? m.label : c;
+                }).join(', ') || '—' %>
+              </span></div>
+              <div class="rv-row full"><span class="rv-label">Target ages</span><span class="rv-value">
+                <%= (cmp.target_ages || []).map(function (c) {
+                  var m = (ref.TARGET_AGE_GROUPS || []).find(function (x) { return x.code === c; });
+                  return m ? m.label : c;
+                }).join(', ') || '—' %>
+              </span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="competitor" data-folder-pane="cmp-comp">
+          <div class="rv-card">
+            <h2>Competitors</h2>
+            <% if (cmp.competitors && cmp.competitors.length) { %>
+              <table class="rv-table">
+                <thead><tr><th>Competitor</th><th>Product</th><th>Price (local)</th><th>Local CCY</th><th>Price (USD)</th></tr></thead>
+                <tbody>
+                  <% cmp.competitors.forEach(function (c) { %>
+                    <tr>
+                      <td style="text-align:left;"><%= show(c.name) %></td>
+                      <td style="text-align:left;"><%= show(c.product) %></td>
+                      <td><%= fmt(c.price_local) %></td>
+                      <td><%= show(c.price_local_ccy) %></td>
+                      <td><%= fmt(c.price_usd) %></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } else { %><p style="color:#94a3b8;font-size:13px;">No competitor pricing recorded.</p><% } %>
+            <% if (cmp.market_trends) { %>
+              <h3>Market trends</h3>
+              <div class="rv-row full" style="border-bottom:none;"><span class="rv-value"><%= cmp.market_trends %></span></div>
+            <% } %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <!-- ============== BOM Selection — 2 internal folder tabs ============== -->
+    <% if (hasBom) { %>
+      <%
+        function bomTable(rows) {
+          var out = '';
+          if (!rows.length) return '<p style="color:#94a3b8;font-size:13px;">No components.</p>';
+          out += '<table class="rv-table"><thead><tr>'
+              + '<th style="text-align:left;">Source</th>'
+              + '<th style="text-align:left;">Material #</th>'
+              + '<th style="text-align:left;">Description</th>'
+              + '<th style="text-align:left;">Category</th>'
+              + '<th style="text-align:left;">Brand</th>'
+              + '<th style="text-align:left;">Mat. Group</th>'
+              + '<th>Type</th><th>UoM</th><th>Div.</th><th>Volume</th><th>Quantity</th>'
+              + '</tr></thead><tbody>';
+          rows.forEach(function (r) {
+            var pillBg    = r.source === 'NEW' ? '#fde68a' : (r.source === 'MASTER' ? '#dbeafe' : '#bbf7d0');
+            var pillFg    = r.source === 'NEW' ? '#92400e' : (r.source === 'MASTER' ? '#1e40af' : '#166534');
+            out += '<tr>'
+                + '<td style="text-align:left;"><span class="rv-pill" style="background:'+pillBg+';color:'+pillFg+';">'+show(r.source)+'</span></td>'
+                + '<td style="text-align:left;font-family:ui-monospace,monospace;">'+show(r.material_number)+'</td>'
+                + '<td style="text-align:left;">'+show(r.material_description)+'</td>'
+                + '<td style="text-align:left;">'+show(r.category_name)+'</td>'
+                + '<td style="text-align:left;">'+show(r.brand)+'</td>'
+                + '<td style="text-align:left;">'+show(r.material_group)+'</td>'
+                + '<td>'+show(r.material_type)+'</td>'
+                + '<td>'+show(r.base_uom)+'</td>'
+                + '<td>'+show(r.division)+'</td>'
+                + '<td>'+fmt(r.volume)+'</td>'
+                + '<td>'+fmt(r.quantity)+'</td>'
+                + '</tr>';
+            if (r.source === 'NEW' && r.vendor) {
+              out += '<tr><td colspan="11" style="text-align:left;background:#fffbeb;font-size:11px;color:#92400e;padding:4px 10px;">'
+                  + 'Vendor: <strong>'+show(r.vendor.type)+'</strong>';
+              if (r.vendor.type === 'EXISTING') {
+                out += ' · code '+show(r.vendor.vendor_code);
+              } else {
+                out += ' · '+show(r.vendor.name);
+                if (r.vendor.contact) out += ' · '+r.vendor.contact;
+                if (r.vendor.email)   out += ' · '+r.vendor.email;
+                if (r.vendor.phone)   out += ' · '+r.vendor.phone;
+              }
+              out += '</td></tr>';
+            }
+          });
+          out += '</tbody></table>';
+          return out;
+        }
+      %>
+      <section class="rv-form" data-form="bom">
+        <nav class="rv-folder-nav">
+          <button class="active" data-folder-group="bom" data-folder-tab="bom-pkg">Packaging BOM</button>
+          <button                data-folder-group="bom" data-folder-tab="bom-frm">Formula BOM</button>
+        </nav>
+        <div class="rv-folder-pane active" data-folder-pane-group="bom" data-folder-pane="bom-pkg">
+          <div class="rv-card">
+            <h2>Packaging BOM (<%= bomPkgRO.length %>)
+              <% if (pr.bom_completed_at) { %><span class="rv-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.bom_completed_at %></span><% } else { %><span class="rv-pill" style="background:#fef3c7;color:#92400e;">In progress</span><% } %>
+            </h2>
+            <%- bomTable(bomPkgRO) %>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="bom" data-folder-pane="bom-frm">
+          <div class="rv-card">
+            <h2>Formula BOM (<%= bomFrmRO.length %>)</h2>
+            <%- bomTable(bomFrmRO) %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <!-- ============== Legal Task — 2 internal folder tabs ============== -->
+    <% if (hasLegal) { %>
+      <%
+        var certAttsByCode = legalAtts.filter(function (a) { return a.category === 'legal_cert'; })
+             .reduce(function (m, a) { (m[a.certificate_type] = m[a.certificate_type] || []).push(a); return m; }, {});
+        var regAttsByCountry = legalAtts.filter(function (a) { return a.category === 'legal_reg'; })
+             .reduce(function (m, a) { (m[a.certificate_type] = m[a.certificate_type] || []).push(a); return m; }, {});
+      %>
+      <section class="rv-form" data-form="legal">
+        <nav class="rv-folder-nav">
+          <button class="active" data-folder-group="legal" data-folder-tab="lg-cert">Legal Certifications</button>
+          <button                data-folder-group="legal" data-folder-tab="lg-reg">Country Registration</button>
+        </nav>
+        <div class="rv-folder-pane active" data-folder-pane-group="legal" data-folder-pane="lg-cert">
+          <div class="rv-card">
+            <h2>Legal Certifications
+              <% if (pr.legal_completed_at) { %><span class="rv-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.legal_completed_at %></span><% } else { %><span class="rv-pill" style="background:#fef3c7;color:#92400e;">In progress</span><% } %>
+            </h2>
+            <% if ((legalRO.certifications || []).length) { %>
+              <table class="rv-table">
+                <thead><tr><th style="text-align:left;">Certification</th><th>Status</th><th style="text-align:left;">Comment</th><th style="text-align:left;">File</th></tr></thead>
+                <tbody>
+                  <% legalRO.certifications.forEach(function (c) {
+                      var match = (ref.LEGAL_CERTIFICATES || []).find(function (x) { return x.code === c.code; });
+                      var label = match ? match.label : c.code;
+                      var files = certAttsByCode[c.code] || [];
+                  %>
+                    <tr>
+                      <td style="text-align:left;"><%= label %></td>
+                      <td><%= show(c.status && c.status.replace(/_/g,' ')) %></td>
+                      <td style="text-align:left;"><%= show(c.comment) %></td>
+                      <td style="text-align:left;">
+                        <% files.forEach(function (f) { %>
+                          <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="text-blue-600 hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+                        <% }); %>
+                        <% if (!files.length) { %>—<% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } else { %><p style="color:#94a3b8;font-size:13px;">No certifications recorded.</p><% } %>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="legal" data-folder-pane="lg-reg">
+          <div class="rv-card">
+            <h2>Packaging Country Registration</h2>
+            <% if ((legalRO.registrations || []).length) { %>
+              <table class="rv-table">
+                <thead><tr><th style="text-align:left;">Country</th><th>Status</th><th style="text-align:left;">Reg. #</th><th style="text-align:left;">Comment</th><th style="text-align:left;">File</th></tr></thead>
+                <tbody>
+                  <% legalRO.registrations.forEach(function (r) {
+                      var match = (ref.PRODUCT_MARKETS || []).find(function (m) { return m.code === r.country; });
+                      var label = match ? match.name : r.country;
+                      var files = regAttsByCountry[r.country] || [];
+                  %>
+                    <tr>
+                      <td style="text-align:left;"><%= label %></td>
+                      <td><%= show(r.status && r.status.replace(/_/g,' ')) %></td>
+                      <td style="text-align:left;font-family:ui-monospace,monospace;"><%= show(r.registration_number) %></td>
+                      <td style="text-align:left;"><%= show(r.comment) %></td>
+                      <td style="text-align:left;">
+                        <% files.forEach(function (f) { %>
+                          <a href="/products/workflow/<%= pr.id %>/attachments/<%= f.id %>" target="_blank" class="text-blue-600 hover:underline" style="margin-right:.5rem;">📎 <%= f.original_name %></a>
+                        <% }); %>
+                        <% if (!files.length) { %>—<% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } else { %><p style="color:#94a3b8;font-size:13px;">No country registrations recorded.</p><% } %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <!-- ============== MDM annotation ============== -->
+    <% if (hasMdm) { %>
+      <section class="rv-form" data-form="mdm">
+        <div class="rv-card rv-card-flat">
+          <h2>MDM Material Review
+            <span class="rv-pill" style="background:#dcfce7;color:#166534;">Submitted <%= pr.mdm_completed_at %></span>
+          </h2>
+          <p style="font-size:13px;color:#4b5563;">MDM has reviewed and refined the BOM components to align with SAP material-master conventions. The final values appear in the BOM Selection form.</p>
+        </div>
+      </section>
+    <% } %>
+
   </div>
-<% } %>
+</div>
+
+<script>
+(function () {
+  // Left-nav: switch which form is visible.
+  document.querySelectorAll('[data-rv-form-btn]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = btn.dataset.rvFormBtn;
+      document.querySelectorAll('[data-rv-form-btn]').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      document.querySelectorAll('[data-form]').forEach(function (f) { f.classList.toggle('active', f.dataset.form === target); });
+    });
+  });
+
+  // Per-form folder tabs: each group is independent.
+  document.querySelectorAll('[data-folder-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var group = btn.dataset.folderGroup;
+      var target = btn.dataset.folderTab;
+      document.querySelectorAll('[data-folder-group="' + group + '"]').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      document.querySelectorAll('[data-folder-pane-group="' + group + '"]').forEach(function (p) { p.classList.toggle('active', p.dataset.folderPane === target); });
+    });
+  });
+})();
+</script>
