@@ -1793,30 +1793,39 @@ function num(v) {
 // ---------- Stage 5 — Production (R&D) -------------------------------------
 
 function pickProduction(b) {
-  // Lead time auto-derived server-side from the two dates so it can't drift
-  // away from the form values even if the user edits HTML.
-  const startStr  = b.prd_launch_start_date || '';
-  const targetStr = b.prd_launch_target_date || '';
-  let leadWeeks = null;
-  if (startStr && targetStr) {
-    const start = new Date(startStr + 'T00:00:00Z');
-    const targ  = new Date(targetStr + 'T00:00:00Z');
-    if (!isNaN(start) && !isNaN(targ) && targ > start) {
-      leadWeeks = Math.round((targ - start) / (7 * 24 * 3600 * 1000));
-    }
+  // Both lead time (manufacturing window) and release time (limited-time
+  // launch window) are derived server-side from the date pairs so they
+  // can't drift away from the form values even if the user edits HTML.
+  function weeks(s, t) {
+    if (!s || !t) return null;
+    const sd = new Date(s + 'T00:00:00Z');
+    const td = new Date(t + 'T00:00:00Z');
+    if (isNaN(sd) || isNaN(td) || td <= sd) return null;
+    return Math.round((td - sd) / (7 * 24 * 3600 * 1000));
   }
+  const startStr   = b.prd_launch_start_date  || '';
+  const targetStr  = b.prd_launch_target_date || '';
+  const launchType = b.prd_launch_type        || '';   // LONG_TERM | LIMITED_TIME
+  // Limited-time fields only when the user picked LIMITED_TIME — else
+  // we drop them so the saved JSON doesn't carry stale values.
+  const limStart   = launchType === 'LIMITED_TIME' ? (b.prd_limited_start_date || '') : '';
+  const limEnd     = launchType === 'LIMITED_TIME' ? (b.prd_limited_end_date   || '') : '';
+
   return {
     plan: {
       launch_start_date:  startStr,
       launch_target_date: targetStr,
-      lead_time_weeks:    leadWeeks,
+      lead_time_weeks:    weeks(startStr, targetStr),
+      launch_type:        launchType,
+      limited_start_date: limStart,
+      limited_end_date:   limEnd,
+      release_weeks:      launchType === 'LIMITED_TIME' ? weeks(limStart, limEnd) : null,
     },
     packaging: {
       origin:      b.pkg_origin      || '',   // NATIONAL | IMPORTED
       region:      b.pkg_region      || '',
       country:     b.pkg_country     || '',
       site:        b.pkg_site        || '',
-      launch_type: b.pkg_launch_type || '',   // LONG_TERM | LIMITED_TIME
     },
     formula: {
       origin:        b.frm_origin        || '',  // NATIONAL | IMPORTED

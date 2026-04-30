@@ -322,7 +322,16 @@ var formList = [
               <div class="rv-row"><span class="rv-label">Launch start</span><span class="rv-value"><%= show(prodPlan.launch_start_date) %></span></div>
               <div class="rv-row"><span class="rv-label">Launch target</span><span class="rv-value"><%= show(prodPlan.launch_target_date) %></span></div>
               <div class="rv-row"><span class="rv-label">Lead time</span><span class="rv-value"><%= prodPlan.lead_time_weeks != null ? (prodPlan.lead_time_weeks + ' weeks') : '—' %></span></div>
+              <div class="rv-row"><span class="rv-label">Launch type</span><span class="rv-value"><%= show(prodPlan.launch_type && prodPlan.launch_type.replace(/_/g,' ')) %></span></div>
             </div>
+            <% if (prodPlan.launch_type === 'LIMITED_TIME') { %>
+              <h3>Limited-time campaign window</h3>
+              <div class="rv-grid cols-3">
+                <div class="rv-row"><span class="rv-label">Start launch date</span><span class="rv-value"><%= show(prodPlan.limited_start_date) %></span></div>
+                <div class="rv-row"><span class="rv-label">End launch date</span><span class="rv-value"><%= show(prodPlan.limited_end_date) %></span></div>
+                <div class="rv-row"><span class="rv-label">Release time</span><span class="rv-value"><%= prodPlan.release_weeks != null ? (prodPlan.release_weeks + ' weeks') : '—' %></span></div>
+              </div>
+            <% } %>
           </div>
         </div>
         <div class="rv-folder-pane" data-folder-pane-group="production" data-folder-pane="prd-pkg">
@@ -330,7 +339,6 @@ var formList = [
             <h2>Packaging</h2>
             <div class="rv-grid cols-3">
               <div class="rv-row"><span class="rv-label">Origin</span><span class="rv-value"><%= show(prodPkg.origin) %></span></div>
-              <div class="rv-row"><span class="rv-label">Launch type</span><span class="rv-value"><%= show(prodPkg.launch_type && prodPkg.launch_type.replace(/_/g,' ')) %></span></div>
               <div class="rv-row"><span class="rv-label">Region / Country</span><span class="rv-value"><%= show(prodPkg.region) %><% if (prodPkg.country) { %> · <%= prodPkg.country %><% } %></span></div>
               <div class="rv-row full"><span class="rv-label">Site</span><span class="rv-value"><%= show(prodPkg.site) %></span></div>
             </div>

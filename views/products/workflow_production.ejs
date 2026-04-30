@@ -130,6 +130,39 @@
               <input type="number" id="prd-lead-weeks" readonly value="<%= prd.lead_time_weeks != null ? prd.lead_time_weeks : '' %>">
             </div>
           </div>
+
+          <div class="vob-grid" style="margin-top:14px;">
+            <div class="vob-field">
+              <label><span class="req">*</span>Launch Type</label>
+              <div class="radio-group">
+                <label><input type="radio" name="prd_launch_type" value="LONG_TERM" required <%= prd.launch_type === 'LONG_TERM' ? 'checked' : '' %> data-launch-type>Long Term</label>
+                <label><input type="radio" name="prd_launch_type" value="LIMITED_TIME" <%= prd.launch_type === 'LIMITED_TIME' ? 'checked' : '' %> data-launch-type>Limited Time</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Limited-Time campaign window. Hidden unless Launch Type = Limited Time. -->
+          <div class="vob-grid cols-3" data-limited-time style="margin-top:14px; <%= prd.launch_type === 'LIMITED_TIME' ? '' : 'display:none;' %>">
+            <div class="vob-field">
+              <label><span class="req">*</span>Start Launch Date</label>
+              <input type="date" name="prd_limited_start_date"
+                     value="<%= prd.limited_start_date || '' %>"
+                     data-limited-start
+                     <%= prd.launch_type === 'LIMITED_TIME' ? 'required' : '' %>>
+            </div>
+            <div class="vob-field">
+              <label><span class="req">*</span>End Launch Date</label>
+              <input type="date" name="prd_limited_end_date"
+                     value="<%= prd.limited_end_date || '' %>"
+                     data-limited-end
+                     <%= prd.launch_type === 'LIMITED_TIME' ? 'required' : '' %>>
+            </div>
+            <div class="vob-field">
+              <label>Release Time (weeks)</label>
+              <input type="number" id="prd-release-weeks" name="prd_release_weeks" readonly
+                     value="<%= prd.release_weeks != null ? prd.release_weeks : '' %>">
+            </div>
+          </div>
         </div>
       </section>
 
@@ -144,13 +177,6 @@
               <div class="radio-group">
                 <label><input type="radio" name="pkg_origin" value="NATIONAL" required <%= pkg.origin === 'NATIONAL' ? 'checked' : '' %>>National</label>
                 <label><input type="radio" name="pkg_origin" value="IMPORTED" <%= pkg.origin === 'IMPORTED' ? 'checked' : '' %>>Imported</label>
-              </div>
-            </div>
-            <div class="vob-field">
-              <label><span class="req">*</span>Launch Type</label>
-              <div class="radio-group">
-                <label><input type="radio" name="pkg_launch_type" value="LONG_TERM" required <%= pkg.launch_type === 'LONG_TERM' ? 'checked' : '' %>>Long Term</label>
-                <label><input type="radio" name="pkg_launch_type" value="LIMITED_TIME" <%= pkg.launch_type === 'LIMITED_TIME' ? 'checked' : '' %>>Limited Time</label>
               </div>
             </div>
           </div>
@@ -410,21 +436,61 @@
   form.addEventListener('input', updateCompletion);
   form.addEventListener('change', updateCompletion);
 
-  // ---- lead-time computation ----
+  // ---- weeks-between helper ----
+  function weeksBetween(s, t) {
+    if (!s || !t) return null;
+    var sd = new Date(s + 'T00:00:00Z'), td = new Date(t + 'T00:00:00Z');
+    if (isNaN(sd) || isNaN(td) || td <= sd) return null;
+    return Math.round((td - sd) / (7 * 24 * 3600 * 1000));
+  }
+
+  // ---- lead-time computation (manufacturing window) ----
   (function () {
     var startEl = document.querySelector('[data-launch-start]');
     var targEl  = document.querySelector('[data-launch-target]');
     var leadEl  = document.getElementById('prd-lead-weeks');
     function recompute() {
-      var s = startEl.value, t = targEl.value;
-      if (!s || !t) { leadEl.value = ''; return; }
-      var sd = new Date(s + 'T00:00:00Z'), td = new Date(t + 'T00:00:00Z');
-      if (isNaN(sd) || isNaN(td) || td <= sd) { leadEl.value = ''; return; }
-      leadEl.value = Math.round((td - sd) / (7 * 24 * 3600 * 1000));
+      var w = weeksBetween(startEl.value, targEl.value);
+      leadEl.value = w == null ? '' : w;
     }
     startEl.addEventListener('change', recompute);
     targEl.addEventListener('change', recompute);
     recompute();
+  })();
+
+  // ---- Launch type → toggle limited-time window + compute release weeks ----
+  (function () {
+    var typeRadios = document.querySelectorAll('[data-launch-type]');
+    var limitedRow = document.querySelector('[data-limited-time]');
+    var startEl    = document.querySelector('[data-limited-start]');
+    var endEl      = document.querySelector('[data-limited-end]');
+    var weeksEl    = document.getElementById('prd-release-weeks');
+    if (!typeRadios.length || !limitedRow || !startEl || !endEl || !weeksEl) return;
+
+    function recomputeWeeks() {
+      var w = weeksBetween(startEl.value, endEl.value);
+      weeksEl.value = w == null ? '' : w;
+    }
+
+    function syncVisibility() {
+      var checked = document.querySelector('[data-launch-type]:checked');
+      var isLimited = checked && checked.value === 'LIMITED_TIME';
+      limitedRow.style.display = isLimited ? '' : 'none';
+      startEl.required = !!isLimited;
+      endEl.required   = !!isLimited;
+      if (!isLimited) {
+        startEl.value = '';
+        endEl.value   = '';
+        weeksEl.value = '';
+      }
+      updateCompletion();
+    }
+
+    typeRadios.forEach(function (r) { r.addEventListener('change', syncVisibility); });
+    startEl.addEventListener('change', recomputeWeeks);
+    endEl.addEventListener('change', recomputeWeeks);
+    syncVisibility();
+    recomputeWeeks();
   })();
 
   // ---- packaging cascade ----
