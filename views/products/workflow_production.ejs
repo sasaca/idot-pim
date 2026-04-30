@@ -105,6 +105,7 @@
       <button type="button" class="vob-tab-btn active" data-tab="plan"><span class="num">1</span><span>Production Plan</span><span class="vob-count"></span></button>
       <button type="button" class="vob-tab-btn"        data-tab="packaging"><span class="num">2</span><span>Packaging</span><span class="vob-count"></span></button>
       <button type="button" class="vob-tab-btn"        data-tab="formula"><span class="num">3</span><span>Formula</span><span class="vob-count"></span></button>
+      <button type="button" class="vob-tab-btn"        data-tab="legal"><span class="num">4</span><span>Legal Certificates</span><span class="vob-count"></span></button>
     </nav>
 
     <form id="prd-form" method="post" enctype="multipart/form-data" action="/products/workflow/<%= pr.id %>/production">
@@ -237,7 +238,13 @@
             </div>
           </div>
 
-          <div class="section-title">Legal Certificates</div>
+        </div>
+      </section>
+
+      <!-- ===== 4) Legal Certificates ===== -->
+      <section class="vob-pane" data-pane="legal">
+        <div class="vob-card">
+          <h2>Legal certificates</h2>
           <p class="text-sm text-gray-600" style="margin-bottom:10px;">
             Tick each certificate that applies. Use the comment box for notes
             and attach the certificate file (PDF or image, max 15 MB).
@@ -294,7 +301,7 @@
 <script>
 (function () {
   // ---- tabs + counter ----
-  var TABS = ['plan','packaging','formula'];
+  var TABS = ['plan','packaging','formula','legal'];
   var current = 0;
   function show(idx) {
     current = Math.max(0, Math.min(TABS.length - 1, idx));

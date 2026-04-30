@@ -311,6 +311,7 @@ var formList = [
           <button class="active" data-folder-group="production" data-folder-tab="prd-plan">Production Plan</button>
           <button                data-folder-group="production" data-folder-tab="prd-pkg">Packaging</button>
           <button                data-folder-group="production" data-folder-tab="prd-frm">Formula</button>
+          <button                data-folder-group="production" data-folder-tab="prd-legal">Legal Certificates</button>
         </nav>
         <div class="rv-folder-pane active" data-folder-pane-group="production" data-folder-pane="prd-plan">
           <div class="rv-card">
@@ -350,8 +351,12 @@ var formList = [
               <div class="rv-row"><span class="rv-label">Cold storage</span><span class="rv-value"><%= show(prodFrm.cold_storage) %></span></div>
               <div class="rv-row"><span class="rv-label">Carbonated</span><span class="rv-value"><%= show(prodFrm.carbonated) %></span></div>
             </div>
+          </div>
+        </div>
+        <div class="rv-folder-pane" data-folder-pane-group="production" data-folder-pane="prd-legal">
+          <div class="rv-card">
+            <h2>Legal Certificates</h2>
             <% if (prodFrm.certificates && prodFrm.certificates.length) { %>
-              <h3>Legal certificates</h3>
               <ul style="font-size:13px; padding-left:18px; list-style:disc; color:#374151;">
                 <% prodFrm.certificates.forEach(function (c) { %>
                   <li><strong><%= c.code %></strong>
@@ -363,6 +368,8 @@ var formList = [
                   </li>
                 <% }); %>
               </ul>
+            <% } else { %>
+              <p style="color:#94a3b8;font-size:13px;">No legal certificates submitted.</p>
             <% } %>
           </div>
         </div>
