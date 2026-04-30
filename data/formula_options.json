@@ -1,13 +1,60 @@
 {
-  "_comment": "Lookup options for the R&D Formula tab. Generic F&B values — replace with real R&D taxonomy when available.",
+  "_comment": "Lookup options for the R&D Formula tab. Class / Formula Type / Flavor / Appearance are keyed by category so the dropdowns adapt when the user picks a category. Color, brand_tier and cold_storage stay universal.",
 
   "category":      ["Beverage", "Snack", "Cereal", "Dairy", "Sauce / Condiment", "Bakery", "Confectionery", "Frozen"],
-  "class":         ["Carbonated", "Still", "Chilled", "Ambient", "Frozen", "Powdered", "Concentrate", "Ready-to-Eat"],
   "brand_tier":    ["Mainstream", "Premium", "Value", "Specialty / Artisan"],
-  "formula_type":  ["Original", "Reformulation", "Line Extension", "Limited Edition", "Reduced Sugar", "Reduced Fat", "Plant-Based", "High Protein", "Organic"],
-  "flavor":        ["Original", "Vanilla", "Chocolate", "Strawberry", "Lemon", "Lime", "Orange", "Mango", "Apple", "Mixed Berry", "Cinnamon", "Honey", "BBQ", "Cheddar", "Salted Caramel"],
   "color":         ["Natural", "Caramel", "Red", "Yellow", "Green", "Blue", "Brown", "Beige", "White", "Clear / Transparent"],
-  "appearance":    ["Liquid", "Powder", "Granular", "Crystalline", "Paste", "Gel", "Solid Bar", "Flake", "Pellet", "Filled / Layered"],
   "cold_storage":  ["Yes", "No"],
-  "carbonated":    ["Yes", "No"]
+  "carbonated":    ["Yes", "No"],
+
+  "by_category": {
+    "Beverage": {
+      "class":        ["Carbonated", "Still", "Sparkling", "Concentrate", "Ready-to-Drink (RTD)", "Powdered Mix", "Cold-Pressed"],
+      "formula_type": ["Original", "Reduced Sugar", "Sugar-Free", "Diet", "Caffeine-Added", "Functional / Energy", "Plant-Based", "Hydration / Sport", "Limited Edition"],
+      "flavor":       ["Original", "Cola", "Lemon-Lime", "Orange", "Apple", "Berry", "Mango", "Coffee", "Tea", "Vanilla", "Chocolate", "Tropical"],
+      "appearance":   ["Liquid (clear)", "Liquid (cloudy)", "Liquid (carbonated)", "Powder", "Concentrate"]
+    },
+    "Snack": {
+      "class":        ["Crispy / Crunchy", "Baked", "Fried", "Extruded", "Popped", "Bar", "Cluster"],
+      "formula_type": ["Original", "Reduced Fat", "Reduced Sodium", "Whole Grain", "Plant-Based", "High Protein", "Limited Edition"],
+      "flavor":       ["Original", "Salted", "BBQ", "Sour Cream & Onion", "Salt & Vinegar", "Cheddar", "Lime & Chilli", "Honey & Oats", "Caramel"],
+      "appearance":   ["Solid Bar", "Crisp / Chip", "Cluster", "Pellet", "Flake", "Filled / Layered"]
+    },
+    "Cereal": {
+      "class":        ["Cold Cereal", "Hot Cereal", "Granola", "Muesli", "Instant", "Cereal Bar"],
+      "formula_type": ["Original", "Whole Grain", "Fortified", "Reduced Sugar", "Gluten-Free", "High Protein", "Plant-Based"],
+      "flavor":       ["Original", "Honey", "Chocolate", "Vanilla", "Berry", "Cinnamon", "Maple", "Apple"],
+      "appearance":   ["Flake", "Cluster", "Granular", "Powder", "Solid Bar"]
+    },
+    "Dairy": {
+      "class":        ["Fresh / Chilled", "Cultured", "Aged", "UHT / Shelf-Stable", "Powder"],
+      "formula_type": ["Original / Whole", "2% Reduced Fat", "Skim / Non-Fat", "Lactose-Free", "Plant-Based", "Greek-Style", "Probiotic", "Organic"],
+      "flavor":       ["Plain", "Vanilla", "Strawberry", "Blueberry", "Peach", "Honey", "Cheddar", "Mozzarella", "Brie", "Provolone"],
+      "appearance":   ["Liquid", "Cup-Set", "Block", "Shred", "Slice", "Spreadable"]
+    },
+    "Sauce / Condiment": {
+      "class":        ["Cold-Process", "Hot-Filled", "Aseptic", "Concentrate", "Frozen"],
+      "formula_type": ["Original", "Reduced Sodium", "Sugar-Free", "Organic", "Spicy", "Sweet", "Limited Edition"],
+      "flavor":       ["Original", "Marinara", "Alfredo", "BBQ", "Hot Sauce", "Ketchup", "Mustard", "Mayo", "Ranch", "Caesar"],
+      "appearance":   ["Liquid", "Paste", "Gel", "Chunky", "Pourable"]
+    },
+    "Bakery": {
+      "class":        ["Fresh", "Frozen Dough", "Par-Baked", "Shelf-Stable"],
+      "formula_type": ["Original", "Whole Wheat", "Sourdough", "Sweet", "Gluten-Free", "Reduced Sugar"],
+      "flavor":       ["Original", "Chocolate", "Vanilla", "Cinnamon", "Berry", "Honey"],
+      "appearance":   ["Loaf", "Roll", "Bar", "Cookie", "Pastry", "Tortilla"]
+    },
+    "Confectionery": {
+      "class":        ["Hard Candy", "Soft Candy", "Chocolate", "Gum", "Gummy", "Caramel"],
+      "formula_type": ["Original", "Sugar-Free", "Reduced Calorie", "Limited Edition", "Premium"],
+      "flavor":       ["Milk Chocolate", "Dark Chocolate", "Caramel", "Strawberry", "Sour Mix", "Mint", "Fruit Mix"],
+      "appearance":   ["Bar", "Bite", "Wrapped Pieces", "Pellet", "Filled / Layered"]
+    },
+    "Frozen": {
+      "class":        ["Frozen Ready-Meal", "Frozen Dessert", "Frozen Snack", "Frozen Vegetable", "Frozen Meat", "Frozen Beverage"],
+      "formula_type": ["Original", "Plant-Based", "Reduced Sodium", "Organic", "Low Calorie"],
+      "flavor":       ["Vanilla", "Chocolate", "Strawberry", "Cookies & Cream", "Mint", "Coffee", "Mixed Berry"],
+      "appearance":   ["Block", "Cup", "Bar", "Pellet", "Pouch"]
+    }
+  }
 }

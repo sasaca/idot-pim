@@ -200,28 +200,86 @@
             </div>
           </div>
 
+          <%
+            var FO = ref.FORMULA_OPTIONS;
+            // Initial dependent-list values (used to pre-render the four
+            // category-driven dropdowns when there's already a saved category).
+            var initBucket = (frm.category && FO.by_category && FO.by_category[frm.category]) || { class:[], formula_type:[], flavor:[], appearance:[] };
+          %>
           <div class="vob-grid cols-3" style="margin-top:14px;">
-            <% var FO = ref.FORMULA_OPTIONS; %>
-            <% [
-              { name:'frm_category',     label:'Category',      list:FO.category,      val:frm.category },
-              { name:'frm_class',        label:'Class',         list:FO.class,         val:frm.class },
-              { name:'frm_brand_tier',   label:'Brand',         list:FO.brand_tier,    val:frm.brand_tier },
-              { name:'frm_formula_type', label:'Formula Type',  list:FO.formula_type,  val:frm.formula_type },
-              { name:'frm_flavor',       label:'Flavor',        list:FO.flavor,        val:frm.flavor },
-              { name:'frm_color',        label:'Color',         list:FO.color,         val:frm.color },
-              { name:'frm_appearance',   label:'Appearance',    list:FO.appearance,    val:frm.appearance }
-            ].forEach(function (f) { %>
-              <div class="vob-field">
-                <label><span class="req">*</span><%= f.label %></label>
-                <select name="<%= f.name %>" required>
-                  <option value="">-- Select --</option>
-                  <% (f.list || []).forEach(function (o) { %>
-                    <option value="<%= o %>" <%= f.val === o ? 'selected' : '' %>><%= o %></option>
-                  <% }); %>
-                </select>
-              </div>
-            <% }); %>
+            <!-- Category — universal -->
+            <div class="vob-field">
+              <label><span class="req">*</span>Category</label>
+              <select name="frm_category" required data-frm-category>
+                <option value="">-- Select --</option>
+                <% (FO.category || []).forEach(function (o) { %>
+                  <option value="<%= o %>" <%= frm.category === o ? 'selected' : '' %>><%= o %></option>
+                <% }); %>
+              </select>
+            </div>
+            <!-- Brand tier — universal -->
+            <div class="vob-field">
+              <label><span class="req">*</span>Brand</label>
+              <select name="frm_brand_tier" required>
+                <option value="">-- Select --</option>
+                <% (FO.brand_tier || []).forEach(function (o) { %>
+                  <option value="<%= o %>" <%= frm.brand_tier === o ? 'selected' : '' %>><%= o %></option>
+                <% }); %>
+              </select>
+            </div>
+            <!-- Color — universal -->
+            <div class="vob-field">
+              <label><span class="req">*</span>Color</label>
+              <select name="frm_color" required>
+                <option value="">-- Select --</option>
+                <% (FO.color || []).forEach(function (o) { %>
+                  <option value="<%= o %>" <%= frm.color === o ? 'selected' : '' %>><%= o %></option>
+                <% }); %>
+              </select>
+            </div>
 
+            <!-- Class — depends on Category -->
+            <div class="vob-field">
+              <label><span class="req">*</span>Class</label>
+              <select name="frm_class" required data-frm-dep="class" <%= frm.category ? '' : 'disabled' %>>
+                <option value="">-- <%= frm.category ? 'Select' : 'Pick a category first' %> --</option>
+                <% initBucket.class.forEach(function (o) { %>
+                  <option value="<%= o %>" <%= frm.class === o ? 'selected' : '' %>><%= o %></option>
+                <% }); %>
+              </select>
+            </div>
+            <!-- Formula Type — depends on Category -->
+            <div class="vob-field">
+              <label><span class="req">*</span>Formula Type</label>
+              <select name="frm_formula_type" required data-frm-dep="formula_type" <%= frm.category ? '' : 'disabled' %>>
+                <option value="">-- <%= frm.category ? 'Select' : 'Pick a category first' %> --</option>
+                <% initBucket.formula_type.forEach(function (o) { %>
+                  <option value="<%= o %>" <%= frm.formula_type === o ? 'selected' : '' %>><%= o %></option>
+                <% }); %>
+              </select>
+            </div>
+            <!-- Flavor — depends on Category -->
+            <div class="vob-field">
+              <label><span class="req">*</span>Flavor</label>
+              <select name="frm_flavor" required data-frm-dep="flavor" <%= frm.category ? '' : 'disabled' %>>
+                <option value="">-- <%= frm.category ? 'Select' : 'Pick a category first' %> --</option>
+                <% initBucket.flavor.forEach(function (o) { %>
+                  <option value="<%= o %>" <%= frm.flavor === o ? 'selected' : '' %>><%= o %></option>
+                <% }); %>
+              </select>
+            </div>
+            <!-- Appearance — depends on Category -->
+            <div class="vob-field">
+              <label><span class="req">*</span>Appearance</label>
+              <select name="frm_appearance" required data-frm-dep="appearance" <%= frm.category ? '' : 'disabled' %>>
+                <option value="">-- <%= frm.category ? 'Select' : 'Pick a category first' %> --</option>
+                <% initBucket.appearance.forEach(function (o) { %>
+                  <option value="<%= o %>" <%= frm.appearance === o ? 'selected' : '' %>><%= o %></option>
+                <% }); %>
+              </select>
+            </div>
+
+            <!-- Cold Storage — universal -->
             <div class="vob-field">
               <label><span class="req">*</span>Cold Storage</label>
               <div class="radio-group">
@@ -229,14 +287,20 @@
                 <label><input type="radio" name="frm_cold_storage" value="NO" <%= frm.cold_storage === 'NO' ? 'checked' : '' %>>No</label>
               </div>
             </div>
-            <div class="vob-field">
+            <!-- Carbonated — only relevant for Beverage. Hidden via JS unless
+                 the user picks Beverage as the Category. -->
+            <div class="vob-field" data-only-for-category="Beverage" style="<%= frm.category === 'Beverage' ? '' : 'display:none;' %>">
               <label><span class="req">*</span>Carbonated</label>
               <div class="radio-group">
-                <label><input type="radio" name="frm_carbonated" value="YES" required <%= frm.carbonated === 'YES' ? 'checked' : '' %>>Yes</label>
+                <label><input type="radio" name="frm_carbonated" value="YES" <%= frm.category === 'Beverage' ? 'required' : '' %> <%= frm.carbonated === 'YES' ? 'checked' : '' %>>Yes</label>
                 <label><input type="radio" name="frm_carbonated" value="NO" <%= frm.carbonated === 'NO' ? 'checked' : '' %>>No</label>
               </div>
             </div>
           </div>
+
+          <!-- Embedded category-keyed lookup so the JS can repopulate dependent
+               dropdowns without an extra HTTP round-trip. -->
+          <script id="formula-by-category" type="application/json"><%- JSON.stringify(FO.by_category || {}) %></script>
 
         </div>
       </section>
@@ -398,6 +462,54 @@
     var cb = row.querySelector('[data-cert-toggle]');
     cb.addEventListener('change', function () { row.classList.toggle('open', cb.checked); });
   });
+
+  // ---- Formula: cascade Class / Formula Type / Flavor / Appearance from
+  //      Category, and toggle the Carbonated row's visibility.
+  (function () {
+    var BY_CAT  = JSON.parse(document.getElementById('formula-by-category').textContent || '{}');
+    var catSel  = document.querySelector('[data-frm-category]');
+    if (!catSel) return;
+    var depKeys = ['class','formula_type','flavor','appearance'];
+
+    function fillDependent(cat) {
+      var bucket = BY_CAT[cat] || { class:[], formula_type:[], flavor:[], appearance:[] };
+      depKeys.forEach(function (k) {
+        var sel = document.querySelector('[data-frm-dep="' + k + '"]');
+        if (!sel) return;
+        var keep = sel.value;          // preserve user's existing pick if it's still valid
+        sel.innerHTML = '<option value="">-- ' + (cat ? 'Select' : 'Pick a category first') + ' --</option>';
+        (bucket[k] || []).forEach(function (o) {
+          var opt = document.createElement('option');
+          opt.value = o; opt.textContent = o;
+          if (keep === o) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.disabled = !cat;
+      });
+    }
+
+    function toggleCarbonated(cat) {
+      var row = document.querySelector('[data-only-for-category]');
+      if (!row) return;
+      var only = row.dataset.onlyForCategory;
+      var visible = (cat === only);
+      row.style.display = visible ? '' : 'none';
+      // Required-ness flips with visibility.
+      row.querySelectorAll('input[name="frm_carbonated"]').forEach(function (r) {
+        if (r.value === 'YES') r.required = visible;
+        if (!visible) r.checked = false;
+      });
+    }
+
+    catSel.addEventListener('change', function () {
+      fillDependent(catSel.value);
+      toggleCarbonated(catSel.value);
+      updateCompletion();
+    });
+    // Sync once at load (covers the case where a saved category needs the
+    // initial visible/required state to match).
+    toggleCarbonated(catSel.value);
+  })();
 
   updateCompletion();
 })();
