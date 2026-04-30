@@ -2,86 +2,171 @@
 /*
   views/products/_approval_form.ejs
   ---------------------------------------------------------------------------
-  Three-button approval footer used by both director approval views. Caller
-  passes the form action URL, the action prefix ('mktg' | 'sc'), and the
-  applicable reason lists.
+  Single-decision approval footer. The user picks one of:
+    Approve / Request more information / Reject
+  from a dropdown. The reason dropdown only appears for the two non-approve
+  options, and its options swap based on which one was chosen. The whole
+  card colour-codes itself green / amber / red as the user makes the choice.
 
   Required locals:
-    formAction      string           — POST url
-    actionPrefix    string           — 'mktg' or 'sc'
+    formAction      string   — POST url
+    actionPrefix    string   — 'mktg' / 'sc' / 'rnd_dir' / 'quality_dir'
     rejectReasons   string[]
     infoReasons     string[]
 */
 %>
 <style>
-  .ap-card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:18px 22px; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-top:18px; }
-  .ap-card h2 { font-size:15px; font-weight:600; color:#111827; margin:0 0 14px; padding-bottom:6px; border-bottom:1px solid #e5e7eb; }
-  .ap-row { display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start; }
-  .ap-card .ap-action-card {
-    flex:1 1 220px; border:1px solid #e5e7eb; border-radius:8px; padding:14px 16px;
-    display:flex; flex-direction:column; gap:8px; background:#fafafa;
+  .ap-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:10px;
+    padding:18px 22px; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-top:18px;
+    transition: background-color .15s ease, border-color .15s ease;
   }
-  .ap-card .ap-action-card.approve { border-color:#bbf7d0; background:#f0fdf4; }
-  .ap-card .ap-action-card.reject  { border-color:#fecaca; background:#fef2f2; }
-  .ap-card .ap-action-card.info    { border-color:#fde68a; background:#fffbeb; }
-  .ap-action-card h3 { font-size:13px; font-weight:600; margin:0; }
-  .ap-action-card.approve h3 { color:#166534; }
-  .ap-action-card.reject  h3 { color:#991b1b; }
-  .ap-action-card.info    h3 { color:#92400e; }
-  .ap-action-card label { font-size:12px; color:#374151; font-weight:500; }
-  .ap-action-card select, .ap-action-card textarea { width:100%; padding:7px 9px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; box-sizing:border-box; }
-  .ap-action-card textarea { min-height:64px; resize:vertical; }
-  .ap-action-card button {
-    padding:.55rem 1rem; border:none; border-radius:.4rem; font-size:13px; font-weight:600;
-    cursor:pointer; color:white;
+  .ap-card h2 {
+    font-size:15px; font-weight:600; color:#111827; margin:0 0 14px;
+    padding-bottom:6px; border-bottom:1px solid #e5e7eb;
   }
-  .ap-action-card.approve button { background:#16a34a; }
-  .ap-action-card.approve button:hover { background:#15803d; }
-  .ap-action-card.reject  button { background:#dc2626; }
-  .ap-action-card.reject  button:hover { background:#b91c1c; }
-  .ap-action-card.info    button { background:#d97706; }
-  .ap-action-card.info    button:hover { background:#b45309; }
+  .ap-card.decision-approve { background:#f0fdf4; border-color:#bbf7d0; }
+  .ap-card.decision-info    { background:#fffbeb; border-color:#fde68a; }
+  .ap-card.decision-reject  { background:#fef2f2; border-color:#fecaca; }
+
+  .ap-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; }
+  @media (max-width: 760px) { .ap-grid { grid-template-columns:1fr; } }
+
+  .ap-card label {
+    display:block; font-size:11px; color:#475569; font-weight:600;
+    text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;
+  }
+  .ap-card select, .ap-card textarea {
+    width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;
+    font-size:14px; box-sizing:border-box; background:white;
+  }
+  .ap-card textarea { min-height:80px; resize:vertical; }
+  .ap-card .ap-full { grid-column:1 / -1; }
+
+  .ap-actions { display:flex; justify-content:flex-end; margin-top:14px; }
+  .ap-submit {
+    padding:.6rem 1.4rem; border:none; border-radius:.4rem;
+    font-size:14px; font-weight:600; cursor:pointer; color:white;
+    background:#1e3a8a;
+  }
+  .ap-card.decision-approve .ap-submit { background:#16a34a; }
+  .ap-card.decision-info    .ap-submit { background:#d97706; }
+  .ap-card.decision-reject  .ap-submit { background:#dc2626; }
+  .ap-submit:disabled { background:#94a3b8; cursor:not-allowed; }
+
+  .ap-decision-hint {
+    font-size:12px; color:#64748b; margin-top:8px;
+    grid-column:1 / -1;
+  }
 </style>
 
-<div class="ap-card">
+<form method="post" action="<%= formAction %>" id="ap-form" class="ap-card" data-prefix="<%= actionPrefix %>">
   <h2>Decision</h2>
-  <div class="ap-row">
-
-    <!-- Reject -->
-    <form method="post" action="<%= formAction %>" class="ap-action-card reject">
-      <h3>✗ Reject</h3>
-      <label>Reason</label>
-      <select name="reason_code" required>
-        <option value="">-- Select reason --</option>
-        <% rejectReasons.forEach(function (r) { %><option><%= r %></option><% }); %>
+  <div class="ap-grid">
+    <div>
+      <label for="ap-decision">Decision</label>
+      <select id="ap-decision" name="action" required>
+        <option value="">— Select a decision —</option>
+        <option value="<%= actionPrefix %>_approve">✓ Approve</option>
+        <option value="<%= actionPrefix %>_request_info">? Request more information</option>
+        <option value="<%= actionPrefix %>_reject">✗ Reject</option>
       </select>
-      <label>Rationale (optional)</label>
-      <textarea name="note" placeholder="Add detail for the requestor (optional)"></textarea>
-      <button type="submit" name="action" value="<%= actionPrefix %>_reject"
-              onclick="return confirm('Reject this product request? This is terminal — a new submission would be required to retry.');">
-        Reject
-      </button>
-    </form>
+    </div>
 
-    <!-- Request more info -->
-    <form method="post" action="<%= formAction %>" class="ap-action-card info">
-      <h3>? Request more information</h3>
-      <label>Reason</label>
-      <select name="reason_code" required>
-        <option value="">-- Select reason --</option>
-        <% infoReasons.forEach(function (r) { %><option><%= r %></option><% }); %>
+    <div id="ap-reason-wrap" style="display:none;">
+      <label for="ap-reason">Reason</label>
+      <select id="ap-reason" name="reason_code">
+        <option value="">— Select reason —</option>
       </select>
-      <label>Rationale (optional)</label>
-      <textarea name="note" placeholder="What does the requestor need to clarify? (optional)"></textarea>
-      <button type="submit" name="action" value="<%= actionPrefix %>_request_info">Send back to requestor</button>
-    </form>
+    </div>
 
-    <!-- Approve -->
-    <form method="post" action="<%= formAction %>" class="ap-action-card approve">
-      <h3>✓ Approve</h3>
-      <label>Note (optional)</label>
-      <textarea name="note" placeholder="Optional approval note"></textarea>
-      <button type="submit" name="action" value="<%= actionPrefix %>_approve">Approve</button>
-    </form>
+    <div class="ap-full">
+      <label for="ap-note">Rationale (optional)</label>
+      <textarea id="ap-note" name="note" placeholder="Add any detail for the requestor (optional)"></textarea>
+    </div>
+
+    <p class="ap-decision-hint" id="ap-hint">Pick a decision to continue. Approvals don't require a reason; reject and request-info do.</p>
   </div>
-</div>
+
+  <div class="ap-actions">
+    <button type="submit" class="ap-submit" id="ap-submit" disabled>Submit decision</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  var REJECT_REASONS = <%- JSON.stringify(rejectReasons) %>;
+  var INFO_REASONS   = <%- JSON.stringify(infoReasons)   %>;
+  var prefix         = '<%= actionPrefix %>';
+
+  var form        = document.getElementById('ap-form');
+  var decisionSel = document.getElementById('ap-decision');
+  var reasonWrap  = document.getElementById('ap-reason-wrap');
+  var reasonSel   = document.getElementById('ap-reason');
+  var hint        = document.getElementById('ap-hint');
+  var submitBtn   = document.getElementById('ap-submit');
+
+  function setReasons(list) {
+    reasonSel.innerHTML = '<option value="">— Select reason —</option>' +
+      list.map(function (r) { return '<option value="' + escAttr(r) + '">' + escHtml(r) + '</option>'; }).join('');
+  }
+
+  function update() {
+    var v = decisionSel.value;
+    form.classList.remove('decision-approve', 'decision-info', 'decision-reject');
+    if (v === prefix + '_approve') {
+      form.classList.add('decision-approve');
+      reasonWrap.style.display = 'none';
+      reasonSel.required = false;
+      reasonSel.value = '';
+      hint.textContent  = 'Approving will move the request forward. A note is optional.';
+      submitBtn.textContent = 'Approve';
+      submitBtn.disabled = false;
+    } else if (v === prefix + '_request_info') {
+      form.classList.add('decision-info');
+      reasonWrap.style.display = '';
+      setReasons(INFO_REASONS);
+      reasonSel.required = true;
+      hint.textContent  = 'Request more info — pick a reason and (optionally) describe what the requestor should clarify.';
+      submitBtn.textContent = 'Send back for info';
+      submitBtn.disabled = !reasonSel.value;
+    } else if (v === prefix + '_reject') {
+      form.classList.add('decision-reject');
+      reasonWrap.style.display = '';
+      setReasons(REJECT_REASONS);
+      reasonSel.required = true;
+      hint.textContent  = 'Reject is terminal — the requestor will need to start a new submission. Pick a reason.';
+      submitBtn.textContent = 'Reject';
+      submitBtn.disabled = !reasonSel.value;
+    } else {
+      reasonWrap.style.display = 'none';
+      reasonSel.required = false;
+      reasonSel.value = '';
+      hint.textContent = 'Pick a decision to continue. Approvals don\'t require a reason; reject and request-info do.';
+      submitBtn.textContent = 'Submit decision';
+      submitBtn.disabled = true;
+    }
+  }
+
+  decisionSel.addEventListener('change', update);
+  reasonSel.addEventListener('change', function () {
+    var v = decisionSel.value;
+    if (v && v !== prefix + '_approve') submitBtn.disabled = !reasonSel.value;
+  });
+
+  form.addEventListener('submit', function (e) {
+    var v = decisionSel.value;
+    if (v === prefix + '_reject') {
+      if (!confirm('Reject this product request? This is terminal — a new submission would be required to retry.')) {
+        e.preventDefault();
+        return false;
+      }
+    }
+  });
+
+  function escHtml(s) { return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) { return { '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;' }[c]; }); }
+  function escAttr(s) { return escHtml(s); }
+
+  update();
+})();
+</script>
