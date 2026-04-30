@@ -73,39 +73,36 @@ var formList = [
 %>
 
 <style>
-  /* ---------- left-nav layout ---------- */
-  .rv-layout { display:flex; gap:14px; align-items:flex-start; margin-bottom:18px; }
-  @media (max-width: 900px) { .rv-layout { flex-direction:column; } .rv-leftnav { position:relative !important; width:100%; flex:0 0 auto; } }
-
-  .rv-leftnav {
-    flex:0 0 220px;
+  /* ---------- horizontal "Submitted forms" pill bar ---------- */
+  .rv-tabs-bar {
+    display:flex; flex-wrap:wrap; gap:6px; align-items:center;
     background:white; border:1px solid #e2e8f0; border-radius:10px;
-    padding:8px;
-    position:sticky; top:1rem; align-self:flex-start;
-    display:flex; flex-direction:column; gap:2px;
+    padding:10px 12px; margin-bottom:14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);
   }
-  .rv-leftnav h4 {
+  .rv-tabs-label {
     font-size:10px; text-transform:uppercase; letter-spacing:.06em;
-    color:#94a3b8; font-weight:700; margin:6px 8px 6px;
+    color:#94a3b8; font-weight:700; padding-right:6px;
   }
-  .rv-leftnav button {
-    text-align:left; padding:9px 12px;
-    background:transparent; border:1px solid transparent;
-    border-radius:7px; cursor:pointer;
-    font-size:13px; color:#475569; font-weight:500;
-    display:flex; align-items:center; gap:8px;
+  .rv-tabs-bar button {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:7px 12px;
+    border:1px solid #e2e8f0; border-radius:7px;
+    background:white; color:#475569;
+    font-size:12.5px; font-weight:500; cursor:pointer;
+    transition: background-color .12s ease, color .12s ease, border-color .12s ease;
   }
-  .rv-leftnav button .rv-num {
+  .rv-tabs-bar button:hover { background:#f1f5f9; color:#0f172a; }
+  .rv-tabs-bar button.active { background:#1e3a8a; border-color:#1e3a8a; color:white; font-weight:600; }
+  .rv-tabs-bar button .rv-num {
     display:inline-flex; align-items:center; justify-content:center;
-    min-width:20px; height:20px; padding:0 6px; border-radius:6px;
-    background:#e2e8f0; color:#475569; font-size:11px; font-weight:700;
+    min-width:18px; height:18px; padding:0 5px; border-radius:5px;
+    background:#e2e8f0; color:#475569; font-size:10.5px; font-weight:700;
   }
-  .rv-leftnav button:hover { background:#f1f5f9; color:#0f172a; }
-  .rv-leftnav button.active { background:#1e3a8a; color:white; font-weight:600; }
-  .rv-leftnav button.active .rv-num { background:rgba(255,255,255,0.25); color:white; }
+  .rv-tabs-bar button.active .rv-num { background:rgba(255,255,255,0.25); color:white; }
 
-  /* ---------- right pane ---------- */
-  .rv-content { flex:1; min-width:0; }
+  /* ---------- form content area (full width below the pill bar) ---------- */
+  .rv-content { width:100%; margin-bottom:18px; }
   .rv-form    { display:none; }
   .rv-form.active { display:block; }
 
@@ -158,20 +155,19 @@ var formList = [
   .rv-banner { background:#eff6ff; border:1px solid #bfdbfe; padding:.65rem .9rem; border-radius:.5rem; font-size:13px; color:#1e3a8a; margin-bottom:.6rem; }
 </style>
 
-<div class="rv-layout">
-  <!-- ===================== LEFT NAV ===================== -->
-  <nav class="rv-leftnav" data-rv-leftnav>
-    <h4>Submitted forms</h4>
-    <% formList.forEach(function (f, i) { %>
-      <button type="button" data-rv-form-btn="<%= f.id %>" class="<%= i === 0 ? 'active' : '' %>">
-        <span class="rv-num"><%= i + 1 %></span>
-        <span><%= f.label %></span>
-      </button>
-    <% }); %>
-  </nav>
+<!-- ===================== TOP NAV BAR ===================== -->
+<nav class="rv-tabs-bar" data-rv-leftnav>
+  <span class="rv-tabs-label">Submitted forms</span>
+  <% formList.forEach(function (f, i) { %>
+    <button type="button" data-rv-form-btn="<%= f.id %>" class="<%= i === 0 ? 'active' : '' %>">
+      <span class="rv-num"><%= i + 1 %></span>
+      <span><%= f.label %></span>
+    </button>
+  <% }); %>
+</nav>
 
-  <!-- ===================== RIGHT PANE — FORMS ===================== -->
-  <div class="rv-content">
+<!-- ===================== FORM CONTENT (full width) ===================== -->
+<div class="rv-content">
 
     <!-- ============== Initiate (no internal tabs) ============== -->
     <section class="rv-form active" data-form="initiate">
@@ -812,7 +808,6 @@ var formList = [
     <% } %>
 
   </div>
-</div>
 
 <script>
 (function () {
