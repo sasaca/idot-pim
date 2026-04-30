@@ -40,6 +40,11 @@
     width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px;
     font-size:14px; box-sizing:border-box; background:white;
   }
+  /* Once a decision is picked, paint the closed select to match the card's
+     theme so the chosen value is unmistakable. */
+  .ap-card.decision-approve #ap-decision { color:#15803d; font-weight:700; border-color:#bbf7d0; }
+  .ap-card.decision-info    #ap-decision { color:#b45309; font-weight:700; border-color:#fde68a; }
+  .ap-card.decision-reject  #ap-decision { color:#b91c1c; font-weight:700; border-color:#fecaca; }
   .ap-card textarea { min-height:80px; resize:vertical; }
   .ap-card .ap-full { grid-column:1 / -1; }
 
@@ -67,9 +72,9 @@
       <label for="ap-decision">Decision</label>
       <select id="ap-decision" name="action" required>
         <option value="">— Select a decision —</option>
-        <option value="<%= actionPrefix %>_approve">✓ Approve</option>
-        <option value="<%= actionPrefix %>_request_info">? Request more information</option>
-        <option value="<%= actionPrefix %>_reject">✗ Reject</option>
+        <option value="<%= actionPrefix %>_approve"      style="color:#15803d;font-weight:700;">Approve</option>
+        <option value="<%= actionPrefix %>_request_info" style="color:#b45309;font-weight:700;">Request more information</option>
+        <option value="<%= actionPrefix %>_reject"       style="color:#b91c1c;font-weight:700;">Reject</option>
       </select>
     </div>
 
